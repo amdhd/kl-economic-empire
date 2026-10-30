@@ -29,7 +29,7 @@ export function TimeChart({ data, xKey, series, yFormat, xFormat, height = 150, 
     <>
       <CartesianGrid stroke="#334155" strokeOpacity={0.35} vertical={false} />
       <XAxis dataKey={xKey} tickFormatter={xFormat} tick={{ fill: '#8b9ab5', fontSize: 10 }} axisLine={false} tickLine={false} minTickGap={28} />
-      <YAxis tickFormatter={yFormat} tick={{ fill: '#8b9ab5', fontSize: 10 }} axisLine={false} tickLine={false} width={52} domain={domain ?? ['auto', 'auto']} />
+      <YAxis tickFormatter={yFormat} tick={{ fill: '#8b9ab5', fontSize: 10 }} axisLine={false} tickLine={false} width={76} domain={domain ?? ['auto', 'auto']} />
       <Tooltip
         contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 10, fontSize: 12 }}
         labelStyle={{ color: '#cbd5e1' }}
@@ -69,6 +69,9 @@ export function TimeChart({ data, xKey, series, yFormat, xFormat, height = 150, 
           </LineChart>
         )}
       </ResponsiveContainer>
+      {series.length > 1 && <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-slate-300" aria-label="Chart legend">
+        {series.map(s => <span className="inline-flex items-center gap-1.5" key={s.key}><span className="h-0.5 w-3" style={{ background: s.color }} />{s.name}</span>)}
+      </div>}
     </div>
   );
 }

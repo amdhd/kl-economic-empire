@@ -32,7 +32,7 @@ export function PartnersPanel() {
     </div>
     <Section title="Partners">
       <table className="w-full text-[12px]" data-testid="partner-table">
-        <thead><tr className="text-left text-slate-400"><th>Partner</th><th className="text-right">Exports</th><th className="text-right">Imports</th><th className="text-right">Our surcharge</th><th className="text-right">Theirs</th><th className="w-28">Relations</th><th>Agreement</th></tr></thead>
+        <thead><tr className="text-left text-slate-400"><th>Partner</th><th className="text-right">Exports</th><th className="text-right">Imports</th><th className="text-right">Our surcharge</th><th className="pr-3 text-right">Theirs</th><th className="w-28 px-2">Relations</th><th className="pl-2">Agreement</th></tr></thead>
         <tbody>{PARTNER_IDS.map((id) => {
           const q = w.partners[id];
           return <tr key={id} className={`cursor-pointer ${id === partner ? 'bg-emerald-500/10' : 'hover:bg-slate-800/50'}`} onClick={() => { setPartner(id); setTariff(q.ourTariff * 100); }} data-testid={`partner-${id}`}>
@@ -40,9 +40,9 @@ export function PartnersPanel() {
             <td className="num text-right">{pct(PARTNERS[id].exportShare, 1)}</td>
             <td className="num text-right">{pct(PARTNERS[id].importShare, 1)}</td>
             <td className={`num text-right ${q.ourTariff > 0 ? 'text-amber-200' : ''}`}>{pct(q.ourTariff, 1)}</td>
-            <td className={`num text-right ${q.theirTariff > 0 ? 'text-rose-300' : ''}`}>{pct(q.theirTariff, 1)}{q.retaliationDay !== null && <span className="text-slate-400"> → {pct(q.retaliationTarget, 1)}</span>}</td>
+            <td className={`num pr-3 text-right ${q.theirTariff > 0 ? "text-rose-300" : ""}`}>{pct(q.theirTariff, 1)}{q.retaliationDay !== null && <span className="text-slate-400"> → {pct(q.retaliationTarget, 1)}</span>}</td>
             <td className="px-2"><Bar value={q.relations} max={100} color={q.relations >= 50 ? '#34d399' : '#f43f5e'} /></td>
-            <td>{q.negotiationDoneDay !== null ? `talks · ${q.negotiationDoneDay - today}d` : q.agreement ? `tier ${q.agreement}` : '—'}</td>
+            <td className="pl-2">{q.negotiationDoneDay !== null ? `talks · ${q.negotiationDoneDay - today}d` : q.agreement ? `tier ${q.agreement}` : '—'}</td>
           </tr>;
         })}</tbody>
       </table>

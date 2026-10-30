@@ -1,47 +1,44 @@
 import { useGame, type PanelId } from '../../store/game-store';
+import { HudIcon } from './HudIcon';
 
-const ITEMS: { id: PanelId; label: string; icon: string; group: string }[] = [
-  { id: 'overview', label: 'Overview', icon: '◎', group: 'Presidency' },
-  { id: 'objectives', label: 'Objectives', icon: '🏆', group: 'Presidency' },
-  { id: 'policies', label: 'Taxes & budget', icon: '⚖', group: 'Government' },
-  { id: 'projects', label: 'Projects', icon: '🏗', group: 'Government' },
-  { id: 'debt', label: 'Treasury & debt', icon: '🏦', group: 'Government' },
-  { id: 'fiscal', label: 'Fiscal rules', icon: '⚖︎', group: 'Government' },
-  { id: 'controls', label: 'Economic controls', icon: '⚙', group: 'Government' },
-  { id: 'trade', label: 'Trade & central bank', icon: '⇄', group: 'Government' },
-  { id: 'partners', label: 'Trading partners', icon: '🌐', group: 'Government' },
-  { id: 'commodities', label: 'Commodities', icon: '🛢', group: 'Government' },
-  { id: 'markets', label: 'Stock markets', icon: '📈', group: 'Markets' },
-  { id: 'fund', label: 'Sovereign fund', icon: '💼', group: 'Markets' },
-  { id: 'soe', label: 'State enterprises', icon: '🏭', group: 'Markets' },
-  { id: 'economy', label: 'Economy', icon: '🏙', group: 'Analysis' },
-  { id: 'sources', label: 'Baseline & sources', icon: '◈', group: 'Analysis' },
-  { id: 'reports', label: 'Reports & log', icon: '📰', group: 'Analysis' },
+const GROUPS: { title: string; items: { id: PanelId; label: string; color: string }[] }[] = [
+  { title: 'Presidency', items: [
+    { id: 'overview', label: 'Briefing', color: '#76d7ef' },
+    { id: 'population', label: 'Population', color: '#78c9ec' },
+    { id: 'objectives', label: 'Objectives', color: '#edce79' },
+  ] },
+  { title: 'Government', items: [
+    { id: 'policies', label: 'Taxes & budget', color: '#a6d582' },
+    { id: 'projects', label: 'Projects', color: '#ecb77d' },
+    { id: 'debt', label: 'Treasury & debt', color: '#aebdf1' },
+    { id: 'fiscal', label: 'Fiscal rules', color: '#f0a3a3' },
+    { id: 'controls', label: 'Economic controls', color: '#9dd9d4' },
+  ] },
+  { title: 'Trade & resources', items: [
+    { id: 'trade', label: 'Trade & FX', color: '#e2c778' },
+    { id: 'partners', label: 'Trading partners', color: '#8fd3c7' },
+    { id: 'commodities', label: 'Commodities', color: '#e8a86a' },
+  ] },
+  { title: 'Markets & analysis', items: [
+    { id: 'markets', label: 'Stock markets', color: '#a7d782' },
+    { id: 'fund', label: 'Sovereign fund', color: '#c0a8ed' },
+    { id: 'soe', label: 'State enterprises', color: '#9fb6e8' },
+    { id: 'economy', label: 'Economy', color: '#75c9e6' },
+    { id: 'reports', label: 'Reports & log', color: '#d6b594' },
+    { id: 'sources', label: 'Baseline & sources', color: '#a2b7cc' },
+  ] },
 ];
-
 export function LeftRail() {
-  const panel = useGame((s) => s.panel);
-  const setPanel = useGame.getState().setPanel;
-  let lastGroup = '';
+  const panel = useGame(s => s.panel);
   return (
-    <nav className="glass pointer-events-auto flex w-[168px] shrink-0 flex-col gap-0.5 rounded-2xl p-2" aria-label="Main">
-      {ITEMS.map((it) => {
-        const header = it.group !== lastGroup ? it.group : null;
-        lastGroup = it.group;
-        return (
-          <div key={it.id}>
-            {header && <div className="label px-2 pb-1 pt-2">{header}</div>}
-            <button
-              onClick={() => setPanel(panel === it.id ? null : it.id)}
-              className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] font-semibold transition ${panel === it.id ? 'bg-emerald-500/15 text-emerald-200 ring-1 ring-emerald-400/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white'}`}
-              data-testid={`nav-${it.id}`}
-            >
-              <span className="w-5 text-center text-[14px]">{it.icon}</span>
-              {it.label}
-            </button>
-          </div>
-        );
-      })}
+    <nav className="glass category-menu pointer-events-auto" aria-label="Info view categories" id="info-categories">
+      <div className="category-heading">INFO VIEWS <span>{GROUPS.reduce((n, g) => n + g.items.length, 0)}</span></div>
+      {GROUPS.map(group => <div className="category-group" key={group.title}>
+        <div className="label">{group.title}</div>
+        <div className="category-grid">{group.items.map(item => <button key={item.id} title={item.label} aria-pressed={panel === item.id} onClick={() => useGame.getState().setPanel(panel === item.id ? null : item.id)} className={`category-button ${panel === item.id ? 'is-active' : ''}`} data-testid={`nav-${item.id}`}>
+          <span style={{ color: item.color }}><HudIcon name={item.id} /></span><span>{item.label}</span>
+        </button>)}</div>
+      </div>)}
     </nav>
   );
 }

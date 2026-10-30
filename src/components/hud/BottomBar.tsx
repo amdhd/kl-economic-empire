@@ -1,3 +1,4 @@
+import { Clock, SpeedControls } from './TopBar';
 import { fullMoneyMinor } from '../../utils/format';
 import { useMemo } from 'react';
 import { daysInMonth, formatKL, klParts } from '../../engine/time';
@@ -12,9 +13,10 @@ export function BottomBar() {
   const monthsDone = g.reports.length;
   const text = items.map((n) => ({ ...n, when: formatKL(n.atMin) }));
   return (
-    <footer className="glass pointer-events-auto flex min-h-14 flex-wrap items-center gap-3 overflow-hidden rounded-2xl pl-3 pr-2">
-      <span className="chip shrink-0 bg-rose-500/15 text-rose-300 ring-1 ring-rose-400/30">NEWS</span>
-      <div className="relative min-w-0 flex-1 basis-40 overflow-hidden" onClick={() => setPanel('reports')} role="button" title="Open reports & event log">
+    <footer className="bottom-bar pointer-events-auto">
+      <div className="time-controls"><SpeedControls /><Clock /></div>
+      <span className="news-label">CITY WIRE</span>
+      <button className="news-ticker relative min-w-0 overflow-hidden text-left" onClick={() => setPanel('reports')} title="Open reports & event log">
         <div className="ticker-track flex w-max gap-10 whitespace-nowrap text-[12.5px]">
           {[...text, ...text].map((n, i) => (
             <span key={`${n.id}-${i}`} className="text-slate-300">
@@ -23,8 +25,8 @@ export function BottomBar() {
             </span>
           ))}
         </div>
-      </div>
-      <div className="flex max-w-full flex-wrap items-center gap-4 border-l border-slate-600/40 pl-3 text-[11.5px] text-slate-400">
+      </button>
+      <div className="cash-status flex max-w-full flex-wrap items-center gap-4 text-[11.5px] text-slate-400">
         <button className="text-left" onClick={() => setPanel('debt')} title="Spendable government cash · open Treasury & debt" data-testid="bottom-treasury">
           <span className="block text-[10px] uppercase tracking-wider">Treasury balance</span>
           <b className="num whitespace-nowrap text-[13px] text-emerald-200">{fullMoneyMinor(g.government.treasury)}</b>
