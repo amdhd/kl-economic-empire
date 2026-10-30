@@ -8,7 +8,7 @@ import {
 } from './calibration';
 import type { AggregatedMods } from './external';
 import { post, type GovDay } from './government';
-import { clamp } from './util';
+import { clamp, toMinor } from './util';
 
 /** Monthly amounts are 'per average month'; daily flow = monthly × 12/365. */
 export const PER_DAY = 12 / 365;
@@ -37,7 +37,7 @@ function importPrice(s: GameState, j: SectorId): number {
  * Export demand index (real) for a sector. External demand × price competitiveness: KL prices
  * relative to foreign prices in MYR (FX × US price level). Visitors also respond to the levy.
  */
-function exportIndex(s: GameState, j: SectorId): number {
+export function exportIndex(s: GameState, j: SectorId): number {
   const e = s.external;
   const fxf = e.myrPerUsd / BASELINE.myrPerUsd;
   const rel = s.sectors[j].price / (fxf * e.usPrice);
@@ -51,7 +51,8 @@ function exportIndex(s: GameState, j: SectorId): number {
   return idx;
 }
 
-export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEconomy {
+/** Read-only household spending plan, shared by settlement and static policy previews. */
+export function householdDemand(s: GameState, transfersPaid: number) {
   const hh = s.households;
   const bank = s.bank;
   const tax = s.government.policies.tax;
@@ -64,18 +65,28 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
     wages += wagesBy[j];
   }
   const other = hh.otherIncomeMonthly * PER_DAY;
-  const householdTax = post(s.government, 'taxHousehold', tax.household * wages * SURCHARGE_BASE_SHARE);
+  const householdTax = toMinor(tax.household * wages * SURCHARGE_BASE_SHARE) / 100;
   const hhRate = bank.lendingRate + HOUSEHOLD_RATE_PREMIUM;
   const interestH = (bank.loansH * hhRate) / 365;
   const amortH = bank.loansH * HOUSEHOLD_AMORT_MONTHLY * PER_DAY;
-  bank.mtdInterestH += interestH;
-  bank.mtdAmortH += amortH;
-  const disposable = wages + gov.transfersPaid + other - householdTax - interestH - amortH;
+  const disposable = wages + transfersPaid + other - householdTax - interestH - amortH;
   // Permanent-income smoothing: households spend out of a blend of current and smoothed income,
   // drawing down savings when income dips (spec: DrawdownFromSavings).
-  hh.permanentIncome += 0.012 * (disposable - hh.permanentIncome);
-  const consumption = Math.max(0, 0.5 * disposable + 0.5 * hh.permanentIncome) * hh.mpc;
+  const permanentIncome = hh.permanentIncome + 0.012 * (disposable - hh.permanentIncome);
+  const consumption = Math.max(0, 0.5 * disposable + 0.5 * permanentIncome) * hh.mpc;
   const credit = hh.newCreditMonthly * PER_DAY;
+  return { wagesBy, wages, other, householdTax, interestH, amortH, disposable, permanentIncome, consumption, credit };
+}
+
+export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEconomy {
+  const hh = s.households;
+  const bank = s.bank;
+  const tax = s.government.policies.tax;
+  const { wagesBy, wages, other, householdTax, interestH, amortH, disposable, permanentIncome, consumption, credit } = householdDemand(s, gov.transfersPaid);
+  post(s.government, 'taxHousehold', householdTax);
+  bank.mtdInterestH += interestH;
+  bank.mtdAmortH += amortH;
+  hh.permanentIncome = permanentIncome;
   hh.savings += disposable - consumption;
 
   // --- Final demand (nominal MYR → real) -------------------------------------------------------

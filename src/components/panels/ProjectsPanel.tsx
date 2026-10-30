@@ -14,8 +14,9 @@ export function ProjectsPanel() {
   const [pick, setPick] = useState<ProjectTemplate | null>(null);
   const [cancel, setCancel] = useState<number | null>(null);
   const gov = g.government;
+  const constructionPrice = g.sectors.prop.price;
   const building = gov.projects.filter((p) => p.status === 'building');
-  const monthlyCapex = building.reduce((a, p) => a + (p.cost / p.durationDays) * 30.4, 0);
+  const monthlyCapex = building.reduce((a, p) => a + Math.min(p.cost - p.work, (p.cost / p.durationDays) * 365 / 12) * constructionPrice, 0);
   return (
     <PanelShell title="Infrastructure projects" subtitle="Money is disbursed over the build; benefits start only on completion." width={680}>
       <div className="rounded-xl bg-slate-900/40 p-3 text-[12.5px] text-slate-300">
@@ -35,7 +36,7 @@ export function ProjectsPanel() {
                 </div>
                 <Bar value={prog} color={p.status === 'complete' ? '#34d399' : '#fbbf24'} />
                 <div className="mt-1 flex justify-between text-[11.5px] text-slate-400">
-                  <span className="num">{pct(prog, 0)} built · {money(p.spent)} spent of {money(p.cost)} budget{p.spent > p.work * 1.005 ? ' (construction-cost escalation)' : ''}</span>
+                  <span className="num">{pct(prog, 0)} built · {money(p.spent)} spent · {money(p.cost)} base cost{p.spent > p.work * 1.005 ? ' (construction-cost escalation)' : ''}</span>
                   {p.status === 'building' && <button className="btn !px-2 !py-0.5 !text-[11px]" onClick={() => setCancel(p.id)}>Cancel</button>}
                 </div>
               </div>
@@ -50,7 +51,7 @@ export function ProjectsPanel() {
             return (
               <div key={t.id} className="flex flex-col rounded-xl bg-slate-800/40 p-3 ring-1 ring-slate-600/20">
                 <div className="text-[13px] font-bold text-white">{t.name}</div>
-                <div className="num my-1 text-[11.5px] text-amber-200">{money(t.cost)} · {Math.round(t.durationDays / 30)} months</div>
+                <div className="num my-1 text-[11.5px] text-amber-200">≈ {money(t.cost * constructionPrice)} at current prices · {Math.round(t.durationDays / 30)} months</div>
                 <p className="mb-2 flex-1 text-[11.5px] text-slate-400">{t.description}</p>
                 <div className="mb-2 text-[11px] text-slate-300">
                   {Object.entries(t.productivity).map(([k, v]) => `${k} +${((v as number) * 100).toFixed(1)}%`).join(' · ')}
@@ -67,7 +68,7 @@ export function ProjectsPanel() {
       </Section>
       {pick && (
         <ConfirmDialog title={`Commission ${pick.name}?`} confirmLabel="Commission" onCancel={() => setPick(null)} onConfirm={() => { command({ type: 'startProject', templateId: pick.id }); setPick(null); }}>
-          Commits {money(pick.cost)} at today’s construction prices over ~{Math.round(pick.durationDays / 30)} months (≈ {money((pick.cost / pick.durationDays) * 30.4)}/month) — more if construction prices rise. Once complete it costs ≈ {money(pick.cost * 0.03)}/year to maintain, and only ~60% of the spend counts as a public asset. Repeated gains in the same sector have diminishing returns. Spending flows to construction (≈70%), industry and tech now; productivity and service benefits arrive at completion. If the treasury runs short, bonds are issued within your borrowing cap.
+          Estimated cost {money(pick.cost * constructionPrice)} at today’s construction prices ({money(pick.cost)} base cost) over ~{Math.round(pick.durationDays / 30)} months (≈ {money((pick.cost / pick.durationDays) * 365 / 12 * constructionPrice)}/month), with daily payments starting at the next settlement. Future prices and funding can change cost and completion time. Once complete it costs ≈ {money(pick.cost * 0.03 * constructionPrice)}/year to maintain, and only ~60% of the spend counts as a public asset. Repeated gains in the same sector have diminishing returns. Spending flows to construction (≈70%), industry and tech during the build; productivity and service benefits arrive at completion. If the treasury runs short, bonds are issued within your borrowing cap.
         </ConfirmDialog>
       )}
       {cancel !== null && (

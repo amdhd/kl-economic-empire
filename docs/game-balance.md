@@ -68,3 +68,12 @@ to events better than these simple bots. Re-tune the bar if human playtests win 
 - Seeds with early event clusters (11, 42) keep growth scores low for everyone; consider scoring growth against a
   benchmark that partly adjusts for external shocks.
 - Wealth still rewards tax-maximising strongly; it's balanced only by the satisfaction penalty.
+
+## Phase 4 acceptance audit (2026-10-31)
+
+No economic coefficients, scoring weights, event hazards, RNG draw order or victory threshold were tuned in this
+pass. The acceptance tests now pin tax effective dates and the six-month capacity lag, paid construction demand
+before productivity benefits, finite IO calibration and GDP separation from confirmed filled trades. Fiscal and
+project forecast fixes change displayed estimates only. Historical replay tables above remain historical samples;
+they are not a new balance result. External-event seed variance, the tax/wealth incentive and the victory bar's
+dependence on scripted bots still require Phase 6 work and human playtesting.

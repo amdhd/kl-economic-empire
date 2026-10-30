@@ -66,6 +66,50 @@ Hourly (open sessions only): `Δln P = 0.012·ln(FV/P) + market + sector + idios
 - AI boom: US semiconductor revenue ↑ ≫ Malaysian retail.
 - More public-service spending: service quality ↑ over months, at a fiscal cost.
 
+## Phase 4 acceptance audit
+
+The existing seven-sector model supplies Phase 4's six-sector minimum. The audit keeps its coefficients and RNG
+draw order. `tests/economic-invariants.test.ts` additionally checks finite, nonnegative IO coefficients, positive
+value-added shares and recovery of baseline gross output from final demand through `(I − A)⁻¹`.
+
+- **Tax timing:** a January proposal effective 1 February leaves January company accounts, corporate collections
+  and February investment plans unchanged. February earnings close at the new rate on 1 March; lower after-tax
+  returns reduce the new plans then. Capacity additions enter a six-slot pipeline, so the first different capacity
+  matures on 1 September. Plans and demand can change earlier; physical capacity cannot.
+- **Infrastructure timing:** commissioning records a commitment. Payments start at the next daily settlement and
+  buy 70% construction, 20% industrial and 10% technology output. IO links propagate demand to suppliers (including
+  utilities) during the build. Treasury costs occur before any completed-project productivity boost. Real work
+  accrues as `paid / constructionPrice`; completion unlocks benefits. Funding shortfalls can delay completion.
+- **GDP separation:** the baseline's sector value added also equals final demand less imported intermediate
+  inputs, rather than gross output. The trade test verifies actual filled buys and sells before comparing nominal
+  GDP, real GDP, sector value added and corporate tax with the same-seed hands-off case.
+
+### Policy and project estimates
+
+`policy-preview.ts` reads state without postings or RNG draws. Estimates are changes in MYR per average month,
+`D = 365/12`, with prices, current demand and the last closed corporate-profit base held fixed:
+
+- Corporate: `(proposedRate − currentRate) × Σ max(0, lastMonthProfit_j) × D / daysInClosedMonth`.
+- Property: rate change × `0.5 × currentPropertyOutput × currentPropertyPrice × D`.
+- Household: rate change × current daily wages × surcharge base share × `D`.
+- Consumption: let `B` be the resident consumer spending envelope (including new credit), `V` the model's current
+  tax-exclusive visitor purchases. Daily levy at rate `t` is `B × t/(1+t) + V × t`; forecast the difference × `D`.
+  The household plan uses funded transfers at the configured budget for this estimate, not a prediction of future
+  financing constraints. Behavioral changes to income, tourism, investment and prices remain uncertain.
+
+These bases work after tax regime changes and zero-rate months. Project quotes multiply base cost, scheduled
+disbursements and annual upkeep by today's construction price index; ongoing monthly disbursement estimates are
+capped by remaining real work. Future inflation and funding can change actual cost and timing. Settlement rules
+and save schema are unchanged. `tests/policy-preview.test.ts` checks the forecast equations and zero-rate/short-month
+cases; `e2e/phase4.spec.ts` exercises the forecasts, effective dates, reports and project payments in the browser.
+
+Audit coverage: households, wages, CPI and bank credit already feed daily production and monthly reporting;
+property/corporate taxes, operating budgets and effective-date controls are already present. Optional district
+overlays and the score calibration issues in `game-balance.md` remain outside this acceptance pass (D-P4-01).
+
+Validation (2026-10-31): strict production build, 93 unit/invariant/campaign tests, all 17 Playwright browser tests
+and ESLint pass. Browser tests run on isolated port 5174, with Phase 4 tabs disabling player saves.
+
 ## Stock market (Phase 2)
 
 Implemented in `src/engine/stock-market.ts`, `src/engine/market-calendar.ts` and `src/engine/market-view.ts`.

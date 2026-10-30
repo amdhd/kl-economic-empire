@@ -82,3 +82,19 @@ renumbered here as D-P3-xx (restatements of conventions already recorded above �
   Reports panels gained its unique views instead (realised P&L and dividend totals, treasury journal, month-to-date flows,
   company statements, reconciliation residuals). Save schema 3 chains master's v2 (project `work`) and Phase 3's v2
   (fund totals, treasury journal); the v2→v3 step fills whichever fields are missing, so saves from either branch load.
+
+## Phase 4 — interconnected economy acceptance audit
+
+- **D-P4-01 Scope.** Keep the existing seven-sector economy (the milestone's six sectors are a minimum), household,
+  bank, fiscal and project systems. Audit their causal behavior and strengthen the existing invariant suite rather
+  than replace the model. External-shock score adjustment, tax/wealth scoring and human calibration of the victory
+  bar remain Phase 6 work. The explicitly optional district overlays remain deferred; no district geography or
+  synthetic allocation rules are introduced by this audit.
+- **D-P4-02 Static fiscal previews.** Quote fictional MYR per average month (365/12 days). Corporate previews use the
+  latest closed month's positive sector profits, normalised for its calendar length; other previews use current
+  prices and demand. Reuse the settlement household spending calculation without changing state or consuming RNG.
+  Keep resident consumer spending tax-inclusive and visitor spending tax-exclusive, and freeze current tourism
+  demand for this all-else-equal preview. Never divide historical receipts by the currently effective rate: these
+  may refer to different tax regimes, including a zero-rate month. Project quotes use the current construction
+  index for cost, disbursement and upkeep; template costs remain base-price costs. These are forecast corrections,
+  not changes to settlement, economic parameters or the save schema.

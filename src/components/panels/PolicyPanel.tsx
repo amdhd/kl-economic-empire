@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { BASE_BUDGET, BUDGET_LABELS, SECTOR_IDS, TAX_LABELS } from '../../data/economic-baseline';
-import { CAL, PROPERTY_LEVY_BASE, SURCHARGE_BASE_SHARE } from '../../engine/calibration';
+import { BASE_BUDGET, BUDGET_LABELS, TAX_LABELS } from '../../data/economic-baseline';
 import { treasuryMYR } from '../../engine/government';
+import { estimateTaxChange } from '../../engine/policy-preview';
 import { formatKL, klParts } from '../../engine/time';
 import { useGame, useGameState } from '../../store/game-store';
 import type { BudgetCategory, BudgetPolicy, TaxPolicy } from '../../types/game';
@@ -24,18 +24,7 @@ export function PolicyPanel() {
   const [confirm, setConfirm] = useState<'tax' | 'budget' | null>(null);
 
   const last = g.reports.at(-1);
-  // Static (all-else-equal) monthly fiscal estimate from last month's bases.
-  const monthDays = 30.4;
-  const taxable = SECTOR_IDS.reduce((a, j) => a + Math.max(0, g.sectors[j].lastMonthProfit), 0);
-  const propBase = PROPERTY_LEVY_BASE * g.sectors.prop.output * g.sectors.prop.price * monthDays;
-  const consBase = last ? last.gov.taxConsumption / Math.max(pol.tax.consumption, 0.001) : CAL.levyBase * monthDays / 0.04;
-  const wageBase = SECTOR_IDS.reduce((a, j) => a + g.sectors[j].employment * CAL.wage0[j], 0) * g.households.wageIndex * monthDays * SURCHARGE_BASE_SHARE;
-  const effect: Record<keyof TaxPolicy, number> = {
-    corporate: (tax.corporate - pol.tax.corporate) * taxable,
-    property: (tax.property - pol.tax.property) * propBase,
-    consumption: (tax.consumption - pol.tax.consumption) * consBase,
-    household: (tax.household - pol.tax.household) * wageBase,
-  };
+  const effect = estimateTaxChange(g, tax);
   const taxDelta = Object.values(effect).reduce((a, b) => a + b, 0);
   const budgetDelta = CATS.reduce((a, k) => a + budget[k] - pol.budget[k], 0);
   const taxChanged = TAX_KEYS.some((k) => Math.abs(tax[k] - (pendingTax(k) ?? pol.tax[k])) > 1e-9);
@@ -74,7 +63,7 @@ export function PolicyPanel() {
             </div>
           );
         })}
-        <div className="mt-2 rounded-lg bg-slate-950/40 p-2 text-[12px] text-slate-300">
+        <div className="mt-2 rounded-lg bg-slate-950/40 p-2 text-[12px] text-slate-300" data-testid="tax-estimate">
           <b>Static estimate:</b> {taxDelta >= 0 ? '+' : ''}{money(taxDelta)} per month in receipts, all else equal. Uncertain: higher corporate tax lowers after-tax returns and investment with a lag; levies cut real spending and tourism; the surcharge reduces disposable income. Tax rises dent trust immediately.
         </div>
         <div className="mt-2 flex gap-2">
