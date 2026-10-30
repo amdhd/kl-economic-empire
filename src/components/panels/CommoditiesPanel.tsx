@@ -37,7 +37,7 @@ export function CommoditiesPanel() {
         return <Stat key={c} label={m.name} value={`${m.currency === 'USD' ? 'US$' : 'RM'}${price.toFixed(0)}/${m.unit}`} sub={`${pct(w.prices[c] - 1, 1, true)} vs reference`} />;
       })}
     </div>
-    <Section title="World price indices · reference = 100">
+    <Section title="World price indices · reference = 100" right={<span className="text-[10.5px] text-slate-400">before 1 Jan 2027: fictional pre-game history</span>}>
       <TimeChart data={chart} xKey="t" unit="Index" yFormat={(v) => v.toFixed(0)} series={COMMODITY_IDS.map((c) => ({ key: c, name: COMMODITIES[c].name, color: COMMODITIES[c].color }))} />
       {w.episodes.length > 0 && <div className="mt-2 space-y-1 text-[12px] text-amber-200">{w.episodes.map((e) => <div key={e.id}>{e.title} · until {formatKL(e.endDay * 1440).date}</div>)}</div>}
     </Section>

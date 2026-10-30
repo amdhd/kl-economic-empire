@@ -7,7 +7,7 @@ import { initialCentralBank, interveneFx } from './trade-fx';
 import { DEVELOPMENT_ANNUAL0, RESOURCE_VA0 } from '../data/world';
 import { exitEscape, initialFiscal, invokeEscape, setFiscalRule } from './fiscal-rules';
 import { initialSoe, khazanahTrade, setKhazanahPayout, setPetronasPolicy, soeEquity, soeSpecialDividend } from './soe';
-import { initialWorld, startNegotiation, validateCommodityPolicy } from './world';
+import { initialWorld, seedWorldHistory, startNegotiation, validateCommodityPolicy } from './world';
 import { outputGap } from './scheduler';
 import { PROJECT_BY_ID } from '../data/projects';
 import type {
@@ -144,6 +144,7 @@ function createWithProfile(seed: number, scenario: ScenarioId, profile: 'malaysi
   s.indicators.cpi = computeCpi(s);
   s.scheduler.startNav = navMYR(s);
   s.soe.openingEquity = soeEquity(s);
+  if (s.world.enabled) seedWorldHistory(s.world, seed, startDay);
   s.baseline.publicNetWorth = publicNetWorth(s);
   s.indicators.publicNetWorth = s.baseline.publicNetWorth;
   s.indicators.score = computeScore(s);

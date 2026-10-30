@@ -9,7 +9,7 @@ import { otherPublicReceiptsMonthly, outlaysOf, revenueOf } from '../src/engine/
 import { publicNetWorth } from '../src/engine/indicators';
 import { nextOpen } from '../src/engine/market-calendar';
 import { khazanahNav, modelledResourceRevenue0 } from '../src/engine/soe';
-import { fuelSubsidyDaily } from '../src/engine/world';
+import { fuelSubsidyDaily, initialWorld, WORLD_SEED_DAYS } from '../src/engine/world';
 import { deserialize, serialize } from '../src/persistence/save';
 import type { GameState } from '../src/types/game';
 import { clone, runUntil, withoutEvents } from './helpers';
@@ -46,6 +46,14 @@ describe('national accounts with resources, development spending and SOEs', () =
       expect(r.gov.subsidy).toBeGreaterThan(0);
     }
   }));
+
+  it('starts the commodity chart with fictional pre-game history without consuming any game stream', () => {
+    const s = createGame(904);
+    expect(s.world.history).toHaveLength(WORLD_SEED_DAYS);
+    expect(s.world.history.at(-1)!.t).toBe(s.scheduler.lastDay - 1);
+    expect(s.world.rng).toEqual(initialWorld(904, true).rng);
+    expect(s.rng).toEqual(createGame(904).rng);
+  });
 
   it('keeps the existing random stream untouched: world shocks use their own seeded stream', () => withoutEvents(() => {
     const a = createGame(903), b = createGame(903);

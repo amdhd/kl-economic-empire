@@ -46,6 +46,31 @@ export function initialWorld(seed: number, enabled: boolean): WorldState {
   };
 }
 
+/** Days of synthetic pre-game price history shown on the commodity chart (display only). */
+export const WORLD_SEED_DAYS = 180;
+
+/**
+ * Fictional pre-game price paths so the chart is not empty at campaign start: a backward AR(1) walk per
+ * commodity ending at today's index of 1. Uses its own throwaway stream, never `world.rng` or `s.rng`,
+ * so it changes no simulated outcome.
+ */
+export function seedWorldHistory(w: WorldState, seed: number, startDay: number): void {
+  const rng = seedRng((seed ^ 0x51ed270b) >>> 0);
+  const path: Record<CommodityId, number[]> = { oil: [], palm: [], wheat: [], steel: [] };
+  for (const c of COMMODITY_IDS) {
+    let x = 0;
+    const sd = c === 'oil' ? 0.012 : COMMODITIES[c].sd;
+    for (let k = 0; k < WORLD_SEED_DAYS; k++) {
+      path[c].push(Math.exp(x));
+      x = 0.995 * x + sd * randnClipped(rng);
+    }
+    path[c].reverse();
+  }
+  w.history = Array.from({ length: WORLD_SEED_DAYS }, (_, k) => ({
+    t: startDay - WORLD_SEED_DAYS + k, oil: path.oil[k], palm: path.palm[k], wheat: path.wheat[k], steel: path.steel[k],
+  }));
+}
+
 /** Episode strength ramps in over 7 days and out over the last 14. */
 function episodeStrength(startDay: number, endDay: number, day: number): number {
   if (day < startDay || day >= endDay) return 0;
