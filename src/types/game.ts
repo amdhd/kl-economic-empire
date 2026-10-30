@@ -183,6 +183,11 @@ export interface FundTx {
   currency: Currency;
   amountMinor: number; // signed cash effect in `currency`
   note: string;
+  fx?: number;
+  counterCurrency?: Currency;
+  counterAmountMinor?: number;
+  realizedMinor?: number;
+  realizedMYR?: number;
 }
 
 export interface FundState {
@@ -196,6 +201,9 @@ export interface FundState {
   pendingDividendTransfer: number; // sen accrued for transfer at month end
   totalInjectedMYR: number;
   totalWithdrawnMYR: number;
+  realized: Record<Currency, number>; // cumulative minor units, survives liquidation
+  realizedMYR: number; // sen at sale-date FX less acquisition basis
+  dividends: Record<Currency, number>; // cumulative net minor units
   feesPaidMYR: number;
   navHistory: { t: number; nav: number }[]; // KL day, sen
 }
@@ -278,6 +286,7 @@ export interface GovMonthFlows {
 }
 
 export interface GovernmentState {
+  ledger: { kind: keyof GovMonthFlows; amountMinor: number; balanceMinor: number }[];
   treasury: number; // sen
   debt: number; // sen
   avgDebtRate: number;
@@ -459,6 +468,7 @@ export interface MonthlyReport {
   events: string[];
   policies: string[];
   notes: string[];
+  reconciliation?: { openingTreasuryMinor: number; closingTreasuryMinor: number; netCashMinor: number; cashResidualMinor: number; openingDebtMinor: number; closingDebtMinor: number; debtResidualMinor: number };
   score: ScoreBreakdown;
 }
 

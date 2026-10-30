@@ -63,3 +63,22 @@ real exchange calendars; (3) add pure market view models; (4) build the market U
   every boundary (09:00, 12:30, 14:30, 17:00 MYT; 09:30, 16:00 ET).
 - **D-P2-09 Parallel dev servers.** `playwright.config.ts` reads `E2E_PORT` (default 5173) and starts its own
   `vite --strictPort`, so parallel checkouts never test another branch's server through `reuseExistingServer`.
+
+## Phase 3 — sovereign fund, treasury and company accounting
+
+Developed concurrently on `codex/phase-3-sovereign-fund` without the shared log, so its original D-004…D-013 numbers were
+renumbered here as D-P3-xx (restatements of conventions already recorded above — D-004, D-006, D-008, D-009 — are folded in).
+
+- **D-P3-01 Settlement & orders** (refines D-008). Settlement is idempotent and re-validates cash, holdings and limits at
+  fill time; `executeOrder` itself enforces session hours, expiry and status, so filled/cancelled/expired orders can never
+  execute again. Buys do not reserve cash and compete in submission order; pending sells reserve held shares.
+- **D-P3-02 Minor-unit safety.** Integer sen/cents use nearest minor-unit rounding for trades and transfers; FX receipts round down. Reject invalid/unsafe inputs before mutating accounts. All balances and basis amounts must remain safe integers. Enforce the existing hard 20% concentration cap, 25% daily-liquidity cap and no leverage/shorts.
+- **D-P3-03 Realised returns & dividends.** Persist realized gains and dividends in cumulative currency-specific fund totals, including after a position is fully liquidated. Track realized MYR gains at sale FX against acquisition-date MYR basis. Transaction records include the FX snapshot and both FX cash legs. Daily NAV is marked to simulated prices and current FX; monthly returns exclude treasury transfers.
+- **D-P3-04 Monthly reconciliation.** Monthly reconciliation includes all month-end SWF distributions in the same treasury flow report. Derive opening cash/debt from prior reports (fictional baseline for first month) and test the exact minor-unit identity. Fund transaction retention is bounded; cumulative totals survive pruning.
+- **D-P3-05 Company accounting.** Company accounts use listing-currency major-unit accrual flows. Maintenance capex equals depreciation, so cash change before dividends/financing equals net income. Dividends are capped by cash and cumulative distributable retained earnings; opening retained earnings equal the synthetic historical undistributed earnings. Cash shortfalls receive explicit matching corporate debt. No Phase 4–6 expansion is included.
+- **D-P3-06 Treasury clamp.** `post()` limits outflows to available treasury cash and records the amount actually paid;
+  callers already finance or record arrears first, so the clamp only absorbs sub-sen rounding across daily disbursements.
+- **D-P3-07 Integration.** The standalone `src/phase3/App.tsx` desk was not mounted: the shell's Fund, Treasury & debt and
+  Reports panels gained its unique views instead (realised P&L and dividend totals, treasury journal, month-to-date flows,
+  company statements, reconciliation residuals). Save schema 3 chains master's v2 (project `work`) and Phase 3's v2
+  (fund totals, treasury journal); the v2→v3 step fills whichever fields are missing, so saves from either branch load.

@@ -59,6 +59,15 @@ export function ReportsPanel() {
                 ))}
               </div>
             </div>
+            {r.reconciliation && (
+              <div className="num mt-3 rounded-lg bg-slate-950/40 p-2 text-[12px]" data-testid="reconciliation">
+                <div className="label mb-1">Cash & debt reconciliation (integer sen)</div>
+                <div className="flex justify-between"><span className="text-slate-400">Opening → closing treasury</span><span>{money(r.reconciliation.openingTreasuryMinor / 100, 'MYR', 2)} → {money(r.reconciliation.closingTreasuryMinor / 100, 'MYR', 2)}</span></div>
+                <div className="flex justify-between"><span className="text-slate-400">Net cash postings</span><span>{money(r.reconciliation.netCashMinor / 100, 'MYR', 2)}</span></div>
+                <div className="flex justify-between"><span className="text-slate-400">Cash residual</span><b className={r.reconciliation.cashResidualMinor === 0 ? 'up' : 'down'} data-testid="cash-residual">RM {(r.reconciliation.cashResidualMinor / 100).toFixed(2)}</b></div>
+                <div className="flex justify-between"><span className="text-slate-400">Debt residual</span><b className={r.reconciliation.debtResidualMinor === 0 ? 'up' : 'down'} data-testid="debt-residual">RM {(r.reconciliation.debtResidualMinor / 100).toFixed(2)}</b></div>
+              </div>
+            )}
             {(r.events.length > 0 || r.policies.length > 0) && (
               <div className="mt-3 grid grid-cols-2 gap-3 text-[12px]">
                 <div><div className="label mb-1">Events started</div>{r.events.map((e, i) => <div key={i} className="text-slate-300">{e}</div>)}</div>

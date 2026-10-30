@@ -19,6 +19,7 @@ import { computeScore, outcomeLabel, publicNetWorth, unemploymentRate, updateSat
 import { isOpen } from './market-calendar';
 import { expireOrders, monthCloseFund, navMYR, processQueuedOrders, receiveDividends } from './sovereign-fund';
 import { hourlyMarket } from './stock-market';
+import { reconcileMonth } from './reconciliation';
 import { daysInMonth, klDay, klDayStartMin, klParts, monthKey, monthKeyLabel } from './time';
 import { clamp, news, pushBounded } from './util';
 
@@ -99,11 +100,11 @@ function closeMonth(s: GameState, key: number): void {
   const navBefore = prev ? prev.fundNav : s.scheduler.startNav;
   const flowsBefore = prev ? prev.fundNetFlows : 0;
 
-  const govClose = monthCloseGovernment(s);
   const divs = monthCloseCompanies(s, key);
   // dividends are paid to holders at the close of the declaring month
   receiveDividends(s, divs);
   monthCloseFund(s);
+  const govClose = monthCloseGovernment(s);
 
   const ind = s.indicators;
   const days = Math.max(1, s.scheduler.mtdDays);
@@ -165,6 +166,7 @@ function closeMonth(s: GameState, key: number): void {
     wageIndex: hh.wageIndex,
     realDisposablePerCapita: realDispPerCap,
     gov: g,
+    reconciliation: reconcileMonth(prev, g, s.government.treasury, s.government.debt),
     treasury: treasuryMYR(s.government),
     debt: debtMYR(s.government),
     bondYield: s.government.bondYield,

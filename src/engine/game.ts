@@ -20,7 +20,7 @@ import { seedRng } from './rng';
 import { klDay, klParts, klToEpochMin, monthKey } from './time';
 import { clamp, news, pushBounded, toMinor } from './util';
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 export const START = { year: 2027, month: 1, day: 1, hour: 8 };
 export const CAMPAIGN_MONTHS = 24;
 
@@ -69,10 +69,10 @@ export function createGame(seed = 20270101, scenario: ScenarioId = 'balanced'): 
     market: undefined as unknown as GameState['market'],
     fund: {
       myrCash: toMinor(BASELINE.fundMYR), usdCash: toMinor(BASELINE.fundUSD), positions: {}, orders: [], tx: [], nextId: 1,
-      dividendTransferPct: 0, pendingDividendTransfer: 0, totalInjectedMYR: 0, totalWithdrawnMYR: 0, feesPaidMYR: 0, navHistory: [],
+      dividendTransferPct: 0, pendingDividendTransfer: 0, totalInjectedMYR: 0, totalWithdrawnMYR: 0, realized: { MYR: 0, USD: 0 }, realizedMYR: 0, dividends: { MYR: 0, USD: 0 }, feesPaidMYR: 0, navHistory: [],
     },
     government: {
-      treasury: toMinor(BASELINE.treasury), debt: toMinor(BASELINE.debt), avgDebtRate: BASELINE.debtRate, accruedInterest: 0,
+      ledger: [], treasury: toMinor(BASELINE.treasury), debt: toMinor(BASELINE.debt), avgDebtRate: BASELINE.debtRate, accruedInterest: 0,
       unpaidObligations: 0, daysInArrears: 0,
       policies: { tax: { ...BASE_TAX }, budget: { ...BASE_BUDGET }, borrowing: { cashBufferMonths: 1, maxDebtToGdp: 0.45 } },
       pending: [], projects: [], nextId: 1, mtd: emptyFlows(), accruedCorporateTax: 0, publicAssets: BASELINE.publicAssets,
@@ -233,14 +233,14 @@ function dispatch(s: GameState, cmd: Command, atMin: number): CommandResult {
       return { ok: true, message: `${p.name} cancelled. Spent funds are sunk; no benefits.` };
     }
     case 'issueBonds': {
-      if (!(cmd.amount > 0)) return { ok: false, message: 'Amount must be positive' };
+      if (!Number.isFinite(cmd.amount) || !(cmd.amount > 0)) return { ok: false, message: 'Amount must be positive and finite' };
       const got = issueDebt(s, cmd.amount, 'Discretionary issuance');
       if (got <= 0) return { ok: false, message: gov.marketAccess ? 'Debt cap reached — raise the cap or repay debt first.' : 'No market access.' };
       logPolicy(s, atMin, atMin, `Issued RM ${(got / 1e6).toFixed(0)}m bonds`);
       return { ok: true, message: `Issued RM ${(got / 1e6).toFixed(0)}m of bonds: treasury and debt both up.` };
     }
     case 'repayDebt': {
-      if (!(cmd.amount > 0)) return { ok: false, message: 'Amount must be positive' };
+      if (!Number.isFinite(cmd.amount) || !(cmd.amount > 0)) return { ok: false, message: 'Amount must be positive and finite' };
       if (cmd.amount > treasuryMYR(gov)) return { ok: false, message: 'Treasury cash is insufficient.' };
       const paid = repayDebt(s, cmd.amount);
       logPolicy(s, atMin, atMin, `Repaid RM ${(paid / 1e6).toFixed(0)}m of debt`);

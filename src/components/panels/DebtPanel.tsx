@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { debtMYR, ratingLabel, treasuryMYR } from '../../engine/government';
+import { debtMYR, isInflow, ratingLabel, treasuryMYR } from '../../engine/government';
+import type { GovMonthFlows } from '../../types/game';
 import { klDayLabel } from '../../engine/time';
 import { useGame, useGameState } from '../../store/game-store';
 import { money, pct } from '../../utils/format';
@@ -7,6 +8,12 @@ import { TimeChart } from '../charts/TimeChart';
 import { ConfirmDialog } from './ConfirmDialog';
 import { PanelShell } from './PanelShell';
 import { Section, Stat } from '../ui';
+
+const FLOW_LABEL: Record<keyof GovMonthFlows, string> = {
+  taxCorporate: 'Corporate tax', taxProperty: 'Property levy', taxConsumption: 'Consumption levy', taxHousehold: 'Household surcharge',
+  federalGrant: 'Federal grant', borrowing: 'Bond proceeds', swfTransferIn: 'SWF distribution in', opex: 'Operating outlays',
+  capex: 'Capital outlays', interest: 'Debt interest', principal: 'Principal repaid', emergency: 'Emergency', swfContribution: 'SWF contribution',
+};
 
 export function DebtPanel() {
   const g = useGameState();
@@ -33,6 +40,23 @@ export function DebtPanel() {
       <Section title="Treasury and debt">
         <TimeChart data={data} xKey="t" xFormat={(v) => klDayLabel(Number(v))} series={[{ key: 'treasury', name: 'Treasury', color: '#34d399' }, { key: 'debt', name: 'Debt', color: '#f87171' }]} yFormat={(v) => v.toFixed(1)} unit="RM billion · daily" height={130} />
       </Section>
+      <div className="grid grid-cols-2 gap-3">
+        <Section title="Month-to-date cash flows · MYR">
+          <div className="num space-y-0.5 text-[12px]" data-testid="mtd-flows">
+            {(Object.entries(gov.mtd) as [keyof GovMonthFlows, number][]).filter(([, v]) => v > 0).map(([k, v]) => (
+              <div key={k} className="flex justify-between"><span className="text-slate-400">{FLOW_LABEL[k]}</span><span className={isInflow(k) ? 'up' : 'down'}>{isInflow(k) ? '+' : '−'}{money(v)}</span></div>
+            ))}
+          </div>
+        </Section>
+        <Section title="Treasury journal · latest postings">
+          <div className="num scroll-thin max-h-44 space-y-0.5 overflow-y-auto text-[11.5px]" data-testid="treasury-journal">
+            {[...gov.ledger].reverse().slice(0, 30).map((l, i) => (
+              <div key={i} className="flex justify-between gap-2"><span className="text-slate-400">{FLOW_LABEL[l.kind]}</span><span className={l.amountMinor >= 0 ? 'up' : 'down'}>{money(l.amountMinor / 100, 'MYR', 2)}</span><span className="text-slate-500">bal {money(l.balanceMinor / 100)}</span></div>
+            ))}
+            {!gov.ledger.length && <div className="text-slate-500">No postings yet — start the clock.</div>}
+          </div>
+        </Section>
+      </div>
       <Section title="Borrowing rule (applies immediately)">
         <div className="grid grid-cols-2 gap-4 text-[12.5px]">
           <label>

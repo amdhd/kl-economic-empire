@@ -59,7 +59,7 @@ function MarketChip({ ex }: { ex: Exchange }) {
 export function TopBar() {
   const { setShowNewGame, setShowHelp } = useGame.getState();
   return (
-    <header className="glass pointer-events-auto flex h-14 items-center gap-4 rounded-2xl px-4">
+    <header className="glass pointer-events-auto relative z-30 flex h-14 items-center gap-4 rounded-2xl px-4">
       <div className="flex items-center gap-2.5 pr-2">
         <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden>
           <rect width="32" height="32" rx="8" fill="#0f172a" />

@@ -33,6 +33,13 @@ export function CompanyPanel({ id }: { id: TickerId }) {
               <tr><th>Month</th><th className="text-right">Revenue</th><th className="text-right">EBITDA</th><th className="text-right">Net</th><th className="text-right">KL tax</th></tr>
             </thead>
             <tbody>
+              <tr className="text-slate-400" title="Month-to-date accrual; closes at month end">
+                <td>This month (accruing)</td>
+                <td className="text-right">{money(st.mtd.revenue, cur)}</td>
+                <td className="text-right">{money(st.mtd.revenue - st.mtd.laborCost - st.mtd.energyCost - st.mtd.otherCost, cur)}</td>
+                <td className="text-right">—</td>
+                <td className="text-right">—</td>
+              </tr>
               {st.history.slice(-6).reverse().map((h) => (
                 <tr key={h.monthKey}>
                   <td>{monthKeyLabel(h.monthKey)}</td>

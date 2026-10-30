@@ -22,7 +22,7 @@ npm run dev        # http://localhost:5173
 | `npm run dev` | Vite dev server |
 | `npm run build` | Strict type-check + production build to `dist/` |
 | `npm test` | Vitest: clock, calendars, orders, accounting invariants, causal chains, 24-month campaign suite |
-| `npm run e2e` | Playwright browser tests (first time: `npx playwright install chromium`) |
+| `npm run e2e` | Playwright browser tests (first time: `npx playwright install chromium`). `E2E_PORT=5174 npm run e2e` runs a separate server so parallel worktrees don't test each other |
 | `npm run lint` / `npm run format` | ESLint / Prettier |
 
 No backend, accounts or paid APIs. The map uses free **OpenFreeMap** vector tiles (needs internet; the simulation

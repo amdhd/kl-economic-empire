@@ -8,7 +8,7 @@ import type { Dividend } from './companies';
 import { post, treasuryMYR } from './government';
 import { isOpen } from './market-calendar';
 import { avgDailyValue } from './stock-market';
-import { news, pushBounded, toMinor } from './util';
+import { assertSafeMinor, news, pushBounded, toMinor } from './util';
 
 export const FEE_RATE: Record<Exchange, number> = { MY: 0.002, US: 0.0003 }; // brokerage + clearing + stamp, simplified
 export const HALF_SPREAD: Record<Exchange, number> = { MY: 0.001, US: 0.0002 };
@@ -71,9 +71,11 @@ const queuedSellUnits = (s: GameState, id: TickerId, except?: number) =>
 export function validateOrder(s: GameState, id: TickerId, side: 'buy' | 'sell', units: number, orderId?: number): string | null {
   const c = COMPANY_BY_ID[id];
   if (!c) return 'Unknown security';
-  if (!Number.isInteger(units) || units <= 0) return 'Quantity must be a positive whole number';
+  if (side !== 'buy' && side !== 'sell') return 'Invalid order side';
+  if (!Number.isSafeInteger(units) || units <= 0) return 'Quantity must be a positive whole number';
   if (units % LOT[c.exchange] !== 0) return `Bursa board lot is ${LOT[c.exchange]} shares`;
   const q = quoteFill(s, id, side, units);
+  if (![q.total, q.gross, q.fees].every((n) => Number.isFinite(n) && n >= 0 && Number.isSafeInteger(Math.round(n * 100)))) return 'Unsafe order value';
   const adv = avgDailyValue(s, id);
   const today = s.market.quotes[id].fundDayValue;
   if (today + q.mid * units > MAX_ADV_SHARE * adv) return `Exceeds today’s liquidity: the fund may trade at most ${MAX_ADV_SHARE * 100}% of average daily value per stock per session (${((today + q.mid * units) / adv * 100).toFixed(0)}% requested incl. earlier fills) — spread it over several sessions`;
@@ -91,19 +93,19 @@ export function validateOrder(s: GameState, id: TickerId, side: 'buy' | 'sell', 
   return null;
 }
 
-function addTx(s: GameState, type: 'buy' | 'sell' | 'dividend' | 'fx' | 'injection' | 'withdrawal', currency: Currency, amountMinor: number, note: string, extra: { ticker?: TickerId; units?: number; price?: number } = {}) {
+function addTx(s: GameState, type: 'buy' | 'sell' | 'dividend' | 'fx' | 'injection' | 'withdrawal', currency: Currency, amountMinor: number, note: string, extra: { ticker?: TickerId; units?: number; price?: number; fx?: number; counterCurrency?: Currency; counterAmountMinor?: number; realizedMinor?: number; realizedMYR?: number } = {}) {
   pushBounded(s.fund.tx, { id: s.fund.nextId++, atMin: s.clock.hour * 60, type, currency, amountMinor, note, ...extra }, TX_LIMIT);
 }
 
 /** Place an order. Fills immediately if the exchange is open at the current game minute. */
 export function placeOrder(s: GameState, id: TickerId, side: 'buy' | 'sell', units: number, atMin: number): Order {
   const c = COMPANY_BY_ID[id];
-  const order: Order = { id: s.fund.nextId++, ticker: id, side, units, status: 'queued', createdMin: atMin, expiresMin: atMin + ORDER_TTL_MIN };
+  const order: Order = { id: s.fund.nextId++, ticker: id, side, units: Number.isSafeInteger(units) ? units : 0, status: 'queued', createdMin: atMin, expiresMin: atMin + ORDER_TTL_MIN };
   s.fund.orders.push(order);
   if (s.fund.orders.length > 200) s.fund.orders = s.fund.orders.filter((o, i, arr) => o.status === 'queued' || i >= arr.length - 150);
   // Static checks that do not depend on market state reject immediately.
   const reason = validateOrder(s, id, side, units, order.id);
-  if (reason && !(reason.startsWith('Insufficient') && !isOpen(c.exchange, atMin))) {
+  if (reason && !(c && reason.startsWith('Insufficient') && !isOpen(c.exchange, atMin))) {
     order.status = 'rejected';
     order.reason = reason;
     return order;
@@ -113,11 +115,15 @@ export function placeOrder(s: GameState, id: TickerId, side: 'buy' | 'sell', uni
 }
 
 export function executeOrder(s: GameState, order: Order, atMin: number): void {
+  if (order.status !== 'queued' || atMin < order.createdMin) return;
+  if (atMin >= order.expiresMin) { order.status = 'expired'; order.reason = 'Not filled within 7 days'; return; }
+  const company = COMPANY_BY_ID[order.ticker];
+  if (company && !isOpen(company.exchange, atMin)) return;
   const reason = validateOrder(s, order.ticker, order.side, order.units, order.id);
   if (reason) {
     order.status = 'rejected';
     order.reason = reason;
-    news(s, { kind: 'fund', tone: 'bad', title: `Order rejected: ${order.side} ${order.units.toLocaleString()} ${COMPANY_BY_ID[order.ticker].displayName}`, body: reason });
+    news(s, { kind: 'fund', tone: 'bad', title: `Order rejected: ${order.side} ${order.units.toLocaleString()} ${COMPANY_BY_ID[order.ticker]?.displayName ?? order.ticker}`, body: reason });
     return;
   }
   const c = COMPANY_BY_ID[order.ticker];
@@ -126,28 +132,41 @@ export function executeOrder(s: GameState, order: Order, atMin: number): void {
   const fx = c.exchange === 'US' ? s.external.myrPerUsd : 1;
   const totalMinor = toMinor(q.total);
   const pos: Position = f.positions[order.ticker] ?? { units: 0, costMinor: 0, costMYR: 0, realizedMinor: 0, dividendsMinor: 0 };
+  const cashKey = c.exchange === 'US' ? 'usdCash' : 'myrCash';
+  assertSafeMinor(f[cashKey] + (order.side === 'buy' ? -totalMinor : totalMinor));
   if (order.side === 'buy') {
+    assertSafeMinor(pos.costMinor + totalMinor);
+    assertSafeMinor(pos.costMYR + toMinor(totalMinor / 100 * fx));
+    assertSafeMinor(pos.units + order.units);
     if (c.exchange === 'US') f.usdCash -= totalMinor;
     else f.myrCash -= totalMinor;
     pos.units += order.units;
     pos.costMinor += totalMinor;
-    pos.costMYR += toMinor(q.total * fx);
-    addTx(s, 'buy', q.currency, -totalMinor, `Bought ${order.units.toLocaleString()} @ ${q.px.toFixed(3)} (fees ${q.fees.toFixed(2)})`, { ticker: order.ticker, units: order.units, price: q.px });
+    pos.costMYR += toMinor(totalMinor / 100 * fx);
+    addTx(s, 'buy', q.currency, -totalMinor, `Bought ${order.units.toLocaleString()} @ ${q.px.toFixed(3)} (fees ${q.fees.toFixed(2)})`, { ticker: order.ticker, units: order.units, price: q.px, fx });
   } else {
-    const costPortion = Math.round((pos.costMinor * order.units) / pos.units);
-    const costMyrPortion = Math.round((pos.costMYR * order.units) / pos.units);
+    const costPortion = Math.round(pos.costMinor * (order.units / pos.units));
+    const costMyrPortion = Math.round(pos.costMYR * (order.units / pos.units));
+    const realized = totalMinor - costPortion;
+    const realizedMYR = toMinor(totalMinor / 100 * fx) - costMyrPortion;
+    assertSafeMinor(f.realized[q.currency] + realized);
+    assertSafeMinor(f.realizedMYR + realizedMYR);
     if (c.exchange === 'US') f.usdCash += totalMinor;
     else f.myrCash += totalMinor;
-    pos.realizedMinor += totalMinor - costPortion;
+    f.realized[q.currency] += realized;
+    f.realizedMYR += realizedMYR;
+    assertSafeMinor(pos.realizedMinor + realized);
+    pos.realizedMinor += realized;
     pos.costMinor -= costPortion;
     pos.costMYR -= costMyrPortion;
     pos.units -= order.units;
-    addTx(s, 'sell', q.currency, totalMinor, `Sold ${order.units.toLocaleString()} @ ${q.px.toFixed(3)} (fees ${q.fees.toFixed(2)})`, { ticker: order.ticker, units: order.units, price: q.px });
+    addTx(s, 'sell', q.currency, totalMinor, `Sold ${order.units.toLocaleString()} @ ${q.px.toFixed(3)} (fees ${q.fees.toFixed(2)})`, { ticker: order.ticker, units: order.units, price: q.px, fx, realizedMinor: realized, realizedMYR });
   }
   if (pos.units > 0) f.positions[order.ticker] = pos;
   else delete f.positions[order.ticker];
   f.feesPaidMYR += q.fees * fx;
   s.market.quotes[order.ticker].fundDayValue += q.gross;
+  s.fund.tx.at(-1)!.atMin = atMin;
   order.status = 'filled';
   order.filledMin = atMin;
   order.fillPrice = q.px;
@@ -185,21 +204,25 @@ export function cancelOrder(s: GameState, orderId: number): boolean {
 export function convertFx(s: GameState, from: Currency, amountMinor: number): string | null {
   const f = s.fund;
   const fx = s.external.myrPerUsd;
-  if (!Number.isInteger(amountMinor) || amountMinor <= 0) return 'Amount must be positive';
+  if (from !== 'MYR' && from !== 'USD') return 'Unknown currency';
+  if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0) return 'Amount must be a positive safe minor-unit integer';
+  if (!Number.isFinite(fx) || fx <= 0) return 'Invalid FX rate';
   if (from === 'MYR') {
     if (amountMinor > f.myrCash) return 'Insufficient MYR cash';
     const usd = Math.floor(amountMinor / (fx * (1 + FX_SPREAD)));
+    if (usd < 1 || !Number.isSafeInteger(f.usdCash + usd)) return 'Conversion is too small or unsafe';
     f.myrCash -= amountMinor;
     f.usdCash += usd;
     f.feesPaidMYR += (amountMinor / 100) * (FX_SPREAD / (1 + FX_SPREAD));
-    addTx(s, 'fx', 'MYR', -amountMinor, `Converted to US$ ${(usd / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })} @ ${(fx * (1 + FX_SPREAD)).toFixed(4)}`);
+    addTx(s, 'fx', 'MYR', -amountMinor, `Converted to US$ ${(usd / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })} @ ${(fx * (1 + FX_SPREAD)).toFixed(4)}`, { fx, counterCurrency: 'USD', counterAmountMinor: usd });
   } else {
     if (amountMinor > f.usdCash) return 'Insufficient USD cash';
     const myr = Math.floor(amountMinor * fx * (1 - FX_SPREAD));
+    if (myr < 1 || !Number.isSafeInteger(f.myrCash + myr)) return 'Conversion is too small or unsafe';
     f.usdCash -= amountMinor;
     f.myrCash += myr;
     f.feesPaidMYR += (amountMinor / 100) * fx * FX_SPREAD;
-    addTx(s, 'fx', 'USD', -amountMinor, `Converted to RM ${(myr / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })} @ ${(fx * (1 - FX_SPREAD)).toFixed(4)}`);
+    addTx(s, 'fx', 'USD', -amountMinor, `Converted to RM ${(myr / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })} @ ${(fx * (1 - FX_SPREAD)).toFixed(4)}`, { fx, counterCurrency: 'MYR', counterAmountMinor: myr });
   }
   return null;
 }
@@ -214,8 +237,12 @@ export function receiveDividends(s: GameState, divs: Dividend[]): void {
     const net = p.units * d.dps * (us ? 1 - US_WITHHOLDING : 1);
     const minor = toMinor(net);
     if (minor <= 0) continue;
+    assertSafeMinor((us ? f.usdCash : f.myrCash) + minor);
+    assertSafeMinor(f.dividends[us ? 'USD' : 'MYR'] + minor);
+    f.dividends[us ? 'USD' : 'MYR'] += minor;
     if (us) f.usdCash += minor;
     else f.myrCash += minor;
+    assertSafeMinor(p.dividendsMinor + minor);
     p.dividendsMinor += minor;
     const myr = (minor / 100) * (us ? s.external.myrPerUsd : 1);
     totalMYR += myr;
@@ -227,8 +254,9 @@ export function receiveDividends(s: GameState, divs: Dividend[]): void {
 
 /** Treasury → fund. A transfer between public accounts: public net worth unchanged. */
 export function injectFund(s: GameState, amountMYR: number): string | null {
-  if (!(amountMYR > 0)) return 'Amount must be positive';
+  if (!Number.isFinite(amountMYR) || amountMYR <= 0 || !Number.isSafeInteger(Math.round(amountMYR * 100)) || Math.round(amountMYR * 100) < 1) return 'Amount must be positive and safe';
   if (amountMYR > treasuryMYR(s.government)) return 'Treasury cash is insufficient';
+  assertSafeMinor(s.fund.myrCash + toMinor(amountMYR));
   const posted = post(s.government, 'swfContribution', amountMYR);
   s.fund.myrCash += toMinor(posted);
   s.fund.totalInjectedMYR += posted;
@@ -238,8 +266,9 @@ export function injectFund(s: GameState, amountMYR: number): string | null {
 
 /** Fund → treasury, from MYR cash only. */
 export function withdrawFund(s: GameState, amountMYR: number): string | null {
-  if (!(amountMYR > 0)) return 'Amount must be positive';
+  if (!Number.isFinite(amountMYR) || amountMYR <= 0 || !Number.isSafeInteger(Math.round(amountMYR * 100)) || Math.round(amountMYR * 100) < 1) return 'Amount must be positive and safe';
   if (toMinor(amountMYR) > s.fund.myrCash) return 'Fund MYR cash is insufficient — sell holdings or convert USD first';
+  assertSafeMinor(s.government.treasury + toMinor(amountMYR));
   const posted = post(s.government, 'swfTransferIn', amountMYR);
   s.fund.myrCash -= toMinor(posted);
   s.fund.totalWithdrawnMYR += posted;
@@ -251,7 +280,7 @@ export function withdrawFund(s: GameState, amountMYR: number): string | null {
 export function monthCloseFund(s: GameState): void {
   const f = s.fund;
   const amt = Math.min(f.pendingDividendTransfer, f.myrCash);
-  f.pendingDividendTransfer = 0;
+  f.pendingDividendTransfer -= amt;
   if (amt > 0) withdrawFund(s, amt / 100);
 }
 

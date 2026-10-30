@@ -34,6 +34,12 @@ export function FundPanel() {
         <Stat label="Return since start" value={money(totalReturn)} tone={totalReturn >= 0 ? 'up' : 'down'} sub={`${pct(totalReturn / g.scheduler.startNav, 2, true)} · ex-transfers`} />
         <Stat label="Costs paid" value={money(f.feesPaidMYR)} sub="fees, spreads, FX" />
       </div>
+      <div className="grid grid-cols-4 gap-3 rounded-xl bg-slate-900/40 p-3" data-testid="fund-totals">
+        <Stat label="Realised (MYR stocks)" value={money(f.realized.MYR / 100)} tone={f.realized.MYR >= 0 ? 'up' : 'down'} hint="Cumulative, survives fully sold positions" />
+        <Stat label="Realised (US stocks, USD)" value={money(f.realized.USD / 100, 'USD')} tone={f.realized.USD >= 0 ? 'up' : 'down'} />
+        <Stat label="Realised, all in MYR" value={money(f.realizedMYR / 100)} sub="at sale FX vs purchase FX" tone={f.realizedMYR >= 0 ? 'up' : 'down'} />
+        <Stat label="Dividends received (net)" value={money(f.dividends.MYR / 100)} sub={`+ ${money(f.dividends.USD / 100, 'USD')}`} />
+      </div>
       <Section title="Allocation">
         {[['Malaysian equities', myEq, '#34d399'], ['US equities', usEq, '#60a5fa'], ['Cash (MYR + USD)', cash, '#94a3b8']].map(([k, v, c]) => (
           <div key={k as string} className="mb-1.5 flex items-center gap-2 text-[12px]">

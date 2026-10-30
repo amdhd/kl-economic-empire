@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { accumulate, displayMinutes, GAME_MS_PER_REAL_MS, MAX_FRAME_MS } from '../src/engine/clock';
-import { advance, createGame, runHeadless } from '../src/engine/game';
+import { advance, createGame, runHeadless, SCHEMA_VERSION } from '../src/engine/game';
 import { formatKL, klParts } from '../src/engine/time';
 import { deserialize, serialize } from '../src/persistence/save';
 import { runUntil } from './helpers';
@@ -125,7 +125,35 @@ describe('save migration', () => {
     file.state.schemaVersion = 1;
     delete file.state.government.projects[0].work;
     const loaded = deserialize(JSON.stringify(file));
-    expect(loaded.schemaVersion).toBe(2);
+    expect(loaded.schemaVersion).toBe(SCHEMA_VERSION);
     expect(loaded.government.projects[0].work).toBe(1e8);
+  });
+});
+
+describe('save migration across the parallel branches', () => {
+  it("loads a Phase 3 branch 'v2' save (fund totals, ledger, no project work)", () => {
+    const s = createGame(4);
+    s.government.projects.push({ id: 1, templateId: 'brt', name: 'x', kind: 'transport', cost: 1.2e9, spent: 3e8, work: 0, startDay: 0, durationDays: 270, status: 'building' });
+    const file = JSON.parse(serialize(s));
+    file.state.schemaVersion = 2;
+    delete file.state.government.projects[0].work;
+    const loaded = deserialize(JSON.stringify(file));
+    expect(loaded.schemaVersion).toBe(SCHEMA_VERSION);
+    expect(loaded.government.projects[0].work).toBe(3e8);
+    expect(loaded.fund.realized).toEqual(s.fund.realized);
+  });
+
+  it("loads a master 'v2' save (project work, no fund totals or ledger)", () => {
+    const s = createGame(5);
+    const file = JSON.parse(serialize(s));
+    file.state.schemaVersion = 2;
+    delete file.state.fund.realized;
+    delete file.state.fund.realizedMYR;
+    delete file.state.fund.dividends;
+    delete file.state.government.ledger;
+    const loaded = deserialize(JSON.stringify(file));
+    expect(loaded.fund.realized).toEqual({ MYR: 0, USD: 0 });
+    expect(loaded.fund.dividends).toEqual({ MYR: 0, USD: 0 });
+    expect(loaded.government.ledger).toEqual([]);
   });
 });
