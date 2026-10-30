@@ -3,7 +3,7 @@ import { FICTIONAL_LABEL } from '../utils/format';
 
 export function Section({ title, right, children, className = '' }: { title: string; right?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={`rounded-xl border border-slate-700/40 bg-slate-900/40 p-3 ${className}`}>
+    <section className={`data-section p-3 ${className}`}>
       <div className="mb-2 flex items-center justify-between gap-2">
         <h3 className="label">{title}</h3>
         {right}

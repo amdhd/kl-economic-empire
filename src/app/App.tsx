@@ -1,7 +1,7 @@
+import { PopulationPanel } from '../components/panels/PopulationPanel';
 import { ControlsPanel } from '../components/panels/ControlsPanel';
 import { Component, useEffect, useState, type ReactNode } from 'react';
 import { BottomBar } from '../components/hud/BottomBar';
-import { Districts } from '../components/hud/Districts';
 import { LeftRail } from '../components/hud/LeftRail';
 import { StatsStrip } from '../components/hud/StatsStrip';
 import { Toasts } from '../components/hud/Toasts';
@@ -24,6 +24,7 @@ import { startGameLoop, useGame, type PanelId } from '../store/game-store';
 import type { ScenarioId } from '../types/game';
 
 const PANELS: Record<PanelId, () => ReactNode> = {
+  population: () => <PopulationPanel />,
   controls: () => <ControlsPanel />,
   trade: () => <TradePanel />,
   sources: () => <SourcesPanel />,
@@ -58,6 +59,7 @@ class ErrorBoundary extends Component<{ children: ReactNode; label: string }, { 
 
 export function App() {
   useEffect(() => startGameLoop(), []);
+  const [menuOpen, setMenuOpen] = useState(false);
   const panel = useGame((s) => s.panel);
   const selection = useGame((s) => s.selection);
   const showNewGame = useGame((s) => s.showNewGame);
@@ -67,24 +69,25 @@ export function App() {
       <ErrorBoundary label="Map">
         <MapView />
       </ErrorBoundary>
-      <div className="pointer-events-none absolute inset-0 z-10 flex flex-col gap-2 p-3">
-        <TopBar />
-        <StatsStrip />
-        <div className="flex min-h-0 flex-1 gap-2">
-          <div className="scroll-thin flex min-h-0 shrink-0 flex-col gap-2 overflow-y-auto">
-            <LeftRail />
-            <Districts />
-          </div>
-          <div className="min-h-0 flex-1">
+      <div className="game-overlay pointer-events-none absolute inset-0 z-10 flex flex-col">
+        <TopBar menuOpen={menuOpen} onToggleMenu={() => {
+          if (menuOpen) {
+            useGame.getState().setPanel(null);
+            useGame.getState().select(null);
+          }
+          setMenuOpen(!menuOpen);
+        }} />
+        <div className="workspace flex min-h-0 flex-1 items-start gap-3">
+          {menuOpen && <LeftRail />}
+          <div className={`panel-slot min-h-0 ${panel === 'markets' ? 'panel-slot-wide' : ''}`}>
             {panel && <ErrorBoundary label="Panel">{PANELS[panel]()}</ErrorBoundary>}
           </div>
-          {selection?.kind === 'company' && (
-            <ErrorBoundary label="Company panel">
-              <CompanyPanel key={selection.id} id={selection.id} />
-            </ErrorBoundary>
-          )}
+          {selection?.kind === 'company' && <div className="company-slot min-h-0 ml-auto"><ErrorBoundary label="Company panel"><CompanyPanel key={selection.id} id={selection.id} /></ErrorBoundary></div>}
         </div>
-        <BottomBar />
+        <div className="bottom-dock pointer-events-auto">
+          <StatsStrip />
+          <BottomBar />
+        </div>
       </div>
       <Toasts />
       {showNewGame && <NewGameModal />}

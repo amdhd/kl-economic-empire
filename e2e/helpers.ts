@@ -5,6 +5,7 @@ export async function startCampaign(page: Page) {
   await page.addInitScript(() => sessionStorage.setItem('klDevNoSave', '1'));
   await page.goto('/');
   await page.getByTestId('start-campaign').click();
+  await page.getByTestId('info-views').click();
 }
 
 /** Dev-only fast-forward (window.__klDev exists only in dev builds). */

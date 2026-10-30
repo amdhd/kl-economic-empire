@@ -12,6 +12,7 @@ test('recession shocks explain their causes, propagation and lifecycle in live a
   await page.goto('/');
   await page.getByTestId('scenario-recession').click();
   await page.getByTestId('start-campaign').click();
+  await page.getByTestId('info-views').click();
   await page.getByTestId('nav-economy').click();
   await expect(page.getByTestId('event-2')).toContainText('Banking credit crunch');
   await expect(page.getByTestId('event-2')).toContainText('Active · strength 1.30×');
@@ -40,6 +41,7 @@ test('a credit crunch changes the economy view and the monthly lending/investmen
   await page.goto('/');
   await page.getByTestId('scenario-recession').click();
   await page.getByTestId('start-campaign').click();
+  await page.getByTestId('info-views').click();
   await runHours(page, 31 * 24 - 8); // January closes, using its own final day's stress
   const s = await state(page);
   expect(s.bank.lendingRate).toBeGreaterThan(0.06);

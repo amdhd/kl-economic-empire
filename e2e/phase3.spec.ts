@@ -11,6 +11,7 @@ async function begin(page: Page) {
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('/');
   await page.getByTestId('start-campaign').click();
+  await page.getByTestId('info-views').click();
   return errors;
 }
 

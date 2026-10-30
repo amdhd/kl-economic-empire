@@ -29,7 +29,7 @@ function IndexCard({ game, ex }: { game: GameState; ex: Exchange }) {
   const v = indexView(game, ex);
   const series = indexSeries(game, ex).slice(-60).map((p) => p.v);
   return (
-    <div className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.03] p-3" data-testid={`index-${ex}`}>
+    <div className="market-index min-w-0 flex-1" data-testid={`index-${ex}`}>
       <div className="flex items-baseline justify-between gap-2">
         <span className="truncate text-[11px] uppercase tracking-wider text-slate-400">{v.name}</span>
         <span className="text-[10px] text-slate-500">fictional</span>
@@ -38,7 +38,7 @@ function IndexCard({ game, ex }: { game: GameState; ex: Exchange }) {
         <span className="text-lg font-semibold tabular-nums text-white">{num(v.value, 2)}</span>
         <span className={`text-xs tabular-nums ${changeCls(v.change)}`}>{pct(v.change, 2, true)}</span>
       </div>
-      <Sparkline values={series} />
+      <div className="market-index-chart"><Sparkline values={series} height={28} /></div>
     </div>
   );
 }
@@ -103,12 +103,12 @@ export function MarketBrowser({
   const rows = tab === 'FX' ? [] : filterRows(all, { query, sector, sort, exchange: searching ? 'ALL' : tab });
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="flex gap-2 p-3 pb-2">
+    <div className="market-browser">
+      <div className="market-indices flex gap-2">
         <IndexCard game={game} ex="MY" />
         <IndexCard game={game} ex="US" />
       </div>
-      <div className="flex flex-wrap items-center gap-2 px-3 pb-2">
+      <div className="market-toolbar flex flex-wrap items-center gap-2">
         <div className="flex rounded-lg bg-white/5 p-0.5" role="tablist" aria-label="Market">
           {TABS.map((t) => (
             <button
@@ -151,9 +151,9 @@ export function MarketBrowser({
       </div>
 
       {tab === 'FX' ? (
-        <FxPane game={game} />
+        <div className="market-fx-scroll scroll-thin"><FxPane game={game} /></div>
       ) : (
-        <div className="min-h-0 flex-1 overflow-auto px-1">
+        <div className="market-table-scroll scroll-thin" role="region" aria-label="Company list" tabIndex={0} data-testid="company-list-scroll">
           {searching && <div className="px-2 pb-1 text-[11px] text-slate-500">Searching both markets</div>}
           <table className="w-full whitespace-nowrap text-xs" data-testid="security-table">
             <thead className="sticky top-0 bg-slate-950/95 text-[10px] uppercase tracking-wider text-slate-500">
@@ -205,7 +205,7 @@ export function MarketBrowser({
           </table>
         </div>
       )}
-      <div className="border-t border-white/5 px-3 py-1.5 text-[10px] text-slate-500">
+      <div className="market-disclaimer border-t border-white/5 px-3 py-1.5 text-[10px] text-slate-500">
         Real company names and tickers for context only. All prices, financials and indices are fictional simulations — not market data or investment advice.
       </div>
     </div>

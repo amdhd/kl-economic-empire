@@ -8,7 +8,7 @@ const state = (page: Page) => page.evaluate(() => (window as unknown as Dev).__k
 test('help pauses deliberation and speed shortcuts cannot resume the clock inside dialogs', async ({ page }) => {
   await startCampaign(page);
   await page.getByTestId('btn-speed-3').click();
-  await page.getByRole('button', { name: '?', exact: true }).click();
+  await page.getByRole('button', { name: 'Help & shortcuts', exact: true }).click();
   await expect(page.getByRole('dialog')).toContainText('Clock paused while help is open');
   const before = (await state(page)).clock.hour;
   await page.keyboard.press('1');
@@ -33,6 +33,7 @@ test('final report explains scores, compares the true opening state and restores
   // A fresh isolated Playwright context: permit save/load without touching any real player profile.
   await page.goto('/');
   await page.getByTestId('start-campaign').click();
+  await page.getByTestId('info-views').click();
   await runHours(page, 24 * 731 - 1);
   await page.getByTestId('btn-speed-3').click();
   await expect(page.getByTestId('panel')).toContainText('Economic Presidency Report', { timeout: 15000 });

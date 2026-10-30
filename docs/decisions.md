@@ -209,3 +209,19 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   or buys below the lower bound, subject to daily configured size, segregated inventory, USD-sale reserve floor, spreads
   and the same shared daily turnover cap as manual interventions. Pressure affects subsequent fixings, never guarantees
   a peg. No new RNG draws. Schema5 persists all controls; schema4 migrates to neutral defaults without resetting accounts.
+
+- **D-029 City-first info views (user-directed UI, 31 Oct 2026).** The reference screenshots supersede §11's
+  persistent left navigation and top stat rows: a single Info views button opens the category grid; the chosen
+  inspector appears beside it, while clock/speed, key indicators and exact treasury/fund cash remain in a bottom
+  dock. Categories stay open until toggled, and a panel can remain open with the menu hidden. District camera
+  shortcuts move into a compact location picker. Original SVG icons and charcoal/cyan glass take visual cues
+  from the references without copying game assets. Population uses existing household totals and sector job
+  shares; do not fabricate birth/death, age, homelessness or geographic overlays absent from the model. No
+  economic rules, saved game fields, RNG draws or clock behavior change.
+
+- **D-030 Info-view dismissal and market space (user correction, 31 Oct 2026).** Supersedes D-029's independent
+  panel visibility: switching Info views off dismisses the active category panel and company selection, returning
+  to the map. Reopening starts with categories only. Market windows use available workspace width, a compact
+  title/subtitle/status header and inline index sparklines. The company list owns bounded vertical/horizontal
+  scrolling; fixed header/filter/footer rows never compete with it through nested percentage-height scrollers.
+  Ordinary inspectors retain their body scroll. No simulation behavior changes.
