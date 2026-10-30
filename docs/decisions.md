@@ -141,3 +141,43 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   balance runner. Both remain outside player controls. Profile real 3× browser play and tick/serialization costs
   with explicit machine/sample caveats. Modal help uses the deliberation-pause preference; speed shortcuts cannot
   resume a paused deliberation dialog. Validate corrupt saves before they can restore an unusable clock or economy.
+
+## Malaysia baseline, trade and central-bank FX — user-directed expansion
+
+- **D-018 Scope override (31 Oct 2026).** The user explicitly chose “Switch the economic baseline to Malaysia,
+  keeping the KL map.” New campaigns therefore use dated Malaysian GDP, federal debt/cash proxy and federal
+  operating estimates. This supersedes the original city-only fiscal scope in §§1, 2, 8 and 10. Keep the title,
+  verified KL geography and fictional presidency, securities, future events and economic paths. Preserve legacy
+  KL saves, including their original calibration, rather than silently resetting/scaling their money or history.
+- **D-019 Observation boundaries.** Pin official data available on 31 Oct 2026, with reference dates and units.
+  GDP is the sum of DOSM 2025 nominal quarters; the real game series is rebased to opening prices. Cash uses
+  federal deposits at BNM only, expressly a narrow proxy rather than consolidated treasury cash. The 2027
+  operating estimates are allocations, not actual spending. Group education/higher education, defence/home
+  affairs, works/transport operations and pensions into existing controls. Other operations are a derived residual;
+  exclude debt service (paid separately) and development capital appropriations (projects remain commissioned).
+  Do not claim the seven fictional sector splits, taxes, loans, SWF or public asset stock are national statistics.
+- **D-020 Fiscal scale.** Solve sector scale so value added plus the opening product levy equals observed nominal
+  GDP exactly. Keep positive residual exports. Calibrate fixed omitted federal receipts to the official 2027
+  total less the modeled opening tax base; changing tax sliders cannot move that residual. Existing `federalGrant`
+  storage key means “other public receipts” nationally and still means the old grant in legacy saves. National
+  debt cap starts at 80% (a game rule, not a legal limit); risk/rating debt thresholds are 65%/60%, keeping the
+  old 35%/30% thresholds for KL. Normalize population pressure and transfers to the matching profile. National
+  company tax/demand exposure combines KL and rest-of-Malaysia weights; global exposure stays separate.
+- **D-021 Trade.** Tariffs (0–20%) and export services (RM0–2bn/month) are effective next month. Tariffs charge
+  actual imported production inputs and increase costs; net product-tax treatment prevents counting that same
+  domestic transfer as lost GDP. Export services require actual cash, buy domestic services and build bounded
+  demand access over 90 days. No unpaid discretionary support is carried as an essential fiscal obligation.
+  Measured exports are capacity-rationed sector deliveries; imports are production inputs, not complete customs
+  or balance-of-payments statistics. These are modeled flows, not calibrated official merchandise totals.
+- **D-022 Central bank.** User-directed FX control supersedes D-012's prohibition on player central-bank action;
+  OPR remains automatic. Use the BNM foreign-currency reserve component, excluding gold/SDRs/IMF/other assets.
+  A separate fictional RM5bn sterilisation inventory permits purchases without printing fiscal cash. Reserve
+  operations cannot transfer to treasury/SWF; both currency legs, fees and turnover are journalled. Effect is
+  temporary, bounded pressure on the next daily fixing, not a guaranteed peg. Subtract opening portfolio equity
+  when adding central-bank gains/losses to modeled public wealth. For the negative national opening net worth,
+  deflate asset values and retain nominal liabilities in scoring, preventing inflation alone from earning wealth
+  credit. The initial FX anchor is an implied reserve valuation ratio, expressly not an observed spot quote.
+- **D-023 Compatibility and balances.** Schema 4 chains 1→2→3→4. Persist profile, opening cash/debt, trade and CB
+  accounts. Legacy saves receive zero new reserve inventory; do not reconstruct trade activity that was never
+  recorded. Label their first upgraded trade month partial. Keep all prior clocks/RNG/cash/history. Display exact
+  treasury sen and both SWF cash currencies beside “Month closes in”; distinguish spendable cash from fund NAV.

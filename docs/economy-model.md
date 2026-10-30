@@ -381,3 +381,87 @@ Schema 3 (integration) holds cumulative realized/dividend totals, the treasury j
 ### Validation
 
 `tests/phase3-accounting.test.ts` covers closed/double/expired settlement, malformed inputs, liquidation returns, FX round trips, cash competition, sell reservations, company cash/earnings/debt reconciliation, dividend limits, jurisdictional tax exposure, save validation/migration and twelve exact monthly cash/debt reconciliations with treasury/fund transfers. Existing trading, clock, invariant and seeded campaign suites remain mandatory. `e2e/phase3.spec.ts` exercises quotes/order confirmation, open and closed orders, cancellation, FX, transfers, statements, reports, save/load and pause behavior in a real browser.
+
+## Malaysia baseline and trade/FX expansion (schema 4)
+
+The 31 Oct 2026 user amendment changes **new** campaigns to a national Malaysia baseline while retaining the KL map.
+Legacy KL saves select `LEGACY_CAL`, legacy fiscal/FX constants and the original sector calibration. Migration never
+rescales cash, debt, history, RNG or the clock. The source ledger in `docs/data-sources.md` distinguishes observations
+from assumptions and estimates; official data is pinned locally in code, with no live data service.
+
+### National opening calibration and fiscal flows
+
+Scale the seven fictional sector VA weights by a common scalar `a`. Calibration at fixed national budgets/credit is
+affine in `a`, including the consumption product levy: solve `a = 1 + (observedGDP − GDP(1))/(GDP(2) − GDP(1))`.
+Then `GDP0 = Σ sectorVA0 + openingProductLevy = RM2,025,379,140,000` (2025 current prices). Real GDP starts at this
+same value in opening prices; it is **not** DOSM GDP at constant 2015 prices. Positive residual final exports are tested.
+The IO coefficients, seven-sector weights, lending stocks and policy elasticities remain fictional model assumptions.
+
+Monthly controlled opex = MOF annual 2027 operating allocations / 12. Healthcare uses B.42; services B.63+B.64;
+safety B.60+B.62; development B.27+B.28 (operations only); household transfers T.14 pensions/allowances/gratuities.
+Administration = total operating estimate − T.13 debt service − all five other groups. Debt interest is separate; the
+opening average coupon is `61.013bn / openingDebt`, calibrated to the debt-service estimate. Subsequent financing
+changes it normally. Development appropriations are not silently auto-spent; commissioned game projects remain capex.
+
+The reduced tax system does not cover all federal revenue. Fix omitted receipts to
+`(2027 official receipts − 365 × modeledOpeningDailyTaxes)/12`, where modeled taxes include corporate, property,
+consumption and household receipts. These receipts use the legacy `federalGrant` key; nationally the UI says “other
+public receipts.” They are a derived residual, not an observed grant or a policy-responsive tax base. The original
+legacy KL grant remains RM1bn/month. National starting borrowing cap 80% and rating/premium thresholds 60%/65% are
+fictional game rules; they are not legal debt limits. Legacy thresholds and cap remain unchanged. Service population
+pressure is normalized against the selected baseline; transfers in inequality scoring use that profile's opening budget.
+Company domestic demand and taxable exposure combine its KL and rest-of-Malaysia weights nationally; global exposure
+remains external. Featured-company tax is still informational inside sector collections, never a second collection.
+
+### Trade policy and accounting
+
+Queue tariff `t ∈ [0,.2]` and export-service budget `B ∈ [0,2bn]` for the 1st of the next month. Settle the old month first.
+`importCostIndex_j = FXrelative × foreign/energy basket_j × (1+t)`.
+For actual delivered output `Y_j`, `imports_j = foreignCostIndex_j × importShare_j × Y_j` before tariffs.
+`tariffReceipts = Σ imports_j × t`, posted via `post('importTariff')` to treasury. Sector input costs include this tariff;
+nominal GDP adds the same net product tax back after sector VA. Real GDP at opening prices adds no tariff (base tariff0).
+Tariffs therefore affect costs, profits, prices and subsequent demand, without directly manufacturing real GDP.
+
+Each day `paidSupport = post('exportSupport', B ×12/365)`, capped to available treasury cash after essential outlays and
+household withholding. It buys technology/financial services 60%/40%. `targetReadiness = clamp(.12 × paidSupport /
+(1bn ×12/365),0,.12)`; `readiness += (targetReadiness−readiness)/90`. Multiply sector export demand by `1+readiness`.
+No cash payment means no new boost; existing readiness decays. There is no support arrears balance or free GDP multiplier.
+Delivered nominal exports = requested real exports × sector price × `actualOutput / requestedGrossOutput` (0 if no demand).
+MTD and monthly trade records contain these delivered exports, production-input imports, paid tariffs and support.
+This is a reduced sector trade account, excluding final household imports and re-exports, **not** official merchandise
+trade or a complete balance of payments. Migrated campaigns record only flows since migration and label the partial month.
+Fiscal revenue, expenditure, deficit, risk, monthly reconciliation and term report include both new treasury flow kinds.
+
+### Central-bank FX operations
+
+New national campaigns receive usable foreign currency USD116.4bn (15 Oct 2026 BNM component) and a **fictional** RM5bn
+sterilisation float. Gold, SDRs, IMF and other reserve assets are excluded. Separate USD cents and MYR sen inventories
+are guarded safe integers, nonnegative, nontransferable to treasury/SWF. This desk does not print treasury money.
+`openingEquityMYR = openingUSD × openingFX + openingMYR` is a fixed accounting offset, not a government cash balance.
+
+At current pre-intervention FX `f`, buying USD costs `ceil(usdCents × f ×1.002)` sen; selling yields
+`floor(usdCents × f ×.998)` sen. Validate both resulting inventories before mutating; reject insufficient or unsafe
+balances and nonpositive/unsafe requests. Shared turnover cap: USD1bn per KL calendar day across both directions,
+not per order. Persist both legs, execution FX, timestamp, pressure and daily usage. Immediate round trips lose the
+spread; intervention never directly changes GDP, treasury, fund cash or RNG.
+
+Pressure `p` changes by `±.003 × USDamount/1bn` (+ for buying USD, − for selling), bounded ±.08. At each subsequent
+daily fixing, first decay `p *= exp(−1/30)`, then include `exp(p)` in the existing FX equation, still bounded3.2–6.5.
+Selling USD thus supports MYR (lower MYR/USD); buying weakens it. No exact rate or peg is guaranteed; external shocks
+continue and all draws retain their order. OPR remains automatic, starting from the observed 2.75% reference.
+Opening FX is `RM538,759,540,269 / USD132.1bn`, an implied reserve valuation ratio, **not** a spot-market quote.
+
+Public net worth adds `CBUSD × currentFX + CBMYR − openingEquityMYR`, so reserve sales are asset exchanges and fees/
+revaluations count. These are modeled balance-sheet changes, not an assertion of the consolidated Malaysian balance
+sheet. National opening net worth is negative because unmodeled public assets are not invented. National wealth-score
+change = `(currentNetWorth + debt + arrears)/CPIrelative − debt − arrears − openingNetWorth`; retaining nominal liabilities
+prevents inflation alone from granting wealth score. Legacy KL keeps the prior CPI-adjusted net-wealth formula.
+
+### Validation
+
+`tests/trade-fx-baseline.test.ts` covers official units and grouped opex, fiscal residual calibration, national corporate
+jurisdiction, v3 compatibility, tariff timing/propagation, cash-funded export lags, exact reconciliation, unsafe inputs,
+reserve inventory/turnover constraints, round-trip costs, directional FX effects, RNG/save continuation and full-digit
+sen formatting. Existing economic/campaign checks also exercise the national default. Browser checks cover sources,
+full cash balances, confirmation, policy timing and reserve settlement. Strategy budget amounts are proportions of
+the selected opening budget; the victory threshold still needs human playtesting at the new scale.

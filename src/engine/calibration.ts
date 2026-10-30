@@ -1,8 +1,8 @@
 // One-off steady-state calibration of the KL input–output economy. Pure and deterministic.
 // Final demand f = (I − A)·Y0; household, government and investment components come from the
 // behavioural rules evaluated at baseline, and exports are the residual (asserted positive in tests).
-import { BASE_BUDGET, BASE_TAX, BASELINE, BUDGET_PURCHASES, INVESTMENT_GOODS, IO, SECTOR_IDS, SECTORS } from '../data/economic-baseline';
-import type { BudgetCategory, SectorId } from '../types/game';
+import { BASE_BUDGET, BASE_TAX, BASELINE, LEGACY_BASELINE, LEGACY_BUDGET, NATIONAL_GDP, BUDGET_PURCHASES, INVESTMENT_GOODS, IO, SECTOR_IDS, SECTORS } from '../data/economic-baseline';
+import type { BudgetCategory, SectorId, GameState } from '../types/game';
 
 export type Vec = Record<SectorId, number>;
 const zero = (): Vec => Object.fromEntries(SECTOR_IDS.map((s) => [s, 0])) as Vec;
@@ -60,24 +60,26 @@ export interface Calibration {
   gdpDaily: number;
 }
 
-function calibrate(): Calibration {
+function calibrate(BASELINE = LEGACY_BASELINE, BASE_BUDGET = LEGACY_BUDGET, scale = 1): Calibration {
+  const BASE_LEND_RATE = BASELINE.opr + 0.02;
+  const vaAnnual = (j: SectorId) => SECTORS[j].vaAnnual * scale;
   const n = SECTOR_IDS.length;
   const v = zero(), Y0 = zero(), L0 = zero(), wage0 = zero(), K0 = zero(), cap0 = zero(), capitalPerCap = zero(), laborProd0 = zero();
   for (const j of SECTOR_IDS) {
     const colSum = SECTOR_IDS.reduce((s, i) => s + IO[i][j], 0);
     v[j] = 1 - colSum - SECTORS[j].importShare;
-    Y0[j] = SECTORS[j].vaAnnual / 365 / v[j];
-    K0[j] = SECTORS[j].capitalToVa * SECTORS[j].vaAnnual;
+    Y0[j] = vaAnnual(j) / 365 / v[j];
+    K0[j] = SECTORS[j].capitalToVa * vaAnnual(j);
     cap0[j] = Y0[j] / NORMAL_UTIL;
     capitalPerCap[j] = K0[j] / cap0[j];
   }
   // Employment split by wage bill and relative wage
   const employed0 = BASELINE.laborForce * (1 - BASELINE.unemployment);
-  const weights = SECTOR_IDS.map((j) => (SECTORS[j].laborShare * SECTORS[j].vaAnnual) / RELATIVE_WAGE[j]);
+  const weights = SECTOR_IDS.map((j) => (SECTORS[j].laborShare * vaAnnual(j)) / RELATIVE_WAGE[j]);
   const wsum = weights.reduce((a, b) => a + b, 0);
   SECTOR_IDS.forEach((j, k) => {
     L0[j] = (employed0 * weights[k]) / wsum;
-    wage0[j] = (SECTORS[j].laborShare * SECTORS[j].vaAnnual) / 365 / L0[j];
+    wage0[j] = (SECTORS[j].laborShare * vaAnnual(j)) / 365 / L0[j];
     laborProd0[j] = Y0[j] / L0[j];
   });
   // f0 = (I - A) Y0
@@ -89,7 +91,7 @@ function calibrate(): Calibration {
   const profit0 = zero(), rok0 = zero();
   let afterTaxTotal = 0;
   for (const j of SECTOR_IDS) {
-    const va = SECTORS[j].vaAnnual / 365;
+    const va = vaAnnual(j) / 365;
     const wages = SECTORS[j].laborShare * va;
     const dep = (BASELINE.depreciation * K0[j]) / 365;
     const interest = (BASELINE.firmLoans * (K0[j] / Ktot) * BASE_LEND_RATE) / 365;
@@ -137,7 +139,7 @@ function calibrate(): Calibration {
   const A = SECTOR_IDS.map((i) => SECTOR_IDS.map((j) => (i === j ? 1 : 0) - IO[i][j]));
   const leontief = invert(A);
   void n;
-  const gdpDaily = SECTOR_IDS.reduce((s, j) => s + SECTORS[j].vaAnnual / 365, 0) + levy;
+  const gdpDaily = SECTOR_IDS.reduce((s, j) => s + vaAnnual(j) / 365, 0) + levy;
   return {
     v, Y0, f0, L0, wage0, K0, cap0, capitalPerCap, laborProd0, C0, G0, I0, X0, profit0, rok0, leontief,
     hh: { wages, transfers, other, tax, debtService, disposable, consumption, credit, levy },
@@ -146,5 +148,10 @@ function calibrate(): Calibration {
   };
 }
 
-export const CAL: Calibration = calibrate();
+export const LEGACY_CAL: Calibration = calibrate();
+const c1 = calibrate(BASELINE, BASE_BUDGET, 1).gdpDaily * 365;
+const c2 = calibrate(BASELINE, BASE_BUDGET, 2).gdpDaily * 365;
+export const NATIONAL_SCALE = 1 + (NATIONAL_GDP - c1) / (c2 - c1);
+export const CAL: Calibration = calibrate(BASELINE, BASE_BUDGET, NATIONAL_SCALE);
+export const calibrationFor = (s: Pick<GameState, 'baseline'>): Calibration => s.baseline.profile === 'legacy-kl' ? LEGACY_CAL : CAL;
 export const SECTOR_INDEX: Record<SectorId, number> = Object.fromEntries(SECTOR_IDS.map((s, i) => [s, i])) as Record<SectorId, number>;

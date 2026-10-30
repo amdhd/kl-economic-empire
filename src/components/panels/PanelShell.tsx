@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { useGame } from '../../store/game-store';
 import { SimTag } from '../ui';
 
-export function PanelShell({ title, subtitle, children, width = 640, right }: { title: string; subtitle?: string; children: ReactNode; width?: number; right?: ReactNode }) {
+export function PanelShell({ title, subtitle, children, width = 640, right, referenceData = false }: { title: string; subtitle?: string; children: ReactNode; width?: number; right?: ReactNode; referenceData?: boolean }) {
   const setPanel = useGame.getState().setPanel;
   return (
     <div className="glass pointer-events-auto flex max-h-full flex-col overflow-hidden rounded-2xl" style={{ width }} data-testid="panel">
@@ -13,7 +13,7 @@ export function PanelShell({ title, subtitle, children, width = 640, right }: { 
         </div>
         <div className="flex items-center gap-2">
           {right}
-          <SimTag />
+          {referenceData ? <span className="chip whitespace-nowrap bg-cyan-400/10 text-[9.5px] text-cyan-200">Official starting references</span> : <SimTag />}
           <button onClick={() => setPanel(null)} className="rounded-md px-2 py-1 text-slate-400 hover:bg-slate-700/60 hover:text-white" aria-label="Close panel">✕</button>
         </div>
       </div>

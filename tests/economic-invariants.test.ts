@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { IO, SECTOR_IDS, SECTORS } from '../src/data/economic-baseline';
+import { BASE_BUDGET, NATIONAL_GDP, IO, SECTOR_IDS, SECTORS } from '../src/data/economic-baseline';
 import { bankIdentityGap } from '../src/engine/banks';
 import { CAL } from '../src/engine/calibration';
 import { COMPANY_BY_ID } from '../src/engine/companies';
@@ -12,13 +12,12 @@ import type { GameState, GovMonthFlows } from '../src/types/game';
 import { runUntil, withoutEvents } from './helpers';
 
 describe('calibration', () => {
-  it('starts in a positive-export steady state with GDP ≈ RM 300bn', () => {
+  it('starts in a positive-export steady state at sourced Malaysia nominal GDP', () => {
     for (const j of SECTOR_IDS) {
       expect(CAL.X0[j]).toBeGreaterThan(0);
       expect(CAL.v[j]).toBeGreaterThan(0.2);
     }
-    expect(CAL.gdpDaily * 365).toBeGreaterThan(290e9);
-    expect(CAL.gdpDaily * 365).toBeLessThan(320e9);
+    expect(CAL.gdpDaily * 365).toBeCloseTo(NATIONAL_GDP, 2);
   });
 
   it('has finite productive input coefficients and recovers gross output from final demand', () => {
@@ -233,7 +232,7 @@ describe('causal chains (events disabled, same seed)', () => {
 
   it('more public-service spending raises service quality with a lag, costs the treasury', () => {
     const base = scenario(() => {}, [2027, 6, 1]);
-    const more = scenario((s) => applyCommand(s, { type: 'queueBudget', patch: { health: 1.4e9, services: 1.0e9 } }, s.clock.hour * 60), [2027, 6, 1]);
+    const more = scenario((s) => applyCommand(s, { type: 'queueBudget', patch: { health: BASE_BUDGET.health * 1.55, services: BASE_BUDGET.services * 1.43 } }, s.clock.hour * 60), [2027, 6, 1]);
     expect(more.government.serviceQuality).toBeGreaterThan(base.government.serviceQuality + 0.03);
     expect(more.government.treasury - more.government.debt).toBeLessThan(base.government.treasury - base.government.debt);
   });

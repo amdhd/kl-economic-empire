@@ -14,6 +14,8 @@ import { ObjectivesPanel } from '../components/panels/ObjectivesPanel';
 import { OverviewPanel } from '../components/panels/OverviewPanel';
 import { PolicyPanel } from '../components/panels/PolicyPanel';
 import { ProjectsPanel } from '../components/panels/ProjectsPanel';
+import { TradePanel } from '../components/panels/TradePanel';
+import { SourcesPanel } from '../components/panels/SourcesPanel';
 import { ReportsPanel } from '../components/panels/ReportsPanel';
 import { MapView } from '../map/MapView';
 import { readSlot } from '../persistence/storage';
@@ -21,6 +23,8 @@ import { startGameLoop, useGame, type PanelId } from '../store/game-store';
 import type { ScenarioId } from '../types/game';
 
 const PANELS: Record<PanelId, () => ReactNode> = {
+  trade: () => <TradePanel />,
+  sources: () => <SourcesPanel />,
   overview: () => <OverviewPanel />,
   policies: () => <PolicyPanel />,
   projects: () => <ProjectsPanel />,
@@ -65,7 +69,7 @@ export function App() {
         <TopBar />
         <StatsStrip />
         <div className="flex min-h-0 flex-1 gap-2">
-          <div className="flex flex-col gap-2">
+          <div className="scroll-thin flex min-h-0 shrink-0 flex-col gap-2 overflow-y-auto">
             <LeftRail />
             <Districts />
           </div>
@@ -102,10 +106,10 @@ function NewGameModal() {
         <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-300">Alternate history · 2027</div>
         <h1 className="mt-1 text-[28px] font-black tracking-tight text-white">KL Economic Empire</h1>
         <p className="mt-2 text-[13px] leading-relaxed text-slate-300">
-          Kuala Lumpur has been granted sweeping economic autonomy and you are its first President. Set taxes and budgets, build infrastructure, and run a sovereign wealth fund across 40 simulated Malaysian and US equities. Can you make KL richer and more livable in 24 months — without a fiscal or financial crisis?
+          Lead a fictional Malaysian presidency from the Kuala Lumpur skyline. New campaigns start with dated Malaysian GDP, federal debt and operating budget figures. Set taxes and budgets, build infrastructure, and run a sovereign wealth fund across 40 simulated Malaysian and US equities. Can you make Malaysia richer and more livable in 24 months — without a fiscal or financial crisis?
         </p>
         <p className="mt-2 rounded-lg bg-amber-400/10 p-2 text-[11.5px] text-amber-200 ring-1 ring-amber-300/20">
-          Fiction: real KL has no president with these powers. Company names and tickers are real; every price, financial statement and event is simulated. Not investment advice.
+          Alternate-history powers and all future outcomes are fictional. Official starting figures have different reference dates; see Baseline & sources. Company names and tickers are real; every price, financial statement and event is simulated. Not investment advice.
         </p>
         <div className="mt-4 grid grid-cols-2 gap-3">
           {([['balanced', 'Balanced start', 'Calm global backdrop; seeded random events.'], ['recession', 'Adverse: global recession', 'Begins in a global slowdown and credit crunch.']] as const).map(([id, t, d]) => (

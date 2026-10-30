@@ -67,7 +67,7 @@ export function TopBar() {
         </svg>
         <div className="leading-tight">
           <div className="text-[13px] font-extrabold tracking-[0.14em] text-white">KL ECONOMIC EMPIRE</div>
-          <div className="text-[9.5px] font-semibold uppercase tracking-wider text-amber-300/80">Alternate-history simulation</div>
+          <div className="text-[9.5px] font-semibold uppercase tracking-wider text-amber-300/80">Malaysia economy · KL map · simulation</div>
         </div>
       </div>
       <div className="h-8 w-px bg-slate-600/40" />

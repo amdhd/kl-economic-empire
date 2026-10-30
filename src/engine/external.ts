@@ -1,6 +1,7 @@
 // External (rest-of-Malaysia, US, global) economy. Seeded mean-reverting cycles around trends,
 // plus event modifiers. KL policy has (almost) no influence here by design.
-import { BASELINE } from '../data/economic-baseline';
+import { LEGACY_BASELINE, baselineFor } from '../data/economic-baseline';
+import { BASELINE as nationalBase } from '../data/economic-baseline';
 import { EVENT_BY_ID, type EventMods } from '../data/events';
 import type { ExternalState, GameState, GlobalDriver } from '../types/game';
 import { eventIsActive } from './events';
@@ -68,7 +69,7 @@ export function aggregateMods(s: GameState, today: number): AggregatedMods {
   return m;
 }
 
-export function initialExternal(): ExternalState {
+export function initialExternal(BASELINE: typeof LEGACY_BASELINE = nationalBase): ExternalState {
   const cycles: Record<string, number> = {};
   for (const k of Object.keys(CYCLES)) cycles[k] = 0;
   return {
@@ -82,6 +83,7 @@ export function initialExternal(): ExternalState {
 
 /** Daily external update. `klInflation` feeds Malaysia's national inflation with a small weight. */
 export function updateExternal(s: GameState, mods: AggregatedMods, klInflation: number, dayOfMonth: number, month: number, klOutputGap = 0): void {
+  const BASELINE = baselineFor(s);
   const e = s.external;
   e.daysElapsed += 1;
   const t = e.daysElapsed / 365;
@@ -100,7 +102,7 @@ export function updateExternal(s: GameState, mods: AggregatedMods, klInflation: 
   if (dayOfMonth === 1 && month % 2 === 1) {
     e.myInflation = clamp(0.85 * (0.02 + 0.03 * (e.oil - 1) + 0.2 * (e.myrPerUsd / BASELINE.myrPerUsd - 1)) + 0.15 * klInflation, -0.02, 0.12);
     // KL is a large share of the national economy, so its output gap enters the (fictional) rule.
-    const oprTarget = 0.03 + 1.3 * (e.myInflation - 0.02) + 0.5 * Math.log(e.myDemand / Math.exp(TREND.my * t)) + 0.2 * klOutputGap;
+    const oprTarget = BASELINE.opr + 1.3 * (e.myInflation - 0.02) + 0.5 * Math.log(e.myDemand / Math.exp(TREND.my * t)) + 0.2 * klOutputGap;
     if (Math.abs(oprTarget - e.opr) > 0.00125) e.opr = clamp(e.opr + Math.sign(oprTarget - e.opr) * 0.0025, 0.0125, 0.06);
     const fedTarget = 0.0375 + mods.usRate + 1.2 * (Math.log(e.usDemand / Math.exp(TREND.us * t))) + 0.4 * (e.oil - 1) * 0.03;
     if (Math.abs(fedTarget - e.fedRate) > 0.00125) e.fedRate = clamp(e.fedRate + Math.sign(fedTarget - e.fedRate) * 0.0025, 0.005, 0.08);
@@ -110,7 +112,8 @@ export function updateExternal(s: GameState, mods: AggregatedMods, klInflation: 
 
   // Ringgit: rate differential, oil (Malaysia is a net energy exporter) and risk appetite.
   const diff = e.opr - e.fedRate - (BASELINE.opr - BASELINE.fedRate);
-  e.myrPerUsd = clamp(BASELINE.myrPerUsd * Math.exp(cy.fx - 1.5 * diff - 0.05 * (e.oil - 1) - 0.08 * (e.riskAppetite - 0.5)) * mods.fx, 3.2, 6.5);
+  s.centralBank.pressure *= Math.exp(-1 / 30);
+  e.myrPerUsd = clamp(BASELINE.myrPerUsd * Math.exp(s.centralBank.pressure + cy.fx - 1.5 * diff - 0.05 * (e.oil - 1) - 0.08 * (e.riskAppetite - 0.5)) * mods.fx, 3.2, 6.5);
 
   const d = (name: GlobalDriver, base: number) => base * (mods.drivers[name] ?? 1);
   const g = e.globalDemand, us = e.usDemand, tc = e.techCycle;

@@ -40,11 +40,11 @@ test('final report explains scores, compares the true opening state and restores
   const final = await state(page);
   await expect(page.getByTestId('score-explanation')).toContainText('Sustainability preserves');
   await expect(page.getByTestId('campaign-comparison')).toContainText('Opening · 01 Jan 2027');
-  await expect(page.getByTestId('campaign-comparison')).toContainText('RM 7.0bn');
+  await expect(page.getByTestId('campaign-comparison')).toContainText('RM 8.9bn');
   await page.getByRole('button', { name: 'Real output', exact: true }).click();
   await expect(page.getByTestId('panel')).toContainText('real RM bn per year');
   await page.getByTestId('term-fiscal').scrollIntoViewIfNeeded();
-  await expect(page.getByTestId('term-fiscal')).toContainText('Taxes & grants');
+  await expect(page.getByTestId('term-fiscal')).toContainText('Public receipts');
   await expect(page.getByTestId('term-fiscal')).toContainText('Bond proceeds');
   await page.getByText(/Policy history \(/).click();
   await expect(page.getByTestId('panel')).toContainText('You made no policy decisions.');

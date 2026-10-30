@@ -1,8 +1,8 @@
+import { baselineFor } from '../data/economic-baseline';
 // Pure, read-only view models for the market UI (tables, search, charts, exchange status, FX).
 // Nothing here mutates GameState or draws random numbers, so the UI can call it freely.
 // All prices and financials are FICTIONAL simulations.
 import { COMPANIES, COMPANY_BY_ID, currencyOf } from '../data/companies';
-import { BASELINE } from '../data/economic-baseline';
 import type { Bar, CompanySeed, Currency, Exchange, GameState, QuoteState, SectorId, TickerId } from '../types/game';
 import { ttmNetIncome } from './companies';
 import { localParts, nextClose, nextOpen, sessionPhase, type SessionPhase } from './market-calendar';
@@ -225,6 +225,7 @@ export interface FxView {
 }
 
 export function fxView(s: GameState): FxView {
+  const BASELINE = baselineFor(s);
   const r = s.external.myrPerUsd;
   const prev = s.daily.length ? s.daily[s.daily.length - 1].fx : BASELINE.myrPerUsd;
   return {

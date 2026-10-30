@@ -210,7 +210,7 @@ export interface FundState {
 
 // ---------------------------------------------------------------- government
 export interface TaxPolicy {
-  corporate: number; // on KL-taxable profits
+  corporate: number; // on taxable profits within the campaign jurisdiction
   property: number; // commercial assessment on rental value
   consumption: number; // levy on consumer & visitor spending
   household: number; // income surcharge (progressive)
@@ -234,8 +234,8 @@ export interface PendingPolicy {
   id: number;
   createdMin: number;
   effectiveMin: number;
-  kind: 'tax' | 'budget' | 'borrowing';
-  patch: Partial<TaxPolicy> | Partial<BudgetPolicy> | Partial<BorrowingPolicy>;
+  kind: 'tax' | 'budget' | 'borrowing' | 'trade';
+  patch: Partial<TaxPolicy> | Partial<BudgetPolicy> | Partial<BorrowingPolicy> | Partial<TradePolicy>;
   label: string;
 }
 
@@ -275,6 +275,8 @@ export interface GovMonthFlows {
   taxConsumption: number;
   taxHousehold: number;
   federalGrant: number;
+  importTariff: number;
+  exportSupport: number;
   opex: number;
   capex: number;
   interest: number;
@@ -506,6 +508,8 @@ export interface GameState {
   households: HouseholdState;
   bank: BankState;
   external: ExternalState;
+  trade: TradeState;
+  centralBank: CentralBankState;
   events: { active: ActiveEvent[]; nextId: number; log: ActiveEvent[] };
   indicators: Indicators;
   baseline: BaselineSnapshot;
@@ -520,7 +524,28 @@ export interface GameState {
   policyChurn: number;
 }
 
+export interface TradePolicy { tariff: number; exportBudgetMonthly: number }
+export interface TradeState {
+  trackingStartDay: number;
+  policy: TradePolicy;
+  readiness: number;
+  mtdExports: number;
+  mtdImports: number;
+  history: { monthKey: number; exports: number; imports: number; tariff: number; support: number }[];
+}
+export interface CentralBankState {
+  usdReserves: number; // US cents; usable FX component only, excludes gold/SDRs/IMF
+  myrCash: number; // sen; segregated, cannot be transferred to treasury or SWF
+  openingEquityMYR: number;
+  pressure: number; // log FX effect, decays daily
+  dailyUsdUsed: number;
+  lastInterventionDay: number;
+  tx: { atMin: number; side: 'buyUSD' | 'sellUSD'; usdMinor: number; myrMinor: number; rate: number }[];
+}
 export interface BaselineSnapshot {
+  profile: 'malaysia' | 'legacy-kl';
+  openingTreasury: number;
+  openingDebt: number;
   realGdpAnnual: number;
   nominalGdpAnnual: number;
   publicNetWorth: number;

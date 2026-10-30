@@ -1,10 +1,9 @@
+import { baselineFor } from '../data/economic-baseline';
 // Aggregate KL banking system, reduced form. Balance-sheet identity (tested):
 //   reserves + loansH + loansF = deposits + capital
 // New loans create deposits, repayments destroy them, interest received moves deposits → capital,
 // interest/opex/dividends paid move capital → deposits, defaults reduce loans and capital.
-import { BASELINE } from '../data/economic-baseline';
 import type { GameState } from '../types/game';
-import { BASE_LEND_RATE } from './calibration';
 import type { AggregatedMods } from './external';
 import { clamp } from './util';
 
@@ -18,6 +17,8 @@ export function bankIdentityGap(s: GameState): number {
 }
 
 export function monthCloseBank(s: GameState, mods: AggregatedMods, unemployment: number): void {
+  const BASELINE = baselineFor(s);
+  const BASE_LEND_RATE = baselineFor(s).opr + 0.02;
   const b = s.bank;
   const loans = b.loansH + b.loansF;
   const interestF = (b.loansF * b.lendingRate) / 12;

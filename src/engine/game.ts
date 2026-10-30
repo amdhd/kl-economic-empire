@@ -1,11 +1,13 @@
 // Game construction, typed player commands, and the real-time driver.
 import { COMPANIES } from '../data/companies';
-import { BASE_BUDGET, BASE_TAX, BASELINE, BUDGET_LABELS, SECTOR_IDS, SECTORS, TAX_LABELS } from '../data/economic-baseline';
+import { BASE_TAX, BASELINE, LEGACY_BASELINE, LEGACY_BUDGET, BUDGET_LABELS, SECTOR_IDS, SECTORS, TAX_LABELS } from '../data/economic-baseline';
+import { BASE_BUDGET as nationalBudget } from '../data/economic-baseline';
+import { initialCentralBank, interveneFx } from './trade-fx';
 import { PROJECT_BY_ID } from '../data/projects';
 import type {
   BorrowingPolicy, BudgetCategory, BudgetPolicy, Currency, GameSpeed, GameState, ScenarioId, SectorState, TaxPolicy, TickerId,
 } from '../types/game';
-import { BASE_LEND_RATE, BASE_MPC, CAL, CAPITAL_GROWTH0 } from './calibration';
+import { BASE_MPC, CAL, LEGACY_CAL, CAPITAL_GROWTH0 } from './calibration';
 import { accumulate } from './clock';
 import { initialCompany } from './companies';
 import { computeCpi } from './economy';
@@ -21,11 +23,19 @@ import { seedRng } from './rng';
 import { klDay, klParts, klToEpochMin, monthKey } from './time';
 import { clamp, news, pushBounded, toMinor } from './util';
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 export const START = { year: 2027, month: 1, day: 1, hour: 8 };
 export const CAMPAIGN_MONTHS = 24;
 
-export function createGame(seed = 20270101, scenario: ScenarioId = 'balanced'): GameState {
+export function createGame(seed = 20270101, scenario: ScenarioId = 'balanced', profile: 'malaysia' | 'legacy-kl' = 'malaysia'): GameState {
+  const base = profile === 'legacy-kl' ? LEGACY_BASELINE : BASELINE;
+  const cal = profile === 'legacy-kl' ? LEGACY_CAL : CAL;
+  return createWithProfile(seed, scenario, profile, base, cal);
+}
+
+function createWithProfile(seed: number, scenario: ScenarioId, profile: 'malaysia' | 'legacy-kl', BASELINE: typeof LEGACY_BASELINE, CAL: typeof LEGACY_CAL): GameState {
+  const BASE_LEND_RATE = BASELINE.opr + 0.02;
+  const BASE_BUDGET = profile === 'legacy-kl' ? LEGACY_BUDGET : nationalBudget;
   const startMin = klToEpochMin(START.year, START.month, START.day, START.hour);
   const endMin = klToEpochMin(START.year + CAMPAIGN_MONTHS / 12, START.month, START.day, START.hour);
   const startDay = klDay(startMin);
@@ -75,7 +85,7 @@ export function createGame(seed = 20270101, scenario: ScenarioId = 'balanced'): 
     government: {
       ledger: [], treasury: toMinor(BASELINE.treasury), debt: toMinor(BASELINE.debt), avgDebtRate: BASELINE.debtRate, accruedInterest: 0,
       unpaidObligations: 0, daysInArrears: 0,
-      policies: { tax: { ...BASE_TAX }, budget: { ...BASE_BUDGET }, borrowing: { cashBufferMonths: 1, maxDebtToGdp: 0.45 } },
+      policies: { tax: { ...BASE_TAX }, budget: { ...BASE_BUDGET }, borrowing: { cashBufferMonths: 1, maxDebtToGdp: profile === 'malaysia' ? 0.8 : 0.45 } },
       pending: [], projects: [], nextId: 1, mtd: emptyFlows(), accruedCorporateTax: 0, publicAssets: BASELINE.publicAssets,
       bondYield: BASELINE.mgs10 + 0.004, creditRating: 9, marketAccess: true, serviceQuality: BASELINE.serviceQuality, insolvent: false,
       resilience: 0, tourismBoost: 0, housingFactor: 1, serviceBoost: 0, mtdArrearsDays: 0, pendingEmergency: 0,
@@ -93,7 +103,9 @@ export function createGame(seed = 20270101, scenario: ScenarioId = 'balanced'): 
       deposits: BASELINE.bankReserves + loans - capital, capital, lendingRate: BASE_LEND_RATE, depositRate: BASELINE.opr - 0.01,
       nplRate: BASE_NPL, willingness: 0.9, mtdNewLoans: 0, mtdInterestH: 0, mtdAmortH: 0, firmCreditRatio: 1, mtdDefaults: 0, lastProfit: 0,
     },
-    external: initialExternal(),
+    external: initialExternal(BASELINE),
+    trade: { trackingStartDay: startDay, policy: { tariff: 0, exportBudgetMonthly: 0 }, readiness: 0, mtdExports: 0, mtdImports: 0, history: [] },
+    centralBank: initialCentralBank(profile, BASELINE.myrPerUsd),
     events: { active: [], nextId: 1, log: [] },
     indicators: {
       nominalGdpAnnual: gdpAnnual, realGdpAnnual: gdpAnnual, realGrowthYoY: 0, cpi: 100, inflationYoY: 0.02, inflationMoM: 0,
@@ -103,6 +115,7 @@ export function createGame(seed = 20270101, scenario: ScenarioId = 'balanced'): 
       score: { growth: 50, wealth: 50, satisfaction: 62, stability: 80, total: 0, caps: [] },
     },
     baseline: {
+      profile, openingTreasury: BASELINE.treasury, openingDebt: BASELINE.debt,
       realGdpAnnual: gdpAnnual, nominalGdpAnnual: gdpAnnual, publicNetWorth: 0, employment: employed,
       realDisposablePerCapita: (CAL.hh.disposable * 365) / BASELINE.population,
       rentBurden: (CAL.hh.consumption * SECTORS.prop.consumption) / CAL.hh.disposable,
@@ -110,7 +123,7 @@ export function createGame(seed = 20270101, scenario: ScenarioId = 'balanced'): 
     news: [], nextNewsId: 1, daily: [], reports: [], actions: [], policyLog: [], policyChurn: 0,
   } as unknown as GameState;
 
-  for (const c of COMPANIES) s.companies[c.id] = initialCompany(c, mk, BASE_TAX.corporate);
+  for (const c of COMPANIES) s.companies[c.id] = initialCompany(c, mk, BASE_TAX.corporate, profile);
   s.market = initialMarket(s);
   seedHistory(s, startDay);
   s.indicators.cpi = computeCpi(s);
@@ -127,12 +140,14 @@ export function createGame(seed = 20270101, scenario: ScenarioId = 'balanced'): 
     s.external.cycles.us = -0.03;
     s.external.cycles.risk = -0.15;
   }
-  news(s, { kind: 'system', tone: 'neutral', title: 'Welcome, President', body: 'Alternate-history Kuala Lumpur has broad economic autonomy. All companies’ prices and financials are fictional simulations. Press Space to start the clock.' });
+  news(s, { kind: 'system', tone: 'neutral', title: 'Welcome, President', body: 'A fictional Malaysian presidency governs the national economy from the KL map. New campaigns use dated official starting figures; subsequent outcomes are simulations. All companies’ prices and financials are fictional simulations. Press Space to start the clock.' });
   return s;
 }
 
 // ------------------------------------------------------------------ commands
 export type Command =
+  | { type: 'queueTrade'; tariff: number; exportBudgetMonthly: number }
+  | { type: 'interveneFx'; side: 'buyUSD' | 'sellUSD'; usdMinor: number }
   | { type: 'queueTax'; patch: Partial<TaxPolicy> }
   | { type: 'queueBudget'; patch: Partial<BudgetPolicy> }
   | { type: 'setBorrowing'; patch: Partial<BorrowingPolicy> }
@@ -170,6 +185,15 @@ function firstOfNextMonth(atMin: number): number {
 function dispatch(s: GameState, cmd: Command, atMin: number): CommandResult {
   const gov = s.government;
   switch (cmd.type) {
+    case 'interveneFx': return interveneFx(s, cmd.side, cmd.usdMinor, atMin);
+    case 'queueTrade': {
+      if (!Number.isFinite(cmd.tariff) || cmd.tariff < 0 || cmd.tariff > 0.2 || !Number.isFinite(cmd.exportBudgetMonthly) || cmd.exportBudgetMonthly < 0 || cmd.exportBudgetMonthly > 2e9) return { ok: false, message: 'Tariff must be 0–20%; export support RM 0–2bn/month.' };
+      const patch = { tariff: Math.round(cmd.tariff * 1000) / 1000, exportBudgetMonthly: Math.round(cmd.exportBudgetMonthly / 1e6) * 1e6 };
+      const pending = gov.pending.filter(p => p.kind === 'trade').at(-1)?.patch;
+      const current = { ...s.trade.policy, ...pending };
+      if (patch.tariff === current.tariff && patch.exportBudgetMonthly === current.exportBudgetMonthly) return { ok: false, message: 'No change to queue.' };
+      return queue(s, 'trade', patch, `Trade: tariff ${(patch.tariff * 100).toFixed(1)}%, export support RM ${(patch.exportBudgetMonthly / 1e6).toFixed(0)}m/month`, firstOfNextMonth(atMin), atMin);
+    }
     case 'queueTax': {
       const patch: Partial<TaxPolicy> = {};
       const parts: string[] = [];
@@ -191,7 +215,7 @@ function dispatch(s: GameState, cmd: Command, atMin: number): CommandResult {
       const patch: Partial<BudgetPolicy> = {};
       const parts: string[] = [];
       for (const [k, v] of Object.entries(cmd.patch) as [BudgetCategory, number][]) {
-        if (!(k in BUDGET_LABELS) || !Number.isFinite(v) || v < 0 || v > 5e9) return { ok: false, message: `Invalid budget for ${k}` };
+        if (!(k in BUDGET_LABELS) || !Number.isFinite(v) || v < 0 || v > 50e9) return { ok: false, message: `Invalid budget for ${k}` };
         const cur = pendingValue(s, 'budget', k) ?? gov.policies.budget[k];
         const val = Math.round(v / 1e6) * 1e6;
         if (val === cur) continue;
@@ -293,7 +317,7 @@ function pendingValue(s: GameState, kind: 'tax' | 'budget', key: string): number
   return v;
 }
 
-function queue(s: GameState, kind: 'tax' | 'budget', patch: object, label: string, effectiveMin: number, atMin: number): CommandResult {
+function queue(s: GameState, kind: 'tax' | 'budget' | 'trade', patch: object, label: string, effectiveMin: number, atMin: number): CommandResult {
   s.government.pending.push({ id: s.government.nextId++, createdMin: atMin, effectiveMin, kind, patch, label });
   logPolicy(s, atMin, effectiveMin, label);
   const p = klParts(effectiveMin);

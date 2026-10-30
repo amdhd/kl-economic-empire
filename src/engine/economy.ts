@@ -1,9 +1,11 @@
+import { calibrationFor } from './calibration';
+import { baselineFor } from '../data/economic-baseline';
 // Aggregate KL economy: households, 7 input–output sectors, labour, prices and investment.
 // See docs/economy-model.md for the equations; every rule here has a matching section there.
-import { BASE_TAX, BASELINE, CPI_WEIGHTS, INVESTMENT_GOODS, IO, SECTOR_IDS, SECTORS } from '../data/economic-baseline';
+import { BASE_TAX, CPI_WEIGHTS, INVESTMENT_GOODS, IO, SECTOR_IDS, SECTORS } from '../data/economic-baseline';
 import type { GameState, SectorId } from '../types/game';
 import {
-  BASE_LEND_RATE, BASE_MPC, CAL, CAPITAL_GROWTH0, CREDIT_SPEND, HOUSEHOLD_AMORT_MONTHLY, HOUSEHOLD_RATE_PREMIUM,
+  BASE_MPC, CAPITAL_GROWTH0, CREDIT_SPEND, HOUSEHOLD_AMORT_MONTHLY, HOUSEHOLD_RATE_PREMIUM,
   NORMAL_UTIL, PROPERTY_LEVY_BASE, SURCHARGE_BASE_SHARE, type Vec,
 } from './calibration';
 import type { AggregatedMods } from './external';
@@ -27,10 +29,11 @@ export interface DayEconomy {
 
 /** Import price index for a sector: FX × (foreign goods, energy). */
 function importPrice(s: GameState, j: SectorId): number {
+  const BASELINE = baselineFor(s);
   const e = s.external;
   const fxf = e.myrPerUsd / BASELINE.myrPerUsd;
   const es = SECTORS[j].energyImportShare;
-  return fxf * ((1 - es) * e.usPrice + es * e.oil);
+  return fxf * ((1 - es) * e.usPrice + es * e.oil) * (1 + s.trade.policy.tariff);
 }
 
 /**
@@ -38,6 +41,7 @@ function importPrice(s: GameState, j: SectorId): number {
  * relative to foreign prices in MYR (FX × US price level). Visitors also respond to the levy.
  */
 export function exportIndex(s: GameState, j: SectorId): number {
+  const BASELINE = baselineFor(s);
   const e = s.external;
   const fxf = e.myrPerUsd / BASELINE.myrPerUsd;
   const rel = s.sectors[j].price / (fxf * e.usPrice);
@@ -48,11 +52,12 @@ export function exportIndex(s: GameState, j: SectorId): number {
   idx += (mix.global ?? 0) * e.globalDemand * Math.pow(rel, -0.6);
   idx += (mix.tourism ?? 0) * e.tourism * (1 + s.government.tourismBoost) * levyHit * Math.pow(rel, -0.8);
   idx += (mix.tech ?? 0) * Math.sqrt(e.techCycle * e.globalDemand) * Math.pow(rel, -0.5);
-  return idx;
+  return idx * (1 + s.trade.readiness);
 }
 
 /** Read-only household spending plan, shared by settlement and static policy previews. */
 export function householdDemand(s: GameState, transfersPaid: number) {
+  const CAL = calibrationFor(s);
   const hh = s.households;
   const bank = s.bank;
   const tax = s.government.policies.tax;
@@ -79,6 +84,8 @@ export function householdDemand(s: GameState, transfersPaid: number) {
 }
 
 export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEconomy {
+  const BASELINE = baselineFor(s);
+  const CAL = calibrationFor(s);
   const hh = s.households;
   const bank = s.bank;
   const tax = s.government.policies.tax;
@@ -89,6 +96,13 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
   hh.permanentIncome = permanentIncome;
   hh.savings += disposable - consumption;
 
+  // Discretionary export services are paid only from available treasury cash.
+  const support = post(s.government, 'exportSupport', s.trade.policy.exportBudgetMonthly * PER_DAY);
+  gov.purchases.tech += support * 0.6;
+  gov.purchases.fin += support * 0.4;
+  const targetReadiness = clamp(support / (1e9 * PER_DAY) * 0.12, 0, 0.12);
+  s.trade.readiness += (targetReadiness - s.trade.readiness) / 90;
+  const exports = zero();
   // --- Final demand (nominal MYR → real) -------------------------------------------------------
   const finalReal: number[] = [];
   let levy = 0;
@@ -107,6 +121,7 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
     for (const k of SECTOR_IDS) inv += s.sectors[k].investmentMonthly * PER_DAY * (INVESTMENT_GOODS[j] ?? 0);
     const domesticNominal = c + gov.purchases[j] + inv;
     const xReal = CAL.X0[j] * exportIndex(s, j) * (j === 'prop' ? mods.propDemand : 1);
+    exports[j] = xReal;
     if (j === 'cons') {
       // Visitors (the tourism share of consumer exports) pay the levy on top of the sector price.
       const visitors = xReal * (SECTORS.cons.exportMix.tourism ?? 0);
@@ -125,6 +140,7 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
   let gdpReal = BASE_TAX.consumption * consPurchasesReal;
   const Ktot = SECTOR_IDS.reduce((a, j) => a + s.sectors[j].capital, 0);
   const rateF = bank.lendingRate;
+  let tariffReceipts = 0;
   SECTOR_IDS.forEach((j, idx) => {
     const sec = s.sectors[j];
     const cap = sec.capacity * (1 + sec.infraBoost) * (mods.capacity[j] ?? 1);
@@ -136,7 +152,11 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
     const out = Math.min(demand, cap, laborCap);
     sec.output = out;
     const gross = sec.price * out;
-    let inter = importPrice(s, j) * SECTORS[j].importShare * out;
+    const imports = importPrice(s, j) / (1 + s.trade.policy.tariff) * SECTORS[j].importShare * out;
+    tariffReceipts += imports * s.trade.policy.tariff;
+    s.trade.mtdImports += imports;
+    s.trade.mtdExports += exports[j] * (demand > 0 ? out / demand : 0) * sec.price;
+    let inter = imports * (1 + s.trade.policy.tariff);
     for (const i of SECTOR_IDS) inter += IO[i][j] * s.sectors[i].price * out;
     const va = gross - inter;
     const realVa = CAL.v[j] * out;
@@ -157,6 +177,10 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
     gdpReal += realVa;
   });
 
+  const tariffPaid = post(s.government, 'importTariff', tariffReceipts);
+  // Tariffs are net product taxes. They offset the domestic input-tax deduction in VA;
+  // they do not create real output or enter base-price real GDP (opening tariff = zero).
+  gdpNominal += tariffPaid;
   // --- Prices: move toward cost-based targets with demand-pressure markups -----------------------
   const cpiIdx = s.indicators.cpi / 100;
   const nextP: Vec = zero();
@@ -199,6 +223,7 @@ export function computeCpi(s: GameState): number {
 
 /** Weekly: hiring/firing toward output-implied labour demand, bounded by the labour force. */
 export function weekly(s: GameState): void {
+  const CAL = calibrationFor(s);
   const hh = s.households;
   let total = 0;
   for (const j of SECTOR_IDS) {
@@ -219,6 +244,9 @@ export function weekly(s: GameState): void {
  * credit, wages, expectations and household behaviour.
  */
 export function monthClose(s: GameState, inflationYoY: number, unemployment: number, realIncomeGrowth: number, days: number): void {
+  const BASELINE = baselineFor(s);
+  const CAL = calibrationFor(s);
+  const BASE_LEND_RATE = baselineFor(s).opr + 0.02;
   const hh = s.households;
   const bank = s.bank;
   const taxRate = s.government.policies.tax.corporate;

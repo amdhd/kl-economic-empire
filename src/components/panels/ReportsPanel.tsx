@@ -9,7 +9,7 @@ import { Section, Stat, Tabs } from '../ui';
 import { EventCard } from '../EventCard';
 
 const FLOW_LABELS: [keyof GovMonthFlows, string, boolean][] = [
-  ['taxCorporate', 'Corporate tax', true], ['taxProperty', 'Property levy', true], ['taxConsumption', 'Consumption levy', true], ['taxHousehold', 'Household surcharge', true], ['federalGrant', 'Federal grant', true],
+  ['taxCorporate', 'Corporate tax', true], ['taxProperty', 'Property levy', true], ['taxConsumption', 'Consumption levy', true], ['taxHousehold', 'Household surcharge', true], ['federalGrant', 'Other public receipts', true], ['importTariff', 'Import tariffs', true], ['exportSupport', 'Export services', false],
   ['borrowing', 'Bond proceeds', true], ['swfTransferIn', 'SWF transfers in', true],
   ['opex', 'Operating outlays', false], ['capex', 'Capital outlays', false], ['interest', 'Debt interest', false], ['principal', 'Principal repaid', false], ['emergency', 'Emergency', false], ['swfContribution', 'SWF injections', false],
 ];

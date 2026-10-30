@@ -1,5 +1,5 @@
 import { SECTOR_IDS, SECTORS } from '../../data/economic-baseline';
-import { CAL } from '../../engine/calibration';
+import { calibrationFor } from '../../engine/calibration';
 import { daysInMonth, klDay, klDayLabel, monthKeyLabel } from '../../engine/time';
 import { useGameState } from '../../store/game-store';
 import { fx, money, pct } from '../../utils/format';
@@ -10,6 +10,7 @@ import { Section, Stat } from '../ui';
 
 export function EconomyPanel() {
   const g = useGameState();
+  const CAL = calibrationFor(g);
   const R = g.reports;
   const ann = (k: number) => 365 / daysInMonth(Math.floor(k / 12), (k % 12) + 1) / 1e9;
   const monthly = R.map((r) => ({ t: r.monthKey, gdp: r.realGdp * ann(r.monthKey), nom: r.nominalGdp * ann(r.monthKey), infl: r.inflationYoY * 100, u: r.unemployment * 100, inv: r.investment / 1e9 }));
@@ -18,7 +19,7 @@ export function EconomyPanel() {
   const b = g.bank;
   const e = g.external;
   return (
-    <PanelShell title="KL economy" subtitle="Aggregate households, 7 input–output sectors, banks and the external economy. Fictional calibration." width={760}>
+    <PanelShell title={g.baseline.profile === 'malaysia' ? 'Malaysia economy' : 'KL economy · legacy'} subtitle="Aggregate households, 7 input–output sectors, banks and the external economy. Dated official opening totals; modeled sector allocation and simulated outcomes." width={760}>
       <div className="grid grid-cols-2 gap-3">
         <Section title="GDP, annualised">
           <TimeChart data={monthly} xKey="t" xFormat={(v) => monthKeyLabel(Number(v))} series={[{ key: 'gdp', name: 'Real GDP', color: '#34d399' }, { key: 'nom', name: 'Nominal GDP', color: '#60a5fa' }]} yFormat={(v) => v.toFixed(0)} unit="RM bn per year (month × 365/days) · month" height={130} />
@@ -79,9 +80,9 @@ export function EconomyPanel() {
             <Stat label="Willingness" value={pct(b.willingness, 0)} />
           </div>
         </Section>
-        <Section title="External (not under your control)">
+        <Section title="External conditions & monetary signals">
           <div className="grid grid-cols-2 gap-2">
-            <Stat label="Malaysia demand" value={e.myDemand.toFixed(3)} />
+            <Stat label={g.baseline.profile === 'malaysia' ? 'Regional partner demand' : 'Malaysia demand'} value={e.myDemand.toFixed(3)} />
             <Stat label="Global demand" value={e.globalDemand.toFixed(3)} />
             <Stat label="US demand" value={e.usDemand.toFixed(3)} />
             <Stat label="Tech cycle" value={e.techCycle.toFixed(3)} />

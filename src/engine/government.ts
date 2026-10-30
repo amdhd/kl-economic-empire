@@ -1,10 +1,11 @@
+import { baselineFor, budgetFor } from '../data/economic-baseline';
 // Government treasury, debt, budgets, projects and tax settlement.
 // Every treasury movement goes through post(), which rounds to whole sen and records the exact
 // same amount in the month-to-date flow ledger — so the budget identity is testable exactly.
-import { BASE_BUDGET, BASELINE, BUDGET_LABELS, BUDGET_PURCHASES, SECTOR_IDS } from '../data/economic-baseline';
+import { BASE_TAX, BUDGET_LABELS, BUDGET_PURCHASES, SECTOR_IDS } from '../data/economic-baseline';
 import { PROJECT_BY_ID } from '../data/projects';
 import type { BudgetCategory, GameState, GovMonthFlows, GovernmentState, SectorId } from '../types/game';
-import { PROPERTY_LEVY_BASE, type Vec } from './calibration';
+import { calibrationFor, PROPERTY_LEVY_BASE, type Vec } from './calibration';
 import { assertSafeMinor, clamp, news, nowMin, pushBounded, toMinor } from './util';
 
 /** Share of capital spending booked as a public asset (the rest is leakage, design, land, overruns). */
@@ -15,11 +16,11 @@ export const MAINTENANCE_RATE = 0.03;
 export const BOOST_SATURATION = 0.04;
 
 export const emptyFlows = (): GovMonthFlows => ({
-  taxCorporate: 0, taxProperty: 0, taxConsumption: 0, taxHousehold: 0, federalGrant: 0, opex: 0, capex: 0,
+  taxCorporate: 0, taxProperty: 0, taxConsumption: 0, taxHousehold: 0, federalGrant: 0, importTariff: 0, exportSupport: 0, opex: 0, capex: 0,
   interest: 0, borrowing: 0, principal: 0, swfContribution: 0, swfTransferIn: 0, emergency: 0,
 });
 
-const INFLOWS: (keyof GovMonthFlows)[] = ['taxCorporate', 'taxProperty', 'taxConsumption', 'taxHousehold', 'federalGrant', 'borrowing', 'swfTransferIn'];
+const INFLOWS: (keyof GovMonthFlows)[] = ['taxCorporate', 'taxProperty', 'taxConsumption', 'taxHousehold', 'federalGrant', 'importTariff', 'borrowing', 'swfTransferIn'];
 export const isInflow = (k: keyof GovMonthFlows) => INFLOWS.includes(k);
 
 /** Moves cash in/out of the treasury. Returns the rounded MYR amount actually posted. */
@@ -79,12 +80,23 @@ export interface GovDay {
   paidFraction: number;
 }
 
+/** The reduced tax model omits federal tax categories. Calibrate their fixed residual so opening
+ * total receipts equal the official 2027 estimate; never recalculate it from player policy. */
+export function otherPublicReceiptsMonthly(s: GameState): number {
+  const base = baselineFor(s);
+  if (s.baseline.profile === 'legacy-kl') return base.federalGrantMonthly;
+  const c = calibrationFor(s);
+  const modeledTaxes = SECTOR_IDS.reduce((a, j) => a + Math.max(0, c.profit0[j]), 0) * BASE_TAX.corporate
+    + BASE_TAX.property * PROPERTY_LEVY_BASE * c.Y0.prop + c.levyBase + c.hh.tax;
+  return Math.max(0, (380_816_996_000 - modeledTaxes * 365) / 12);
+}
+
 /** Daily: grant receipts, interest accrual, opex/transfers/capex/emergency outlays with financing. */
 export function dailyGovernment(s: GameState, today: number): GovDay {
   const PER_DAY = 12 / 365;
   const gov = s.government;
   const pol = gov.policies;
-  post(gov, 'federalGrant', BASELINE.federalGrantMonthly * PER_DAY);
+  post(gov, 'federalGrant', otherPublicReceiptsMonthly(s) * PER_DAY);
   gov.accruedInterest += (debtMYR(gov) * gov.avgDebtRate) / 365;
 
   const cats = Object.keys(BUDGET_PURCHASES) as Exclude<BudgetCategory, 'transfers'>[];
@@ -181,6 +193,7 @@ export interface GovMonthClose {
 
 /** Month close: settle corporate tax & property levy, pay interest & principal, refinance, rate risk. */
 export function monthCloseGovernment(s: GameState): GovMonthClose {
+  const BASE_BUDGET = budgetFor(s);
   const gov = s.government;
   const pol = gov.policies;
   let taxable = 0;
@@ -198,7 +211,7 @@ export function monthCloseGovernment(s: GameState): GovMonthClose {
   // Scheduled amortisation (~10y average maturity), refinanced by new issuance at today's yield.
   const principalDue = debtMYR(gov) / 120;
   const repaid = repayDebt(s, principalDue);
-  const outlays = gov.mtd.opex + gov.mtd.capex + gov.mtd.interest + gov.mtd.emergency;
+  const outlays = gov.mtd.opex + gov.mtd.capex + gov.mtd.interest + gov.mtd.emergency + gov.mtd.exportSupport;
   const target = pol.borrowing.cashBufferMonths * outlays;
   if (treasuryMYR(gov) < target) issueDebt(s, target - treasuryMYR(gov), repaid > 0 ? 'Refinancing maturing bonds and rebuilding the cash buffer' : 'Rebuilding the cash buffer');
 
@@ -206,15 +219,15 @@ export function monthCloseGovernment(s: GameState): GovMonthClose {
   const gdp = gdpForRatios(s);
   const debtToGdp = debtMYR(gov) / gdp;
   const recent = s.reports.slice(-11);
-  const revenue12 = recent.reduce((a, r) => a + r.gov.taxCorporate + r.gov.taxProperty + r.gov.taxConsumption + r.gov.taxHousehold + r.gov.federalGrant, 0) + gov.mtd.taxCorporate + gov.mtd.taxProperty + gov.mtd.taxConsumption + gov.mtd.taxHousehold + gov.mtd.federalGrant;
-  const spend12 = recent.reduce((a, r) => a + r.gov.opex + r.gov.capex + r.gov.interest + r.gov.emergency, 0) + outlays;
+  const revenue12 = recent.reduce((a, r) => a + r.gov.taxCorporate + r.gov.taxProperty + r.gov.taxConsumption + r.gov.taxHousehold + r.gov.federalGrant + r.gov.importTariff, 0) + gov.mtd.taxCorporate + gov.mtd.taxProperty + gov.mtd.taxConsumption + gov.mtd.taxHousehold + gov.mtd.federalGrant + gov.mtd.importTariff;
+  const spend12 = recent.reduce((a, r) => a + r.gov.opex + r.gov.capex + r.gov.interest + r.gov.emergency + r.gov.exportSupport, 0) + outlays;
   const months = recent.length + 1;
   const deficit = ((spend12 - revenue12) * (12 / months)) / gdp;
   const arrears = gov.mtdArrearsDays > 0 ? 1 : 0;
-  const premium = 0.004 + 0.08 * Math.max(0, debtToGdp - 0.35) + 0.25 * Math.max(0, deficit - 0.03) + 0.02 * arrears;
+  const premium = 0.004 + 0.08 * Math.max(0, debtToGdp - (s.baseline.profile === 'malaysia' ? 0.65 : 0.35)) + 0.25 * Math.max(0, deficit - 0.03) + 0.02 * arrears;
   const prevRating = gov.creditRating;
   gov.bondYield = s.external.mgs10 + premium;
-  gov.creditRating = clamp(9 - 15 * Math.max(0, debtToGdp - 0.3) - 40 * Math.max(0, deficit - 0.025) - 3 * arrears, 0, 10);
+  gov.creditRating = clamp(9 - 15 * Math.max(0, debtToGdp - (s.baseline.profile === 'malaysia' ? 0.6 : 0.3)) - 40 * Math.max(0, deficit - 0.025) - 3 * arrears, 0, 10);
   if (Math.floor(gov.creditRating) < Math.floor(prevRating)) {
     news(s, { kind: 'policy', tone: 'bad', title: `Credit rating downgraded to ${ratingLabel(gov.creditRating)}`, body: `Debt/GDP ${(debtToGdp * 100).toFixed(1)}%, deficit ${(deficit * 100).toFixed(1)}% of GDP. Borrowing costs rise.` });
     s.policyChurn += 4;
@@ -225,7 +238,7 @@ export function monthCloseGovernment(s: GameState): GovMonthClose {
   const cpiF = s.indicators.cpi / 100;
   const base = BASE_BUDGET.health + BASE_BUDGET.services + BASE_BUDGET.safety;
   const real = ((pol.budget.health + pol.budget.services + pol.budget.safety) / cpiF / base) * (1 - (gov.mtdArrearsDays / 30) * 0.5);
-  const targetSq = clamp(0.62 * Math.pow(Math.max(real, 0.1), 0.6) + gov.serviceBoost - 0.004 * (s.households.population / 1e6 - 2.1) * 10, 0.05, 0.98);
+  const targetSq = clamp(0.62 * Math.pow(Math.max(real, 0.1), 0.6) + gov.serviceBoost - 0.004 * (s.households.population / baselineFor(s).population * 2.1 - 2.1) * 10, 0.05, 0.98);
   gov.serviceQuality += (targetSq - gov.serviceQuality) * 0.25;
 
   gov.publicAssets *= 1 - 0.03 / 12;
@@ -253,6 +266,7 @@ export function applyDuePolicies(s: GameState): void {
   for (const p of due) {
     if (p.kind === 'tax') Object.assign(gov.policies.tax, p.patch);
     else if (p.kind === 'budget') Object.assign(gov.policies.budget, p.patch);
+    else if (p.kind === 'trade') Object.assign(s.trade.policy, p.patch);
     else Object.assign(gov.policies.borrowing, p.patch);
     news(s, { kind: 'policy', tone: 'neutral', title: `Now in force: ${p.label}` });
   }

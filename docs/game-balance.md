@@ -130,3 +130,44 @@ The external adjustment is intentionally limited to 3 total points; it does not 
 the early-cluster problem. Keep 75 provisional until human playtesting (see `docs/playtesting.md`), rather than
 lower it just to make scripted bots win. Re-run with `npm run balance` or pass `--seeds` and `--output`; generated
 JSON goes under ignored `artifacts/`, separate from Playwright's disposable output directory.
+
+## National baseline pass — 31 October 2026
+
+The user changed new campaigns to Malaysia observations (D-018–D-023). Keep legacy save calibration intact. The national
+opening debt/GDP is about68.1% because debt is Q2 2026 and the denominator is observed2025 nominal GDP; this mixed-date
+ratio is a game opening calculation, not MOF's contemporaneous63.1% figure. Start with a fictional80% borrowing cap and
+65%/60% spread/rating thresholds. The narrow BNM cash proxy means bridge financing can still occur during a month.
+
+The reduced taxes initially underfunded national operations because several federal tax categories were absent. Fix a
+non-policy-responsive residual so opening total annual receipts equal the MOF2027 estimateRM380.816996bn. Do not alter
+receipts to guarantee later solvency. Operating estimates totalRM376.84bn including the separately settled debt-service
+reference. Published development capex is not automatically appropriated; commissioned game projects remain separate.
+
+Strategy scripts now express spending as fractions of the sourced budgets; old absolute KL-sized amounts caused cuts
+that contradicted their strategy names. `investment_heavy` keeps a national-compatible80% cap instead of cutting it to60%.
+The old isolated Phase5 fiscal stress regression explicitly retains its original KL profile; national campaigns are also
+covered by full-engine causal, accounting, strategy and save tests. National scoring does not reward inflation of a
+negative opening net worth; it deflates modeled assets while retaining nominal liabilities.
+
+Six-seed check (`npm run balance -- --seeds 2027,11,42,201,202,203 --output artifacts/malaysia-balance.json`):
+
+| Strategy | Mean score | Range | Mean approval | Wins |
+|---|---:|---:|---:|---:|
+| Hands off |56.06|44.61–68.77|69.90|0/6|
+| Balanced growth |54.99|36.21–71.23|69.91|0/6|
+| Tax maximiser |46.08|43.99–48.34|35.09|0/6|
+| Investment heavy |59.16|41.86–73.85|73.61|0/6|
+| Austerity |42.98|41.57–44.31|34.35|0/6|
+| Adaptive |58.06|49.04–69.96|73.85|0/6|
+| Adverse recession |24.43|12.97–50.71|29.07|0/6|
+
+These are deterministic bot replays, not human playtesting, and do not exercise optimized trade/FX strategies. National
+infrastructure spending remains a set of KL projects relative to a larger national economy, so the benefit is smaller.
+Keep victory75/approval60 pending human testing; this pass does not claim retuning the whole campaign. Early clustered
+bad shocks remain a material balance issue. Monetary intervention elasticities are bounded fictional assumptions and
+need human feedback. Keep comparisons multi-seed; no new RNG draws were introduced by trade/FX or migrations.
+
+Verification for this expansion: strict build,147 unit/invariant/campaign tests,23 Playwright browser tests and lint pass.
+Browser checks include full-digit treasury/SWF cash, official source links, laptop navigation scrolling, trade policy
+month-boundary timing, FX inventory settlement and treasury reconciliation. Manual screenshots at1600×900 and1280×800
+confirm the balance footer fits without horizontal overflow. No player saves were used for screenshots.

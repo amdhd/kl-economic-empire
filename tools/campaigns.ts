@@ -1,3 +1,4 @@
+import { BASE_BUDGET, budgetFor } from '../src/data/economic-baseline';
 // Test/dev campaign strategies, shared by replays and the command-line balance runner.
 import { applyCommand, createGame, runHeadless, type Command } from '../src/engine/game';
 import { klToEpochMin } from '../src/engine/time';
@@ -12,7 +13,8 @@ function counterCyclical(st: GameState, lastMonth: { n: number }) {
   const u = st.indicators.unemployment;
   const stim = u > 0.045 ? 1 : u < 0.03 ? -1 : 0;
   const b = st.government.policies.budget;
-  const target = { transfers: 500e6 + stim * 250e6, development: 250e6 + stim * 200e6 };
+  const base = budgetFor(st);
+  const target = { transfers: base.transfers * (1 + stim * 0.5), development: base.development * (1 + stim * 0.8) };
   if (target.transfers !== b.transfers || target.development !== b.development) applyCommand(st, { type: 'queueBudget', patch: target }, st.clock.hour * 60);
 }
 
@@ -43,11 +45,11 @@ export const STRATEGIES: Record<string, Script> = {
     { at: [2027, 1, 4, 10], cmd: { type: 'queueTax', patch: { corporate: 0.3, property: 0.08, consumption: 0.1, household: 0.06 } } },
   ],
   investment_heavy: [
-    { at: [2027, 1, 4, 10], cmd: { type: 'setBorrowing', patch: { maxDebtToGdp: 0.6 } } },
+    { at: [2027, 1, 4, 10], cmd: { type: 'setBorrowing', patch: { maxDebtToGdp: 0.8 } } },
     ...['lrt', 'brt', 'fibre', 'housing', 'flood', 'clinics', 'heritage'].map((t) => ({ at: [2027, 1, 4, 10] as [number, number, number, number], cmd: { type: 'startProject', templateId: t } as Command })),
   ],
   austerity: [
-    { at: [2027, 1, 4, 10], cmd: { type: 'queueBudget', patch: { health: 600e6, services: 450e6, safety: 250e6, development: 100e6, admin: 200e6, transfers: 250e6 } } },
+    { at: [2027, 1, 4, 10], cmd: { type: 'queueBudget', patch: { health: BASE_BUDGET.health * 2 / 3, services: BASE_BUDGET.services * 450 / 700, safety: BASE_BUDGET.safety * 250 / 350, development: BASE_BUDGET.development * 0.4, admin: BASE_BUDGET.admin * 2 / 3, transfers: BASE_BUDGET.transfers * 0.5 } } },
   ],
 };
 

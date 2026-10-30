@@ -1,3 +1,4 @@
+import { baselineFor, budgetFor } from '../data/economic-baseline';
 // Deterministic hourly tick. Ordering within a tick (see docs/decisions.md D-004):
 //   1. advance clock one hour
 //   2. if a KL day boundary was crossed: settle the day that just ENDED (external → government →
@@ -7,7 +8,7 @@
 //      effective 1 Feb never taxes January)
 //   4. exchange sessions, price discovery, queued order execution
 //   5. campaign-end check (exactly once)
-import { BASELINE, SECTOR_IDS } from '../data/economic-baseline';
+import { SECTOR_IDS } from '../data/economic-baseline';
 import type { GameState, MonthlyReport, SectorId } from '../types/game';
 import { monthCloseBank } from './banks';
 import { dailyCompanies, monthCloseCompanies } from './companies';
@@ -93,6 +94,7 @@ function settleDay(s: GameState, day: number): AggregatedMods {
 }
 
 function closeMonth(s: GameState, key: number, mods: AggregatedMods): void {
+  const BASELINE = baselineFor(s);
   const y = Math.floor(key / 12);
   const m = (key % 12) + 1;
   const dim = daysInMonth(y, m);
@@ -139,12 +141,12 @@ function closeMonth(s: GameState, key: number, mods: AggregatedMods): void {
 
   ind.debtToGdp = debtMYR(s.government) / ind.nominalGdpAnnual;
   const g = govClose.flows;
-  const revenue = g.taxCorporate + g.taxProperty + g.taxConsumption + g.taxHousehold + g.federalGrant;
-  const spend = g.opex + g.capex + g.interest + g.emergency;
+  const revenue = g.taxCorporate + g.taxProperty + g.taxConsumption + g.taxHousehold + g.federalGrant + g.importTariff;
+  const spend = g.opex + g.capex + g.interest + g.emergency + g.exportSupport;
   ind.deficitToGdp = ((spend - revenue) * (365 / days)) / ind.nominalGdpAnnual;
   ind.publicNetWorth = publicNetWorth(s);
   const tax = s.government.policies.tax;
-  ind.gini = clamp(0.4 + 0.6 * (tax.consumption - 0.04) - 1.0 * (tax.household - 0.02) - 0.03 * (s.government.policies.budget.transfers / 500e6 - 1) + 0.5 * (u - BASELINE.unemployment), 0.25, 0.6);
+  ind.gini = clamp(0.4 + 0.6 * (tax.consumption - 0.04) - 1.0 * (tax.household - 0.02) - 0.03 * (s.government.policies.budget.transfers / budgetFor(s).transfers - 1) + 0.5 * (u - BASELINE.unemployment), 0.25, 0.6);
 
   const gdpBySector = {} as Record<SectorId, number>;
   let investment = 0;
@@ -167,7 +169,7 @@ function closeMonth(s: GameState, key: number, mods: AggregatedMods): void {
     wageIndex: hh.wageIndex,
     realDisposablePerCapita: realDispPerCap,
     gov: g,
-    reconciliation: reconcileMonth(prev, g, s.government.treasury, s.government.debt),
+    reconciliation: reconcileMonth(prev, g, s.government.treasury, s.government.debt, { treasury: s.baseline.openingTreasury, debt: s.baseline.openingDebt }),
     treasury: treasuryMYR(s.government),
     debt: debtMYR(s.government),
     bondYield: s.government.bondYield,
@@ -197,6 +199,10 @@ function closeMonth(s: GameState, key: number, mods: AggregatedMods): void {
     body: report.notes.slice(0, 3).join(' '),
   });
 
+  s.trade.history.push({ monthKey: key, exports: s.trade.mtdExports, imports: s.trade.mtdImports, tariff: g.importTariff, support: g.exportSupport });
+  s.trade.history = s.trade.history.slice(-60);
+  s.trade.mtdExports = 0;
+  s.trade.mtdImports = 0;
   resetMonthToDate(s);
   s.scheduler.mtdGdpNominal = 0;
   s.scheduler.mtdGdpReal = 0;
@@ -205,6 +211,7 @@ function closeMonth(s: GameState, key: number, mods: AggregatedMods): void {
 
 /** Plain-language causal notes for the monthly report. */
 function explainMonth(s: GameState, r: MonthlyReport, prev: MonthlyReport | undefined, corporateTax: number): string[] {
+  const BASELINE = baselineFor(s);
   const notes: string[] = [];
   const e = s.external;
   if (prev) {

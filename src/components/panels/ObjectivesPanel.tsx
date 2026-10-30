@@ -11,7 +11,7 @@ import { EventCard } from '../EventCard';
 
 const COMPONENTS = [
   { key: 'growth', label: 'Growth & productivity', why: 'Calendar-adjusted real GDP growth versus the external-condition benchmark, minus rising unemployment. Inflation does not count.' },
-  { key: 'wealth', label: 'Public net wealth', why: 'CPI-adjusted treasury + SWF NAV + public assets − debt − arrears. Extra credit depends on sustaining real income, output and services.' },
+  { key: 'wealth', label: 'Public net wealth', why: 'Treasury + SWF NAV + modeled public assets − debt − arrears, plus the central-bank portfolio gain/loss. For Malaysia, assets are CPI-adjusted and nominal debt is retained to prevent inflation-only score gains. Extra credit depends on sustaining real income, output and services.' },
   { key: 'satisfaction', label: 'Citizen satisfaction', why: 'Average approval over the last 6 months.' },
   { key: 'stability', label: 'Financial stability', why: 'Inflation near 2.5%, interest burden below 10% of revenue, low bank defaults, no arrears.' },
 ] as const;
@@ -106,10 +106,12 @@ export function ObjectivesPanel() {
       {ended && (
         <Section title="Term fiscal accounts">
           <div className="grid grid-cols-3 gap-3" data-testid="term-fiscal">
-            <Stat label="Taxes & grants" value={money(report.revenue)} />
+            <Stat label="Public receipts" value={money(report.revenue)} />
             <Stat label="Operating outlays" value={money(report.fiscal.opex)} />
             <Stat label="Capital outlays" value={money(report.fiscal.capex)} />
             <Stat label="Debt interest" value={money(report.fiscal.interest)} />
+            <Stat label="Import tariffs" value={money(report.fiscal.importTariff)} />
+            <Stat label="Export support" value={money(report.fiscal.exportSupport)} />
             <Stat label="Emergency outlays" value={money(report.fiscal.emergency)} />
             <Stat label="Fiscal balance" value={money(report.fiscalBalance)} />
             <Stat label="Bond proceeds" value={money(report.fiscal.borrowing)} />

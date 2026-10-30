@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BASE_BUDGET, BUDGET_LABELS, TAX_LABELS } from '../../data/economic-baseline';
+import { budgetFor, BUDGET_LABELS, TAX_LABELS } from '../../data/economic-baseline';
 import { treasuryMYR } from '../../engine/government';
 import { estimateTaxChange } from '../../engine/policy-preview';
 import { formatKL, klParts } from '../../engine/time';
@@ -15,6 +15,7 @@ const CATS = Object.keys(BUDGET_LABELS) as BudgetCategory[];
 
 export function PolicyPanel() {
   const g = useGameState();
+  const BASE_BUDGET = budgetFor(g);
   const command = useGame.getState().command;
   const pol = g.government.policies;
   const pendingTax = (k: keyof TaxPolicy) => g.government.pending.filter((p) => p.kind === 'tax' && k in p.patch).map((p) => (p.patch as TaxPolicy)[k]).at(-1);
@@ -34,7 +35,7 @@ export function PolicyPanel() {
   const outlays = last ? last.gov.opex + last.gov.capex + last.gov.interest : CATS.reduce((a, k) => a + pol.budget[k], 0);
 
   return (
-    <PanelShell title="Taxes & budget" subtitle="Fictional powers of an autonomous KL. Taxes take effect on the 1st of next month; budget changes the next day." width={680}>
+    <PanelShell title="Taxes & budget" subtitle="Fictional fiscal powers. Malaysia baseline for new campaigns. Taxes take effect on the 1st of next month; budget changes the next day." width={680}>
       <div className="grid grid-cols-4 gap-3 rounded-xl bg-slate-900/40 p-3">
         <Stat label="Treasury cash" value={money(treasuryMYR(g.government))} />
         <Stat label="Tax receipts (last mo.)" value={last ? money(last.gov.taxCorporate + last.gov.taxProperty + last.gov.taxConsumption + last.gov.taxHousehold) : '—'} />
@@ -72,6 +73,9 @@ export function PolicyPanel() {
         </div>
       </Section>
 
+      {g.baseline.profile === 'malaysia' && <div className="rounded-lg bg-cyan-500/10 p-3 text-[12px] text-cyan-100">
+        2027 MOF operating estimates ÷ 12. Public services = education + higher education; safety = defence + home affairs; development = works + transport operations; transfers = pensions; administration = all remaining operations. Debt service is paid separately. <button className="underline" onClick={() => useGame.getState().setPanel('sources')}>View annual figures & sources</button>
+      </div>}
       <Section title="Operating budget · RM million per month · effective tomorrow">
         <div className="grid grid-cols-2 gap-x-5 gap-y-2">
           {CATS.map((k) => (
@@ -87,7 +91,7 @@ export function PolicyPanel() {
           ))}
         </div>
         <div className="mt-2 rounded-lg bg-slate-950/40 p-2 text-[12px] text-slate-300">
-          Change: <b className={budgetDelta > 0 ? 'text-amber-300' : 'text-cyan-300'}>{budgetDelta >= 0 ? '+' : ''}{money(budgetDelta)}/month</b>. Health, services and safety raise service quality over ~3–6 months; transfers lift household income; spending buys output from KL sectors (with import leakage). Cuts to services and transfers cost trust.
+          Change: <b className={budgetDelta > 0 ? 'text-amber-300' : 'text-cyan-300'}>{budgetDelta >= 0 ? '+' : ''}{money(budgetDelta)}/month</b>. Health, services and safety raise service quality over ~3–6 months; transfers lift household income; spending buys domestic sector output (with import leakage). Cuts to services and transfers cost trust.
         </div>
         <div className="mt-2 flex gap-2">
           <button className="btn btn-primary" disabled={!budgetChanged} onClick={() => setConfirm('budget')} data-testid="queue-budget">Queue budget</button>

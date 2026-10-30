@@ -27,7 +27,7 @@ test('tax policy takes effect after the old month closes; a zero levy still has 
   await expect(page.getByTestId('panel')).toContainText('GDP by sector (value added)');
   await page.getByTestId('nav-policies').click();
   await page.getByTestId('tax-consumption').fill('0.04');
-  await expect(page.getByTestId('tax-estimate')).toContainText(/\+RM [1-9][\d,.]*m per month/);
+  await expect(page.getByTestId('tax-estimate')).toContainText(/\+RM [1-9][\d,.]*(?:m|bn) per month/);
 });
 
 test('project quote includes current construction prices, then cash and work settle before completion', async ({ page }) => {

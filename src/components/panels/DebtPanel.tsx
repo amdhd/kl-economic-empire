@@ -11,7 +11,7 @@ import { Section, Stat } from '../ui';
 
 const FLOW_LABEL: Record<keyof GovMonthFlows, string> = {
   taxCorporate: 'Corporate tax', taxProperty: 'Property levy', taxConsumption: 'Consumption levy', taxHousehold: 'Household surcharge',
-  federalGrant: 'Federal grant', borrowing: 'Bond proceeds', swfTransferIn: 'SWF distribution in', opex: 'Operating outlays',
+  federalGrant: 'Other public receipts', importTariff: 'Import tariffs', exportSupport: 'Export support', borrowing: 'Bond proceeds', swfTransferIn: 'SWF distribution in', opex: 'Operating outlays',
   capex: 'Capital outlays', interest: 'Debt interest', principal: 'Principal repaid', emergency: 'Emergency', swfContribution: 'SWF contribution',
 };
 

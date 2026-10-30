@@ -11,7 +11,7 @@ export function OverviewPanel() {
   const setPanel = useGame.getState().setPanel;
   const d = g.daily.slice(-200).map((x) => ({ t: x.t, nav: x.nav / 1e9, tre: x.treasury / 1e9, debt: x.debt / 1e9, gdp: x.gdpRunRate / 1e9 }));
   return (
-    <PanelShell title="President’s briefing" subtitle="An alternate-history autonomous Kuala Lumpur. You set fiscal policy and run the sovereign fund; the central bank and the world are outside your control." width={640}>
+    <PanelShell title="President’s briefing" subtitle="A fictional Malaysian presidency on the KL map. Set fiscal and trade policy, manage the sovereign fund and use central-bank reserves to influence FX. Global shocks remain external." width={640}>
       {g.reports.length === 0 && (
         <Section title="Getting started">
           <ol className="list-decimal space-y-1 pl-5 text-[12.5px] text-slate-300">

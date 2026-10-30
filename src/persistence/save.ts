@@ -2,7 +2,8 @@
 import { assertSafeMinor } from '../engine/util';
 import { SCHEMA_VERSION } from '../engine/game';
 import { COMPANIES } from '../data/companies';
-import { SECTOR_IDS } from '../data/economic-baseline';
+import { LEGACY_BASELINE, SECTOR_IDS } from '../data/economic-baseline';
+import { initialCentralBank } from '../engine/trade-fx';
 import type { GameState } from '../types/game';
 
 export interface SaveFile {
@@ -67,6 +68,20 @@ const MIGRATIONS: Record<number, Migration> = {
     }
     return state;
   },
+  3: (state) => {
+    const s = state as unknown as GameState;
+    // Tests may deliberately downgrade a current snapshot; retain explicit provenance if present.
+    s.baseline.profile ??= 'legacy-kl';
+    s.baseline.openingTreasury ??= LEGACY_BASELINE.treasury;
+    s.baseline.openingDebt ??= LEGACY_BASELINE.debt;
+    s.centralBank ??= initialCentralBank('legacy-kl', s.external.myrPerUsd);
+    s.trade ??= { trackingStartDay: s.scheduler.lastDay, policy: { tariff: 0, exportBudgetMonthly: 0 }, readiness: 0, mtdExports: 0, mtdImports: 0, history: [] };
+    for (const flows of [s.government.mtd, ...s.reports.map(r => r.gov)]) {
+      flows.importTariff ??= 0;
+      flows.exportSupport ??= 0;
+    }
+    return state;
+  },
 };
 
 export function deserialize(json: string): GameState {
@@ -91,7 +106,7 @@ export function deserialize(json: string): GameState {
   const s = st as unknown as GameState;
   const bad = findNonFinite(s);
   if (bad) throw new Error(`Corrupt save: non-finite number at ${bad}`);
-  for (const key of ['clock', 'scheduler', 'rng', 'government', 'fund', 'market', 'sectors', 'households', 'bank', 'external'] as const) {
+  for (const key of ['clock', 'scheduler', 'rng', 'government', 'fund', 'market', 'sectors', 'households', 'bank', 'external', 'trade', 'centralBank'] as const) {
     if (!s[key]) throw new Error(`Corrupt save: missing ${key}`);
   }
   const positive = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value > 0;
@@ -117,6 +132,24 @@ export function deserialize(json: string): GameState {
   }
   for (const company of COMPANIES) {
     if (!s.companies?.[company.id] || !s.market.quotes?.[company.id] || !Array.isArray(s.companies[company.id].history)) throw new Error('Corrupt save: missing security');
+  }
+  if (!['malaysia', 'legacy-kl'].includes(s.baseline.profile)
+    || !nonnegative(s.baseline.openingTreasury) || !nonnegative(s.baseline.openingDebt)
+    || !nonnegative(s.trade.policy?.tariff) || s.trade.policy.tariff > 0.2
+    || !nonnegative(s.trade.policy.exportBudgetMonthly) || s.trade.policy.exportBudgetMonthly > 2e9
+    || !nonnegative(s.trade.readiness) || s.trade.readiness > 0.12
+    || !Number.isSafeInteger(s.trade.trackingStartDay) || !nonnegative(s.trade.mtdExports) || !nonnegative(s.trade.mtdImports) || !Array.isArray(s.trade.history)
+    || !nonnegative(s.centralBank.dailyUsdUsed) || s.centralBank.dailyUsdUsed > 1e9
+    || !Number.isSafeInteger(s.centralBank.lastInterventionDay) || Math.abs(s.centralBank.pressure) > 0.08
+    || !nonnegative(s.centralBank.openingEquityMYR) || !Array.isArray(s.centralBank.tx)) throw new Error('Corrupt save: invalid trade or central bank');
+  for (const n of [s.centralBank.usdReserves, s.centralBank.myrCash]) {
+    assertSafeMinor(n);
+    if (n < 0) throw new Error('Corrupt save: negative central-bank inventory');
+  }
+  for (const p of s.government.pending) if (p.kind === 'trade') {
+    const t = p.patch as { tariff?: number; exportBudgetMonthly?: number };
+    if ((t.tariff !== undefined && (!nonnegative(t.tariff) || t.tariff > 0.2))
+      || (t.exportBudgetMonthly !== undefined && (!nonnegative(t.exportBudgetMonthly) || t.exportBudgetMonthly > 2e9))) throw new Error('Corrupt save: invalid pending trade policy');
   }
   if (s.fund.myrCash < 0 || s.fund.usdCash < 0) throw new Error('Corrupt save: negative fund cash');
   for (const n of [s.fund.myrCash, s.fund.usdCash, s.government.treasury, s.government.debt, ...Object.values(s.fund.realized), ...Object.values(s.fund.dividends), s.fund.realizedMYR]) assertSafeMinor(n);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { COMPANIES } from '../src/data/companies';
-import { BASELINE } from '../src/data/economic-baseline';
+import { baselineFor } from '../src/data/economic-baseline';
 import { bankIdentityGap, monthCloseBank } from '../src/engine/banks';
 import { dailyCompanies, monthCloseCompanies } from '../src/engine/companies';
 import { creditSupply, PER_DAY } from '../src/engine/economy';
@@ -101,7 +101,7 @@ describe('Phase 5 external earnings, valuation and FX', () => {
     }
   }));
 
-  it('taxes only KL profit exposure when worldwide pretax earnings are held fixed', () => {
+  it('taxes only domestic profit exposure when worldwide pretax earnings are held fixed', () => {
     const base = createGame(508);
     dailyCompanies(base);
     const hike = clone(base);
@@ -112,7 +112,7 @@ describe('Phase 5 external earnings, valuation and FX', () => {
       expect(b.revenue).toBe(a.revenue);
       expect(b.pbt).toBe(a.pbt);
       expect(b.taxOther).toBe(a.taxOther);
-      expect(a.netIncome - b.netIncome).toBeCloseTo(Math.max(0, a.pbt) * c.exposure.kl * 0.07, 5);
+      expect(a.netIncome - b.netIncome).toBeCloseTo(Math.max(0, a.pbt) * (c.exposure.kl + c.exposure.my) * 0.07, 5);
       if (c.exchange === 'US') expect(Math.abs(b.netIncome / a.netIncome - 1)).toBeLessThan(0.001);
     }
   });
@@ -205,7 +205,7 @@ describe('Phase 5 credit and fiscal stress', () => {
   });
 
   it('high debt raises yields and debt service; prolonged unfunded arrears trigger insolvency and trust loss', () => {
-    const base = createGame(514), stress = clone(base);
+    const base = createGame(514, 'balanced', 'legacy-kl'), stress = clone(base);
     stress.government.debt = Math.round(stress.indicators.nominalGdpAnnual * 1.2 * 100);
     stress.government.marketAccess = false;
     stress.government.treasury = 0;
@@ -226,6 +226,6 @@ describe('Phase 5 credit and fiscal stress', () => {
     expect(stress.indicators.approval).toBeLessThan(base.indicators.approval);
     expect(computeScore(stress).total).toBeLessThanOrEqual(30);
     expect(stress.government.treasury).toBeGreaterThanOrEqual(0);
-    expect(stress.government.debt).toBeGreaterThan(BASELINE.debt * 100);
+    expect(stress.government.debt).toBeGreaterThan(baselineFor(base).debt * 100);
   });
 });

@@ -1011,3 +1011,13 @@ A project meets this specification only when a player can:
 8. Finish a campaign and receive a score balancing **wealth, growth, citizen satisfaction and financial stability**.
 
 **Main priority:** a stable, engaging, understandable economic model with a beautiful 3D KL interface—*not* feature checkboxes or pseudo-realism.
+
+## 19. User amendment — national starting data and trade/FX (31 October 2026)
+
+The user requested official real-world starting GDP, debt, treasury and operating budgets, import/export policy,
+central-bank forex controls, and full-digit money balances beside the bottom month-close countdown. They explicitly
+chose **Malaysia as the economic baseline, keeping the KL map**. This overrides the city-only baseline and prohibition
+on central-bank FX action above. The presidency, simulated securities, economic paths and future events remain fictional.
+New campaigns use pinned, dated observations with linked provenance; old KL saves retain their original balances and
+calibration. Treasury cash must be labelled by its reported scope, with reserves and SWF cash shown separately.
+See D-018–D-023, `docs/data-sources.md` and `docs/economy-model.md` for the implemented boundaries and rules.

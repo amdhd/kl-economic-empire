@@ -1,5 +1,5 @@
+import { baselineFor } from '../data/economic-baseline';
 // Satisfaction, approval and campaign score. All weights/thresholds are transparent constants.
-import { BASELINE } from '../data/economic-baseline';
 import { EVENT_BY_ID } from '../data/events';
 import type { GameState, MonthlyReport, ScoreBreakdown } from '../types/game';
 import { debtMYR, treasuryMYR } from './government';
@@ -42,12 +42,17 @@ export function externalGrowthAdjustment(s: GameState): number {
 
 /** Explainable inputs shared by the score and its UI, all derived without RNG or state changes. */
 export function scoreDrivers(s: GameState) {
+  const BASELINE = baselineFor(s);
   const reports = s.reports;
   const realOutput = reports.length ? annualRealOutput(reports.slice(-3)) : s.baseline.realGdpAnnual;
   const years = Math.max(reports.length / 12, 0.25);
   const realGrowth = Math.pow(realOutput / s.baseline.realGdpAnnual, 1 / years) - 1;
   const externalAdjustment = externalGrowthAdjustment(s);
-  const realWealthChange = publicNetWorth(s) / (s.indicators.cpi / 100) - s.baseline.publicNetWorth;
+  const liabilities = debtMYR(s.government) + s.government.unpaidObligations;
+  // A negative opening net worth must not earn score merely by inflating nominal liabilities.
+  const realWealthChange = s.baseline.profile === 'malaysia'
+    ? (publicNetWorth(s) + liabilities) / (s.indicators.cpi / 100) - liabilities - s.baseline.publicNetWorth
+    : publicNetWorth(s) / (s.indicators.cpi / 100) - s.baseline.publicNetWorth;
   const income = reports.at(-1)?.realDisposablePerCapita ?? s.baseline.realDisposablePerCapita;
   const wealthCreditFactor = clamp(Math.min(income / s.baseline.realDisposablePerCapita,
     realOutput / s.baseline.realGdpAnnual, s.government.serviceQuality / BASELINE.serviceQuality), 0, 1);
@@ -57,7 +62,7 @@ export function scoreDrivers(s: GameState) {
 }
 
 export function publicNetWorth(s: GameState): number {
-  return treasuryMYR(s.government) + navMYR(s) + s.government.publicAssets - debtMYR(s.government) - s.government.unpaidObligations;
+  return treasuryMYR(s.government) + navMYR(s) + s.government.publicAssets - debtMYR(s.government) - s.government.unpaidObligations + (s.centralBank.usdReserves / 100 * s.external.myrPerUsd + s.centralBank.myrCash / 100 - s.centralBank.openingEquityMYR);
 }
 
 export function unemploymentRate(s: GameState): number {
@@ -85,6 +90,7 @@ export function updateSatisfaction(s: GameState, realDispPerCap: number, rentBur
 
 /** Campaign score preview (0–100) from cumulative performance since the start. */
 export function computeScore(s: GameState): ScoreBreakdown {
+  const BASELINE = baselineFor(s);
   const ind = s.indicators;
   const reports = s.reports;
   const caps: string[] = [];
@@ -104,7 +110,7 @@ export function computeScore(s: GameState): ScoreBreakdown {
 
   // Stability: inflation deviation, debt service, banking stress.
   const infl = recent.length ? recent.reduce((a, r) => a + Math.abs(r.inflationYoY - 0.025), 0) / recent.length : 0;
-  const interestToRevenue = recent.length ? recent.reduce((a, r) => a + r.gov.interest, 0) / Math.max(1, recent.reduce((a, r) => a + r.gov.taxCorporate + r.gov.taxProperty + r.gov.taxConsumption + r.gov.taxHousehold + r.gov.federalGrant, 0)) : 0.07;
+  const interestToRevenue = recent.length ? recent.reduce((a, r) => a + r.gov.interest, 0) / Math.max(1, recent.reduce((a, r) => a + r.gov.taxCorporate + r.gov.taxProperty + r.gov.taxConsumption + r.gov.taxHousehold + r.gov.federalGrant + r.gov.importTariff, 0)) : 0.07;
   const stability = clamp(95 - 1000 * Math.max(0, infl - 0.0125) - 150 * Math.max(0, interestToRevenue - 0.1) - 4000 * Math.max(0, s.bank.nplRate - 0.002) - (s.government.daysInArrears > 0 ? 20 : 0), 0, 100);
 
   let total = SCORE_WEIGHTS.growth * growth + SCORE_WEIGHTS.wealth * wealth + SCORE_WEIGHTS.satisfaction * satisfaction + SCORE_WEIGHTS.stability * stability;

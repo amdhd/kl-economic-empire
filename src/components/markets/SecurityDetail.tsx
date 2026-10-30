@@ -97,7 +97,7 @@ export function SecurityDetail({ game, id, nowMin }: { game: GameState; id: Tick
           <Stat label="Net income · 12m" value={money(ttmNi, cur)} tone={tone(ttmNi)} />
           <Stat label="Last month revenue" value={lastM ? money(lastM.revenue, cur) : '—'} />
           <Stat label="Last month net income" value={lastM ? money(lastM.netIncome, cur) : '—'} tone={lastM ? tone(lastM.netIncome) : undefined} />
-          <Stat label="KL tax · last month" value={lastM ? money(lastM.taxKL, cur) : '—'} />
+          <Stat label="Domestic tax · last month" value={lastM ? money(lastM.taxKL, cur) : '—'} />
           <Stat label="Cash" value={money(st.cash, cur)} />
           <Stat label="Debt" value={money(st.debt, cur)} />
           <Stat label="Net margin · 12m" value={pct(ttmRev ? ttmNi / ttmRev : 0, 1)} />

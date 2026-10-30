@@ -6,9 +6,11 @@ const ITEMS: { id: PanelId; label: string; icon: string; group: string }[] = [
   { id: 'policies', label: 'Taxes & budget', icon: '⚖', group: 'Government' },
   { id: 'projects', label: 'Projects', icon: '🏗', group: 'Government' },
   { id: 'debt', label: 'Treasury & debt', icon: '🏦', group: 'Government' },
+  { id: 'trade', label: 'Trade & central bank', icon: '⇄', group: 'Government' },
   { id: 'markets', label: 'Stock markets', icon: '📈', group: 'Markets' },
   { id: 'fund', label: 'Sovereign fund', icon: '💼', group: 'Markets' },
   { id: 'economy', label: 'Economy', icon: '🏙', group: 'Analysis' },
+  { id: 'sources', label: 'Baseline & sources', icon: '◈', group: 'Analysis' },
   { id: 'reports', label: 'Reports & log', icon: '📰', group: 'Analysis' },
 ];
 
@@ -17,7 +19,7 @@ export function LeftRail() {
   const setPanel = useGame.getState().setPanel;
   let lastGroup = '';
   return (
-    <nav className="glass pointer-events-auto flex w-[168px] flex-col gap-0.5 rounded-2xl p-2" aria-label="Main">
+    <nav className="glass pointer-events-auto flex w-[168px] shrink-0 flex-col gap-0.5 rounded-2xl p-2" aria-label="Main">
       {ITEMS.map((it) => {
         const header = it.group !== lastGroup ? it.group : null;
         lastGroup = it.group;

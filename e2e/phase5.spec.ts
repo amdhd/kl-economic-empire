@@ -49,7 +49,7 @@ test('a credit crunch changes the economy view and the monthly lending/investmen
   await page.getByTestId('nav-economy').click();
   await expect(page.getByTestId('panel')).toContainText('Banking (reduced form)');
   await expect(page.getByTestId('panel')).toContainText('Credit met');
-  await expect(page.getByTestId('panel')).toContainText('External (not under your control)');
+  await expect(page.getByTestId('panel')).toContainText('External conditions & monetary signals');
   await expect(page.getByTestId('panel')).toContainText('US demand');
   await page.getByTestId('nav-reports').click();
   await expect(page.getByTestId('panel')).toContainText('Global growth slowdown');
