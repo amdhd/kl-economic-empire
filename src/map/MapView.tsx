@@ -5,7 +5,9 @@ import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import { useEffect, useRef, useState } from 'react';
 import { COMPANIES } from '../data/companies';
 import { SECTORS } from '../data/economic-baseline';
+import { COMPANY_BY_ID } from '../data/companies';
 import { DISTRICTS } from '../data/geo';
+import { companyLocations, LOCATION_TYPE_LABEL } from './company-markers';
 import { useGame } from '../store/game-store';
 import type { CompanySeed, TickerId } from '../types/game';
 
@@ -15,27 +17,6 @@ const STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
 setWorkerUrl(workerUrl);
 export const KLCC: [number, number] = [101.7123, 3.1578];
 const HOME = { center: [101.7105, 3.1525] as [number, number], zoom: 15.2, pitch: 60, bearing: -28 };
-
-interface Group {
-  key: string;
-  lng: number;
-  lat: number;
-  label: string;
-  type: string;
-  companies: CompanySeed[];
-}
-
-function groups(): Group[] {
-  const map = new Map<string, Group>();
-  for (const c of COMPANIES) {
-    if (!c.geo) continue;
-    const key = c.geo.label;
-    const g = map.get(key) ?? { key, lng: c.geo.lng, lat: c.geo.lat, label: c.geo.label, type: c.geo.locationType, companies: [] };
-    g.companies.push(c);
-    map.set(key, g);
-  }
-  return [...map.values()];
-}
 
 const monogram = (c: CompanySeed) => (c.exchange === 'US' ? c.code.replace('.B', '') : c.displayName.replace(/[^A-Za-z ]/g, '').split(' ').map((w) => w[0]).join('').slice(0, 3).toUpperCase());
 
@@ -110,16 +91,17 @@ export function MapView() {
 
     // Company markers (HTML), one per verified building; co-located companies share a pill.
     const markers: Marker[] = [];
-    for (const g of groups()) {
+    // Companies sharing a verified building (same OSM coordinates) share one stacked marker.
+    for (const g of companyLocations()) {
       const root = document.createElement('div');
       root.style.display = 'flex';
       root.style.flexDirection = 'column';
       root.style.gap = '4px';
       root.style.alignItems = 'center';
-      for (const c of g.companies) {
+      for (const c of g.companies.map((cid) => COMPANY_BY_ID[cid])) {
         const pill = document.createElement('div');
         pill.className = 'co-marker';
-        pill.title = `${c.legalName}\n${g.label} (${g.type}) — verified via OpenStreetMap`;
+        pill.title = `${c.legalName}\n${c.geo!.label} (${LOCATION_TYPE_LABEL[g.locationType]}) — ${g.verificationSource}`;
         pill.dataset.testid = `marker-${c.id}`;
         pill.innerHTML = `<span class="co-badge" style="background:${c.exchange === 'US' ? '#1e3a8a' : SECTORS[c.sector].color}">${monogram(c)}</span><span>${c.displayName}</span><span class="co-chg">—</span>`;
         pill.addEventListener('click', (ev) => {

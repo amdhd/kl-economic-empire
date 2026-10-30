@@ -1,103 +1,32 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { COMPANY_BY_ID, currencyOf } from '../../data/companies';
-import { SECTORS } from '../../data/economic-baseline';
-import { ttmNetIncome } from '../../engine/companies';
 import { displayMinutes } from '../../engine/clock';
-import { isOpen, nextOpen, sessionPhase } from '../../engine/market-calendar';
+import { isOpen, nextOpen } from '../../engine/market-calendar';
 import { LOT, MAX_POSITION_PCT, navMYR, positionValueMYR, quoteFill, validateOrder } from '../../engine/sovereign-fund';
-import { marketCap } from '../../engine/stock-market';
 import { formatKL, klDayLabel, monthKeyLabel } from '../../engine/time';
 import { useGame, useGameState } from '../../store/game-store';
 import type { TickerId } from '../../types/game';
 import { money, num, pct, price } from '../../utils/format';
-import { TimeChart } from '../charts/TimeChart';
 import { ConfirmDialog } from '../panels/ConfirmDialog';
-import { Bar, Section, SimTag, Stat, Tabs } from '../ui';
-
-type Res = 'hour' | 'day' | 'month';
+import { Section, SimTag, Stat, Tabs } from '../ui';
+import { SecurityDetail } from './SecurityDetail';
 
 export function CompanyPanel({ id }: { id: TickerId }) {
   const g = useGameState();
-  const rev = useGame((s) => s.rev);
-  const c = COMPANY_BY_ID[id];
+  useGame((s) => s.rev);
   const st = g.companies[id];
-  const q = g.market.quotes[id];
   const cur = currencyOf(id);
-  const [res, setRes] = useState<Res>('day');
   const select = useGame.getState().select;
-  const minute = Math.floor(displayMinutes(g.clock));
-  const phase = sessionPhase(c.exchange, minute);
-  const chg = q.price / q.prevClose - 1;
-  const ttm = ttmNetIncome(st);
-  const eps = ttm / st.shares;
-  const rev12 = st.history.slice(-12).reduce((a, h) => a + h.revenue, 0);
-  const yieldPct = (st.history.slice(-12).reduce((a, h) => a + h.dividends, 0) / st.shares) / q.price;
   const events = g.events.active.filter((e) => e.ticker === id);
 
-  const data = useMemo(() => {
-    if (res === 'hour') return q.hourly.slice(-48).map((b) => ({ t: b.t, v: b.c }));
-    if (res === 'day') return q.daily.slice(-130).map((b) => ({ t: b.t, v: b.c }));
-    const byMonth = new Map<string, { t: number; v: number }>();
-    for (const b of q.daily) {
-      const d = new Date(b.t * 86400000);
-      byMonth.set(`${d.getUTCFullYear()}-${d.getUTCMonth()}`, { t: b.t, v: b.c });
-    }
-    return [...byMonth.values()];
-  }, [res, q.hourly, q.daily, rev]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const xFormat = (v: number | string) => {
-    const n = Number(v);
-    if (res === 'hour') return formatKL(n * 60).time;
-    const d = new Date(n * 86400000);
-    return res === 'month' ? `${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getUTCMonth()]} ${String(d.getUTCFullYear()).slice(2)}` : `${d.getUTCDate()}/${d.getUTCMonth() + 1}`;
-  };
-
   return (
-    <aside className="glass pointer-events-auto flex max-h-full w-[400px] flex-col overflow-hidden rounded-2xl" data-testid="company-panel">
-      <div className="border-b border-slate-700/50 px-4 py-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="chip bg-slate-700/70 font-mono text-slate-200">{id}</span>
-              <span className={`chip ${phase === 'open' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-slate-700/50 text-slate-400'}`}>{phase === 'open' ? 'OPEN' : phase === 'break' ? 'LUNCH BREAK' : 'CLOSED'}</span>
-            </div>
-            <h2 className="mt-1 truncate text-[18px] font-bold text-white" data-testid="company-name">{c.displayName}</h2>
-            <div className="truncate text-[11.5px] text-slate-400">{c.legalName} · {c.industry}</div>
-          </div>
-          <button onClick={() => select(null)} className="rounded-md px-2 py-1 text-slate-400 hover:bg-slate-700/60 hover:text-white" aria-label="Close">✕</button>
-        </div>
-        <div className="mt-2 flex items-end gap-3">
-          <div className="num text-[26px] font-bold text-white" data-testid="company-price">{price(q.price, cur)}</div>
-          <div className={`num pb-1 text-[14px] font-semibold ${chg >= 0 ? 'up' : 'down'}`}>{chg >= 0 ? '+' : '−'}{Math.abs(chg * 100).toFixed(2)}%</div>
-          <SimTag className="mb-1.5 ml-auto" />
-        </div>
+    <aside className="glass pointer-events-auto flex max-h-full w-[420px] flex-col overflow-hidden rounded-2xl" data-testid="company-panel">
+      <div className="flex items-center justify-between border-b border-slate-700/50 px-4 py-2">
+        <SimTag />
+        <button onClick={() => select(null)} className="rounded-md px-2 py-1 text-slate-400 hover:bg-slate-700/60 hover:text-white" aria-label="Close">✕</button>
       </div>
       <div className="scroll-thin min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
-        <Section title={`Price · ${cur}`} right={<Tabs value={res} onChange={setRes} options={[{ id: 'hour', label: 'Hour' }, { id: 'day', label: 'Day' }, { id: 'month', label: 'Month' }]} />}>
-          <TimeChart data={data} xKey="t" series={[{ key: 'v', name: 'Close', color: chg >= 0 ? '#34d399' : '#f87171' }]} yFormat={(v) => v.toFixed(v < 10 ? 3 : 2)} xFormat={xFormat} area unit={`${cur} per share · ${res === 'hour' ? 'hourly (trading hours)' : res === 'day' ? 'daily close' : 'month-end close'}`} />
-          {res === 'day' && <div className="mt-1 text-[10.5px] text-slate-500">History before 1 Jan 2027 is a synthetic seeded backfill.</div>}
-        </Section>
-        <div className="grid grid-cols-3 gap-3 rounded-xl bg-slate-900/40 p-3">
-          <Stat label="Market cap" value={money(marketCap(g, id), cur)} />
-          <Stat label="P/E (TTM)" value={eps > 0 ? (q.price / eps).toFixed(1) : 'n/m'} />
-          <Stat label="Div. yield" value={pct(yieldPct)} />
-          <Stat label="Revenue TTM" value={money(rev12, cur)} />
-          <Stat label="Net income TTM" value={money(ttm, cur)} tone={ttm < 0 ? 'down' : undefined} />
-          <Stat label="Net margin" value={pct(ttm / rev12)} />
-          <Stat label="Debt" value={money(st.debt, cur)} />
-          <Stat label="Cash" value={money(st.cash, cur)} />
-          <Stat label="Model value" value={price(q.fundamental, cur)} hint="Fundamental value from earnings × sector P/E × rate and risk multipliers" />
-        </div>
-        <Section title="Revenue exposure">
-          {(['kl', 'my', 'global'] as const).map((k) => (
-            <div key={k} className="mb-1.5 flex items-center gap-2 text-[12px]">
-              <span className="w-24 text-slate-400">{k === 'kl' ? 'Kuala Lumpur' : k === 'my' ? 'Rest of Malaysia' : c.exchange === 'US' ? 'US / global' : 'International'}</span>
-              <Bar value={c.exposure[k]} color={k === 'kl' ? '#34d399' : k === 'my' ? '#22d3ee' : '#a78bfa'} />
-              <span className="num w-10 text-right">{pct(c.exposure[k], 0)}</span>
-            </div>
-          ))}
-          <div className="mt-1 text-[11px] text-slate-500">KL corporate tax applies only to the KL share of profit. Sector: {SECTORS[c.sector].name}; global driver: {c.driver}.</div>
-        </Section>
+        <SecurityDetail game={g} id={id} nowMin={displayMinutes(g.clock)} />
         <Section title="Monthly results (fictional)">
           <table className="data num">
             <thead>
@@ -123,16 +52,6 @@ export function CompanyPanel({ id }: { id: TickerId }) {
             ))}
           </Section>
         )}
-        <Section title="Location">
-          {c.geo ? (
-            <div className="text-[12.5px]">
-              <div className="text-slate-200">{c.geo.label}</div>
-              <div className="text-slate-400">Type: {c.geo.locationType.toUpperCase()} · Source: {c.geo.verificationSource}</div>
-            </div>
-          ) : (
-            <div className="text-[12.5px] text-slate-400">No verified Kuala Lumpur location — tradable, but not placed on the map.</div>
-          )}
-        </Section>
         <TradeTicket id={id} />
         <div className="pb-1 text-[10.5px] text-slate-500">Real company name and ticker used for context only. Prices, financials and events are fictional simulations — not market data or investment advice.</div>
       </div>

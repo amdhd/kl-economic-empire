@@ -24,7 +24,7 @@ export function Stat({ label, value, sub, tone, hint }: { label: string; value: 
 }
 
 export function SimTag({ className = '' }: { className?: string }) {
-  return <span className={`chip bg-amber-400/10 text-[9.5px] text-amber-300 ring-1 ring-amber-300/25 ${className}`}>{FICTIONAL_LABEL}</span>;
+  return <span className={`chip whitespace-nowrap bg-amber-400/10 text-[9.5px] text-amber-300 ring-1 ring-amber-300/25 ${className}`}>{FICTIONAL_LABEL}</span>;
 }
 
 export function Bar({ value, max = 1, color = '#34d399' }: { value: number; max?: number; color?: string }) {

@@ -61,7 +61,7 @@ export function App() {
       <ErrorBoundary label="Map">
         <MapView />
       </ErrorBoundary>
-      <div className="pointer-events-none absolute inset-0 flex flex-col gap-2 p-3">
+      <div className="pointer-events-none absolute inset-0 z-10 flex flex-col gap-2 p-3">
         <TopBar />
         <StatsStrip />
         <div className="flex min-h-0 flex-1 gap-2">

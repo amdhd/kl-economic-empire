@@ -1,17 +1,19 @@
 import { expect, test } from '@playwright/test';
 import { runHours, startCampaign } from './helpers';
 
-test('clock starts paused at 08:00 and runs at 3x (≈1 game hour per second)', async ({ page }) => {
+test('clock starts paused at 08:00 and runs at 3x (≤1 game hour per real second)', async ({ page }) => {
   await startCampaign(page);
   await expect(page.getByTestId('clock-time')).toHaveText('08:00');
   await page.waitForTimeout(1500);
   await expect(page.getByTestId('clock-time')).toHaveText('08:00'); // still paused
+  // 3× = 60 game minutes per real second. Under CPU load long frames are clamped (no catch-up),
+  // so the clock may run slower than wall time but must never run faster.
+  const t0 = Date.now();
   await page.getByTestId('btn-speed-3').click();
-  await page.waitForTimeout(2600);
-  const t = await page.getByTestId('clock-time').textContent();
-  const [h] = t!.split(':').map(Number);
-  expect(h).toBeGreaterThanOrEqual(10);
-  expect(h).toBeLessThanOrEqual(11);
+  const hour = async () => Number((await page.getByTestId('clock-time').textContent())!.split(':')[0]);
+  await expect.poll(hour, { timeout: 10_000 }).toBeGreaterThanOrEqual(10);
+  const elapsedS = (Date.now() - t0) / 1000;
+  expect((await hour()) - 8).toBeLessThanOrEqual(Math.ceil(elapsedS) + 1);
   await page.keyboard.press('Space');
   const paused = await page.getByTestId('clock-time').textContent();
   await page.waitForTimeout(1200);
@@ -48,7 +50,7 @@ test('SWF buys Maybank while Bursa is open: cash becomes shares', async ({ page 
   await runHours(page, 74); // Mon 4 Jan 2027 10:00 MYT
   await expect(page.getByTestId('market-MY')).toContainText('OPEN');
   await page.getByTestId('nav-markets').click();
-  await page.getByTestId('row-MY:1155').click();
+  await page.locator('[data-testid=security-row][data-ticker="MY:1155"]').click();
   await page.getByTestId('trade-units').fill('100000');
   await page.getByTestId('trade-review').click();
   await page.getByTestId('confirm-btn').click();
