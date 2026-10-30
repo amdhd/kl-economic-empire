@@ -300,3 +300,5 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
 - **D-046 Official deficit history.** The fiscal chart shows MOF's federal overall deficit for 2021–2025 (outturns) and
   2026 (revised), then the simulated 12-month deficit. Official ratios use same-year GDP; the simulation measures
   against opening (2025) GDP, so the same ringgit deficit reads higher in the game, as the panel states.
+
+- **D-047 Cloud saves (user-directed).** Optional Firebase email/password sign-in with console-provisioned account; no social login. Realtime Database stores versioned JSON snapshots because campaign saves may exceed Firestore document limits. Local saving is first and independent. Slots opt into session sync through upload/load; revision transactions reject concurrent or unseen overwrites. Missing configuration leaves the game local-only. No economic rules change.

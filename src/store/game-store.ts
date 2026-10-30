@@ -1,3 +1,4 @@
+import { syncCloud } from '../persistence/cloud';
 // Thin UI store. The engine mutates `game` in place; `rev` bumps whenever economic state changes
 // (hourly tick or player command) so selectors re-run. The visual clock is published separately
 // and throttled so the whole tree does not re-render every frame.
@@ -105,7 +106,9 @@ export const useGame = create<Store>((set, get) => ({
     if (import.meta.env.DEV && sessionStorage.getItem('klDevNoSave')) return;
     const g = get().game;
     try {
-      await writeSlot(slot, serialize(g, label ?? slot));
+      const snapshot = serialize(g, label ?? slot);
+      await writeSlot(slot, snapshot);
+      syncCloud(slot, snapshot);
       set({ lastSaved: new Date().toLocaleTimeString() });
       if (slot !== 'autosave') get().toast('good', `Saved to ${slot}.`);
     } catch (e) {

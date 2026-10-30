@@ -1,0 +1,27 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        "saves": {
+          "$slot": {
+            ".read": "auth != null && auth.uid === $uid && auth.token.email === 'amdhdysr@gmail.com'",
+            ".write": "auth != null && auth.uid === $uid && ($slot === 'autosave' || $slot === 'slot1' || $slot === 'slot2' || $slot === 'slot3') && auth.token.email === 'amdhdysr@gmail.com'",
+            ".validate": "newData.hasChildren(['json', 'revision', 'savedAt'])",
+            "json": {
+              ".validate": "newData.isString() && newData.val().length < 10000000"
+            },
+            "revision": {
+              ".validate": "newData.isNumber() && newData.val() === (data.exists() ? data.val() + 1 : 1)"
+            },
+            "savedAt": {
+              ".validate": "newData.isNumber()"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        }
+      }
+    }
+  }
+}

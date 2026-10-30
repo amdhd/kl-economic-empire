@@ -1,3 +1,4 @@
+import { CloudSaves } from './CloudSaves';
 import { useEffect, useRef, useState } from 'react';
 import { readSlot, SLOTS, type SlotId } from '../../persistence/storage';
 import { useGame } from '../../store/game-store';
@@ -40,7 +41,8 @@ export function SaveMenu() {
         Save / Load
       </button>
       {open && (
-        <div className="glass absolute right-0 top-11 z-50 w-96 rounded-xl p-3">
+        <div className="glass absolute right-0 top-11 z-50 w-96 max-h-[75vh] overflow-y-auto rounded-xl p-3">
+          <CloudSaves />
           <div className="label mb-2">Save slots · saving never changes the economy</div>
           {SLOTS.map((s) => (
             <div key={s} className="mb-1.5 flex items-center gap-2 rounded-lg bg-slate-800/50 p-2">

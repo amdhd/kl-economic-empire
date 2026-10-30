@@ -6,3 +6,10 @@ artifacts/
 *.tsbuildinfo
 .DS_Store
 .claude/worktrees/
+.env
+.env.local
+.env.*.local
+
+.firebase/
+firebase-debug.log
+database-debug.log
