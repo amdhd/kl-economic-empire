@@ -1,3 +1,4 @@
+import { useAppearance, validAppearance } from '../map/appearance';
 import { flushCloud, syncCloud } from '../persistence/cloud';
 // Thin UI store. The engine mutates `game` in place; `rev` bumps whenever economic state changes
 // (hourly tick or player command) so selectors re-run. The visual clock is published separately
@@ -124,6 +125,8 @@ export const useGame = create<Store>((set, get) => ({
         return false;
       }
       const game = deserialize(json);
+      const appearance: unknown = JSON.parse(json).appearance;
+      if (validAppearance(appearance)) useAppearance.getState().update(appearance);
       set({ game, rev: get().rev + 1, uiMinute: displayMinutes(game.clock), selection: null, showNewGame: false,
         panel: game.scheduler.campaignEnded ? 'objectives' : get().panel });
       lastAutosaveDay = klDay(game.clock.hour * 60);

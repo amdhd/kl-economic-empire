@@ -1,3 +1,4 @@
+import { appearanceSnapshot, type MapAppearance } from '../map/appearance';
 import { initialControls, validateControls } from '../engine/policy-controls';
 // Versioned save format. Saving never mutates game state or advances the clock.
 import { assertSafeMinor } from '../engine/util';
@@ -12,6 +13,7 @@ import { initialWorld, validateCommodityPolicy, validateWorld } from '../engine/
 import type { GameState } from '../types/game';
 
 export interface SaveFile {
+  appearance?: MapAppearance;
   format: 'kl-economic-empire';
   schemaVersion: number;
   savedAtReal: string;
@@ -20,7 +22,7 @@ export interface SaveFile {
 }
 
 export function serialize(s: GameState, label = 'Manual save'): string {
-  const file: SaveFile = { format: 'kl-economic-empire', schemaVersion: s.schemaVersion, savedAtReal: new Date().toISOString(), label, state: s };
+  const file: SaveFile = { format: 'kl-economic-empire', schemaVersion: s.schemaVersion, savedAtReal: new Date().toISOString(), label, state: s, appearance: appearanceSnapshot() };
   return JSON.stringify(file);
 }
 

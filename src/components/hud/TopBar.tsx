@@ -1,3 +1,4 @@
+import { MapAppearance } from './MapAppearance';
 import { displayMinutes } from '../../engine/clock';
 import { EXCHANGES, nextOpen, sessionPhase } from '../../engine/market-calendar';
 import { formatKL } from '../../engine/time';
@@ -67,6 +68,7 @@ export function TopBar({ menuOpen, onToggleMenu }: { menuOpen: boolean; onToggle
         <div className="city-title"><b>KL ECONOMIC EMPIRE</b><span>Malaysia economy · KL map · fictional simulation</span></div>
       </div>
       <div className="flex items-center gap-2 pointer-events-auto">
+        <MapAppearance />
         <Districts />
         <div className="exchange-chips flex gap-1"><MarketChip ex="MY" /><MarketChip ex="US" /></div>
         <SaveMenu />
