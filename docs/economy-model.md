@@ -452,7 +452,9 @@ continue and all draws retain their order. OPR remains automatic, starting from 
 Opening FX is `RM538,759,540,269 / USD132.1bn`, an implied reserve valuation ratio, **not** a spot-market quote.
 
 Public net worth adds `CBUSD × currentFX + CBMYR − openingEquityMYR`, so reserve sales are asset exchanges and fees/
-revaluations count. These are modeled balance-sheet changes, not an assertion of the consolidated Malaysian balance
+revaluations count. The wealth score instead uses `scoreNetWorth`, which values `CBUSD` at the opening FX rate: spreads and
+trading losses lower the score, but reserve revaluation (random or caused by the player's own interventions) never
+raises or lowers it (D-029). These are modeled balance-sheet changes, not an assertion of the consolidated Malaysian balance
 sheet. National opening net worth is negative because unmodeled public assets are not invented. National wealth-score
 change = `(currentNetWorth + debt + arrears)/CPIrelative − debt − arrears − openingNetWorth`; retaining nominal liabilities
 prevents inflation alone from granting wealth score. Legacy KL keeps the prior CPI-adjusted net-wealth formula.
@@ -486,7 +488,8 @@ Ministry plans: monthly appropriation0–RM50bn, annual escalation−10% to15%, 
 subsequent appropriations apply every12 months. Reject a plan exceeding the budget ceiling in any scheduled year.
 Daily settlement still pays through the normal treasury/financing/arrears path. No funds are reserved or granted upfront.
 Cancelling affects future scheduled changes, retaining the current budget. Plans run after period settlement and before
-manual policies due at the same boundary, so manual overrides win. No time skip or offline catch-up is introduced.
+manual policies due at the same boundary, so manual overrides win. Queuing a manual budget for a planned category
+cancels that plan's future steps, so a later annual step never overwrites it (D-030). No time skip or offline catch-up is introduced.
 For health, services and safety, `realFundingRatio = budget / profileOpeningBudget / CPIrelative × clamp(1−arrearsDays/30,0,1)`;
 `outcomeTarget = clamp(62 × realFundingRatio^.6 + serviceBoost×100,0,98)` and `outcome += .25×(target−outcome)` monthly.
 These diagnostic synthetic coverage/readiness indices expose individual budget outcomes; aggregate satisfaction retains
@@ -510,3 +513,63 @@ revenue/investment propagation, appropriation schedules, funding outcomes, debt 
 
 Validation for economic controls: strict build and lint pass;156 unit/invariant/campaign tests and24 browser tests pass.
 The browser control test reviews all four settings, checks the selected debt coupon and observes automatic reserve sales.
+
+## Resources, SOEs, commodities, partners and fiscal rules (schema 6, model 2)
+
+Model-2 national campaigns only (`nationalV2`). Schema-5 saves migrate as model 1 with these systems off (D-031).
+
+### Calibration
+`NATIONAL_GDP = Σ sector VA + product levy + RESOURCE_VA0`, with `RESOURCE_VA0 = 148bn × 0.75 + 80bn × 0.6`. The private
+capital stock is `capitalToVa × VA × (1 − φ)`, where `φ = development / (Σ K_full × (δ + g))` is the public share of fixed
+investment; development purchases enter `G0`. Opening receipts: `380.8bn = modelled taxes + modelledResourceRevenue0 +
+residual × 12`.
+
+### Daily order
+external → automatic FX → world (commodity prices, partner responses) → government (operating, transfers, projects,
+development, fuel and wheat subsidies) → resources (upstream and palm VA, palm duty, PETRONAS capex deviation added to
+purchases) → households and sectors → companies. Resource VA is added to nominal and real GDP.
+
+### Resources
+- Upstream revenue/day = `148bn/365 × production × (0.6 oil + 0.4 gas) × FX`; gas follows oil with a ~180-day lag.
+  VA = 75% of revenue. Taxable profit = VA − 35% of opening VA × CPI. PITA = 38% × max(0, monthly taxable profit).
+- `production *= 1 + 6%/365 × (capexAvg / 50bn − 1)`; capexAvg is a 365-day average. Capex below RM50bn shrinks output.
+- PETRONAS cash += profit after tax + RM30bn/yr depreciation − capex − dividend + interest. Below RM30bn cash, capex is cut 30%.
+- Palm value/day = `80bn/365 × volume × palm price × FX`; VA 60%, wages 30% of VA; duty on 28% of value; monthly
+  corporate tax on profit. Households receive changes in estate wages and 40% of after-tax plantation profit.
+
+### Commodities, subsidies and duties
+- Pump price `= 2.60 × (0.45 + 0.55 × oil × FX)`. Effective household price `= e × min(market, ceiling) + (1 − e) × market`.
+  Subsidy/yr `= 17bn L × e × max(0, market − ceiling) × (1 + 12% × leakage above 85% eligibility)`.
+- CPI `= 94.5% × sector CPI + 5.5% × pump-price index`. Households pay `17bn/365 × (effective − opening)` from consumption.
+- Imported inputs per unit of requirement (ringgit): `FX × [generic × importPriceIndex + energy × (1 + pass × (oil − 1))
+  + wheat × wheatUserPrice + steel × (1 + safeguard)] × (1 + MFN tariff)`; utilities `pass = 0.4`, others 1.
+- Wheat user price `= 1 + (1 − subsidy) × (p − 1)` above reference; the treasury pays the difference on yesterday's imports.
+- Steel safeguard: 40% × duty of steel demand shifts to domestic industry (added to industry final demand); duty is
+  collected on the remaining imports; users pay the duty-inclusive price on all steel (import parity).
+- Companies: listed cost shares (`commodityCost`) are priced off world indices in listing currency.
+
+### Trading partners
+`exportAccess = Σ x_p × e^{cycle_p} × (1 + their_p)^{−2.5} × (1 + 0.05 × agreement_p)` multiplies the global and tech
+export mixes and Malaysian companies' foreign sales. `importPriceIndex = (Σ m_p × price_p^{1−4})^{1/(1−4)}` with
+`price_p = (1 + our_p)(1 − 0.02 × agreement_p)`; the duty share of that bill is collected as import tariff.
+
+### Fiscal rules
+Trailing-12-month window, annualised: deficit = (outlays − revenue)/GDP; primary = deficit − interest/GDP; current
+balance = (revenue − (outlays − capital))/GDP; structural = deficit + 0.2 × output gap. Credibility
+`C += 0.15 × (goal − C)`, goal = 35 + 30 (deficit ≤ target, else −20 × overshoot/2pp) + 20 (debt ok) + 15 (golden).
+Premium `= 0.5% × (60 − C)/60` below 60, `−0.2% × (C − 60)/40` above.
+
+### Wealth effect
+`equityIndex += 0.05 × (MY index/1000 − equityIndex)` daily; consumption `+= 3%/365 × 450bn × (equityIndex − 1)`.
+
+### Validation
+`tests/phase7-world.test.ts`: official opening GDP, revenue and deficit; exact monthly reconciliation with the new flows;
+separate RNG stream; SOE dividends are wealth-neutral; capex cuts lower production; Khazanah blocks; fuel, wheat, steel
+and palm policies; tariffs, diversion, retaliation, agreements; glide path, credibility, escape clause; development and
+public capital; wealth effect; schema-6 round trip, schema-5 migration and corrupt-save rejection.
+
+### Known limitation (measured, not yet fixed)
+The engine's demand multiplier is large: removing the RON95 ceiling lowers real GDP by ~1.8% after 200 days in a
+controlled run, and oil +50% by ~4.5% (model 1 gave ~5.6% before this change). Real-world estimates are several times
+smaller. The cause is the existing feedback between unemployment, confidence and the propensity to consume, not the new
+systems; it needs a whole-model recalibration against published multipliers.

@@ -1,8 +1,9 @@
 // One-off steady-state calibration of the KL input–output economy. Pure and deterministic.
 // Final demand f = (I − A)·Y0; household, government and investment components come from the
 // behavioural rules evaluated at baseline, and exports are the residual (asserted positive in tests).
-import { BASE_BUDGET, BASE_TAX, BASELINE, LEGACY_BASELINE, LEGACY_BUDGET, NATIONAL_GDP, BUDGET_PURCHASES, INVESTMENT_GOODS, IO, SECTOR_IDS, SECTORS } from '../data/economic-baseline';
+import { BASE_BUDGET, BASE_BUDGET_V1, BASE_TAX, BASELINE, LEGACY_BASELINE, LEGACY_BUDGET, NATIONAL_GDP, BUDGET_PURCHASES, INVESTMENT_GOODS, IO, SECTOR_IDS, SECTORS } from '../data/economic-baseline';
 import type { BudgetCategory, SectorId, GameState } from '../types/game';
+import { DEVELOPMENT_ANNUAL0, DEVELOPMENT_PURCHASES, RESOURCE_VA0 } from '../data/world';
 
 export type Vec = Record<SectorId, number>;
 const zero = (): Vec => Object.fromEntries(SECTOR_IDS.map((s) => [s, 0])) as Vec;
@@ -60,16 +61,21 @@ export interface Calibration {
   gdpDaily: number;
 }
 
-function calibrate(BASELINE = LEGACY_BASELINE, BASE_BUDGET = LEGACY_BUDGET, scale = 1): Calibration {
+function calibrate(BASELINE = LEGACY_BASELINE, BASE_BUDGET = LEGACY_BUDGET, scale = 1, developmentAnnual = 0): Calibration {
   const BASE_LEND_RATE = BASELINE.opr + 0.02;
   const vaAnnual = (j: SectorId) => SECTORS[j].vaAnnual * scale;
   const n = SECTOR_IDS.length;
   const v = zero(), Y0 = zero(), L0 = zero(), wage0 = zero(), K0 = zero(), cap0 = zero(), capitalPerCap = zero(), laborProd0 = zero();
+  // Sector capital-output ratios describe the whole capital stock. When federal development spending is
+  // modelled explicitly, its share of gross fixed investment is public capital, so the private stock
+  // (and private investment) is reduced by that share rather than counting public investment twice.
+  const fullInvestment = SECTOR_IDS.reduce((a, j) => a + SECTORS[j].capitalToVa * vaAnnual(j), 0) * (BASELINE.depreciation + CAPITAL_GROWTH0);
+  const privateShare = 1 - developmentAnnual / fullInvestment;
   for (const j of SECTOR_IDS) {
     const colSum = SECTOR_IDS.reduce((s, i) => s + IO[i][j], 0);
     v[j] = 1 - colSum - SECTORS[j].importShare;
     Y0[j] = vaAnnual(j) / 365 / v[j];
-    K0[j] = SECTORS[j].capitalToVa * vaAnnual(j);
+    K0[j] = SECTORS[j].capitalToVa * vaAnnual(j) * privateShare;
     cap0[j] = Y0[j] / NORMAL_UTIL;
     capitalPerCap[j] = K0[j] / cap0[j];
   }
@@ -127,6 +133,8 @@ function calibrate(BASELINE = LEGACY_BASELINE, BASE_BUDGET = LEGACY_BUDGET, scal
     const daily = (BASE_BUDGET[cat] * 12) / 365;
     for (const [j, sh] of Object.entries(BUDGET_PURCHASES[cat])) G0[j as SectorId] += daily * (sh as number);
   }
+  // Federal development spending buys construction, equipment and services like other purchases.
+  for (const [j, sh] of Object.entries(DEVELOPMENT_PURCHASES)) G0[j as SectorId] += (developmentAnnual / 365) * sh;
   const Itot = (Ktot * (BASELINE.depreciation + CAPITAL_GROWTH0)) / 365;
   const I0 = zero();
   for (const [j, sh] of Object.entries(INVESTMENT_GOODS)) I0[j as SectorId] = Itot * (sh as number);
@@ -149,9 +157,18 @@ function calibrate(BASELINE = LEGACY_BASELINE, BASE_BUDGET = LEGACY_BUDGET, scal
 }
 
 export const LEGACY_CAL: Calibration = calibrate();
-const c1 = calibrate(BASELINE, BASE_BUDGET, 1).gdpDaily * 365;
-const c2 = calibrate(BASELINE, BASE_BUDGET, 2).gdpDaily * 365;
-export const NATIONAL_SCALE = 1 + (NATIONAL_GDP - c1) / (c2 - c1);
-export const CAL: Calibration = calibrate(BASELINE, BASE_BUDGET, NATIONAL_SCALE);
-export const calibrationFor = (s: Pick<GameState, 'baseline'>): Calibration => s.baseline.profile === 'legacy-kl' ? LEGACY_CAL : CAL;
+/** Linear solve for the sector scale whose GDP (sector value added + product levy) hits `target`. */
+function nationalScale(budget: typeof BASE_BUDGET, target: number, developmentAnnual: number): number {
+  const c1 = calibrate(BASELINE, budget, 1, developmentAnnual).gdpDaily * 365;
+  const c2 = calibrate(BASELINE, budget, 2, developmentAnnual).gdpDaily * 365;
+  return 1 + (target - c1) / (c2 - c1);
+}
+/** Model 1 (schema-5 saves): the seven sectors carry all of GDP; no development budget. */
+export const NATIONAL_SCALE_V1 = nationalScale(BASE_BUDGET_V1, NATIONAL_GDP, 0);
+export const CAL_V1: Calibration = calibrate(BASELINE, BASE_BUDGET_V1, NATIONAL_SCALE_V1);
+/** Model 2: oil & gas and palm oil are a separate resource sector, so the seven sectors carry the rest. */
+export const NATIONAL_SCALE = nationalScale(BASE_BUDGET, NATIONAL_GDP - RESOURCE_VA0, DEVELOPMENT_ANNUAL0);
+export const CAL: Calibration = calibrate(BASELINE, BASE_BUDGET, NATIONAL_SCALE, DEVELOPMENT_ANNUAL0);
+export const calibrationFor = (s: Pick<GameState, 'baseline'>): Calibration =>
+  s.baseline.profile === 'legacy-kl' ? LEGACY_CAL : s.baseline.model === 1 ? CAL_V1 : CAL;
 export const SECTOR_INDEX: Record<SectorId, number> = Object.fromEntries(SECTOR_IDS.map((s, i) => [s, i])) as Record<SectorId, number>;

@@ -3,6 +3,8 @@ import { PROJECTS, type ProjectTemplate } from '../../data/projects';
 import { treasuryMYR } from '../../engine/government';
 import { klDayLabel } from '../../engine/time';
 import { useGame, useGameState } from '../../store/game-store';
+import { nationalV2 } from '../../data/economic-baseline';
+import { KL_ECONOMY_SHARE } from '../../data/world';
 import { money, pct } from '../../utils/format';
 import { ConfirmDialog } from './ConfirmDialog';
 import { PanelShell } from './PanelShell';
@@ -10,6 +12,7 @@ import { Bar, Section } from '../ui';
 
 export function ProjectsPanel() {
   const g = useGameState();
+  const scale = nationalV2(g) ? KL_ECONOMY_SHARE : 1;
   const command = useGame.getState().command;
   const [pick, setPick] = useState<ProjectTemplate | null>(null);
   const [cancel, setCancel] = useState<number | null>(null);
@@ -54,11 +57,12 @@ export function ProjectsPanel() {
                 <div className="num my-1 text-[11.5px] text-amber-200">≈ {money(t.cost * constructionPrice)} at current prices · {Math.round(t.durationDays / 30)} months</div>
                 <p className="mb-2 flex-1 text-[11.5px] text-slate-400">{t.description}</p>
                 <div className="mb-2 text-[11px] text-slate-300">
-                  {Object.entries(t.productivity).map(([k, v]) => `${k} +${((v as number) * 100).toFixed(1)}%`).join(' · ')}
-                  {t.rentEffect ? ` · rents ${(t.rentEffect * 100).toFixed(1)}%` : ''}
+                  {Object.entries(t.productivity).map(([k, v]) => `${k} +${((v as number) * scale * 100).toFixed(2)}%`).join(' · ')}
+                  {t.rentEffect ? ` · rents ${(t.rentEffect * scale * 100).toFixed(2)}%` : ''}
                   {t.resilience ? ` · flood damage −${t.resilience * 100}%` : ''}
-                  {t.tourism ? ` · tourism +${t.tourism * 100}%` : ''}
-                  {t.serviceEffect ? ` · services +${(t.serviceEffect * 100).toFixed(0)}pt` : ''}
+                  {t.tourism ? ` · tourism +${(t.tourism * scale * 100).toFixed(2)}%` : ''}
+                  {t.serviceEffect ? ` · services +${(t.serviceEffect * scale * 100).toFixed(1)}pt` : ''}
+                  {scale < 1 && <span className="text-slate-500"> · national effect = KL share ({(scale * 100).toFixed(0)}%) of city effect</span>}
                 </div>
                 <button className="btn btn-primary" disabled={taken} onClick={() => setPick(t)} data-testid={`project-${t.id}`}>{taken ? 'Commissioned' : 'Commission'}</button>
               </div>

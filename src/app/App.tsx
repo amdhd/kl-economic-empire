@@ -1,4 +1,8 @@
 import { ControlsPanel } from '../components/panels/ControlsPanel';
+import { CommoditiesPanel } from '../components/panels/CommoditiesPanel';
+import { FiscalPanel } from '../components/panels/FiscalPanel';
+import { PartnersPanel } from '../components/panels/PartnersPanel';
+import { SoePanel } from '../components/panels/SoePanel';
 import { Component, useEffect, useState, type ReactNode } from 'react';
 import { BottomBar } from '../components/hud/BottomBar';
 import { Districts } from '../components/hud/Districts';
@@ -25,6 +29,10 @@ import type { ScenarioId } from '../types/game';
 
 const PANELS: Record<PanelId, () => ReactNode> = {
   controls: () => <ControlsPanel />,
+  fiscal: () => <FiscalPanel />,
+  commodities: () => <CommoditiesPanel />,
+  partners: () => <PartnersPanel />,
+  soe: () => <SoePanel />,
   trade: () => <TradePanel />,
   sources: () => <SourcesPanel />,
   overview: () => <OverviewPanel />,

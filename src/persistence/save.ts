@@ -5,6 +5,9 @@ import { SCHEMA_VERSION } from '../engine/game';
 import { COMPANIES } from '../data/companies';
 import { LEGACY_BASELINE, SECTOR_IDS } from '../data/economic-baseline';
 import { initialCentralBank } from '../engine/trade-fx';
+import { initialFiscal, validateFiscal } from '../engine/fiscal-rules';
+import { initialSoe, validateSoe } from '../engine/soe';
+import { initialWorld, validateCommodityPolicy, validateWorld } from '../engine/world';
 import type { GameState } from '../types/game';
 
 export interface SaveFile {
@@ -43,6 +46,23 @@ type Migration = (s: Record<string, unknown>) => Record<string, unknown>;
 /** migrations[n] upgrades a state from schema n to n+1. */
 const MIGRATIONS: Record<number, Migration> = {
   4: state => { (state as unknown as GameState).controls ??= initialControls(); return state; },
+  // v5 → v6: resource sector, SOEs, commodities, trading partners and fiscal rules. Existing campaigns keep
+  // their calibration (model 1) with these systems switched off, so balances and outcomes are unchanged.
+  5: (state) => {
+    const s = state as unknown as GameState;
+    s.baseline.model ??= 1;
+    s.world ??= initialWorld(s.seed, false);
+    s.soe ??= initialSoe(false);
+    s.fiscal ??= initialFiscal(0, 0);
+    s.households.equityIndex ??= 1;
+    for (const flows of [s.government.mtd, ...s.reports.map((r) => r.gov)]) {
+      flows.soeDividend ??= 0;
+      flows.petroleumTax ??= 0;
+      flows.commodityDuty ??= 0;
+      flows.subsidy ??= 0;
+    }
+    return state;
+  },
   // v1 → v2 (master): projects track real work done (for construction-cost escalation).
   1: (s) => {
     const gov = s.government as { projects: { spent: number; work?: number }[] };
@@ -109,7 +129,7 @@ export function deserialize(json: string): GameState {
   validateControls(s.controls);
   const bad = findNonFinite(s);
   if (bad) throw new Error(`Corrupt save: non-finite number at ${bad}`);
-  for (const key of ['clock', 'scheduler', 'rng', 'government', 'fund', 'market', 'sectors', 'households', 'bank', 'external', 'trade', 'centralBank'] as const) {
+  for (const key of ['clock', 'scheduler', 'rng', 'government', 'fund', 'market', 'sectors', 'households', 'bank', 'external', 'trade', 'centralBank', 'world', 'soe', 'fiscal'] as const) {
     if (!s[key]) throw new Error(`Corrupt save: missing ${key}`);
   }
   const positive = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value > 0;
@@ -135,6 +155,23 @@ export function deserialize(json: string): GameState {
   }
   for (const company of COMPANIES) {
     if (!s.companies?.[company.id] || !s.market.quotes?.[company.id] || !Array.isArray(s.companies[company.id].history)) throw new Error('Corrupt save: missing security');
+  }
+  validateWorld(s.world);
+  validateSoe(s.soe);
+  validateFiscal(s.fiscal);
+  if (![1, 2].includes(s.baseline.model) || !(s.households.equityIndex > 0)
+    || (s.baseline.profile !== 'malaysia' || s.baseline.model === 1) !== !s.world.enabled) throw new Error('Corrupt save: inconsistent model generation');
+  if (!['a', 'b', 'c', 'd'].every((k) => {
+    const word = s.world.rng[k as keyof typeof s.world.rng];
+    return Number.isInteger(word) && word >= -2147483648 && word <= 4294967295;
+  })) throw new Error('Corrupt save: invalid world RNG');
+  for (const p of s.government.pending) {
+    if (p.kind === 'commodity' && validateCommodityPolicy(p.patch as object)) throw new Error('Corrupt save: invalid pending commodity policy');
+    if (p.kind === 'development' && !((p.patch as { annual: number }).annual >= 0 && (p.patch as { annual: number }).annual <= 200e9)) throw new Error('Corrupt save: invalid pending development budget');
+    if (p.kind === 'partner') {
+      const q = p.patch as { partner: string; tariff: number };
+      if (!(q.partner in s.world.partners) || !(q.tariff >= 0 && q.tariff <= 0.5)) throw new Error('Corrupt save: invalid pending partner tariff');
+    }
   }
   if (!['malaysia', 'legacy-kl'].includes(s.baseline.profile)
     || !nonnegative(s.baseline.openingTreasury) || !nonnegative(s.baseline.openingDebt)

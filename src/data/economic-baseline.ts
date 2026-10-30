@@ -1,6 +1,7 @@
 // Seven fictional sector weights and behavioral assumptions. Legacy KL constants are preserved;
 // new campaigns use dated Malaysia opening observations below. Units: MYR, annual unless noted.
 import type { BudgetCategory, BudgetPolicy, SectorId, TaxPolicy } from '../types/game';
+import { FUEL_SUBSIDY0 } from './world';
 
 export const SECTOR_IDS: SectorId[] = ['fin', 'prop', 'util', 'tech', 'cons', 'health', 'ind'];
 
@@ -113,8 +114,9 @@ export const CPI_WEIGHTS: Record<SectorId, number> = Object.fromEntries(
   SECTOR_IDS.map((s) => [s, SECTORS[s].consumption]),
 ) as Record<SectorId, number>;
 
-/** Official observations are dated in national-baseline.ts; all unspecified stocks remain model assumptions. */
-export const BASE_BUDGET: BudgetPolicy = {
+/** Official observations are dated in national-baseline.ts; all unspecified stocks remain model assumptions.
+ * Schema-5 national campaigns (model 1) keep this split unchanged. */
+export const BASE_BUDGET_V1: BudgetPolicy = {
   health: 40_954_794_000 / 12,
   services: (63_473_399_800 + 15_129_293_500) / 12,
   safety: (14_523_000_000 + 18_019_701_600) / 12,
@@ -122,6 +124,9 @@ export const BASE_BUDGET: BudgetPolicy = {
   transfers: 44_000_000_000 / 12,
   admin: (376_840_000_000 - 61_013_000_000 - 40_954_794_000 - 63_473_399_800 - 15_129_293_500 - 14_523_000_000 - 18_019_701_600 - 1_146_184_500 - 1_673_604_200 - 44_000_000_000) / 12,
 };
+/** Model 2: the RON95 subsidy is modelled explicitly, so its opening bill leaves the administration residual;
+ * total operating spending still equals the official 2027 estimate. */
+export const BASE_BUDGET: BudgetPolicy = { ...BASE_BUDGET_V1, admin: BASE_BUDGET_V1.admin - FUEL_SUBSIDY0 / 12 };
 export const NATIONAL_GDP = 2_025_379_140_000;
 const scale = NATIONAL_GDP / 303.6e9;
 export const BASELINE = {
@@ -139,4 +144,7 @@ export const BASELINE = {
   myrPerUsd: 538_759_540_269 / 132.1e9,
 };
 export const baselineFor = (s: { baseline: { profile: 'malaysia' | 'legacy-kl' } }) => s.baseline.profile === 'legacy-kl' ? LEGACY_BASELINE : BASELINE;
-export const budgetFor = (s: { baseline: { profile: 'malaysia' | 'legacy-kl' } }) => s.baseline.profile === 'legacy-kl' ? LEGACY_BUDGET : BASE_BUDGET;
+export const budgetFor = (s: { baseline: { profile: 'malaysia' | 'legacy-kl'; model?: 1 | 2 } }) =>
+  s.baseline.profile === 'legacy-kl' ? LEGACY_BUDGET : s.baseline.model === 1 ? BASE_BUDGET_V1 : BASE_BUDGET;
+/** Model-2 national campaigns carry the resource sector, development budget, SOEs, commodities and partners. */
+export const nationalV2 = (s: { baseline: { profile: 'malaysia' | 'legacy-kl'; model?: 1 | 2 } }) => s.baseline.profile === 'malaysia' && s.baseline.model !== 1;

@@ -1,6 +1,6 @@
 import { sectorTax } from './policy-controls';
 import { calibrationFor } from './calibration';
-import { baselineFor } from '../data/economic-baseline';
+import { baselineFor, nationalV2 } from '../data/economic-baseline';
 // Featured listed companies (40). Their KL revenue is a *share of* the sector aggregates, so they
 // are a sample inside the economy, not an addition to it: government taxes are computed on sector
 // aggregates and company-level KL tax is informational. See docs/decisions.md D-006.
@@ -60,6 +60,7 @@ export function dailyCompanies(s: GameState, day = s.scheduler.lastDay): void {
   const CAL = calibrationFor(s);
   const fxf = s.external.myrPerUsd / BASELINE.myrPerUsd;
   const targets = companyEventTargets(s, day);
+  const v2 = nationalV2(s);
   for (const c of COMPANIES) {
     const st = s.companies[c.id];
     const t = targets.get(c.id) ?? { revenue: 1, sentiment: 0 };
@@ -67,7 +68,9 @@ export function dailyCompanies(s: GameState, day = s.scheduler.lastDay): void {
     st.sentiment += 0.05 * (t.sentiment - st.sentiment);
     const { kl, my, gl } = demandIndices(s, c);
     const e = c.exposure;
-    const mix = c.exchange === 'MY' ? e.kl * kl + e.my * my + e.global * gl * fxf : (e.kl * kl + e.my * my) / fxf + e.global * gl;
+    // Model 2: Malaysian exporters' foreign sales depend on access to trading partners.
+    const access = v2 && c.exchange === 'MY' ? s.world.exportAccess : 1;
+    const mix = c.exchange === 'MY' ? e.kl * kl + e.my * my + e.global * gl * fxf * access : (e.kl * kl + e.my * my) / fxf + e.global * gl;
     const realVol = (e.kl * (s.sectors[c.sector].output / CAL.Y0[c.sector]) + e.my * (s.baseline.profile === 'malaysia' ? s.sectors[c.sector].output / CAL.Y0[c.sector] : s.external.myDemand) + e.global * s.external.drivers[c.driver]) * st.revenueShock;
     const revenue = (c.revenue / 365) * mix * st.revenueShock;
     const opex0 = (c.revenue * (1 - c.ebitdaMargin)) / 365;
@@ -76,10 +79,17 @@ export function dailyCompanies(s: GameState, day = s.scheduler.lastDay): void {
     const enIdx = c.exchange === 'MY' ? s.external.oil * fxf : s.external.oil;
     const othIdx = c.exchange === 'MY' ? s.indicators.cpi / 100 : s.external.usPrice;
     const os = 1 - c.laborShare - c.energyShare;
+    // Commodity inputs (model 2) are part of "other" costs but priced off world indices, in listing currency.
+    let commodityShare = 0;
+    let commodityCost = 0;
+    if (v2 && c.commodityCost) for (const [k, share] of Object.entries(c.commodityCost) as ['wheat' | 'steel' | 'palm', number][]) {
+      commodityShare += share;
+      commodityCost += share * s.world.prices[k] * (c.exchange === 'MY' ? fxf : 1);
+    }
     st.mtd.revenue += revenue;
     st.mtd.laborCost += opex0 * scale * c.laborShare * labIdx;
     st.mtd.energyCost += opex0 * scale * c.energyShare * enIdx;
-    st.mtd.otherCost += opex0 * scale * os * othIdx;
+    st.mtd.otherCost += opex0 * scale * ((os - commodityShare) * othIdx + commodityCost);
     st.mtd.depreciation += (c.revenue * c.depreciationPct) / 365;
     const rate = c.exchange === 'MY' ? s.bank.lendingRate - 0.005 : s.external.ust10 + 0.008;
     const cashRate = c.exchange === 'MY' ? s.bank.depositRate : s.external.fedRate - 0.005;

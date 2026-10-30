@@ -31,3 +31,20 @@ test('all four economic controls can be reviewed, applied and observed in simula
   expect(after.centralBank.usdReserves).toBeLessThan(before.centralBank.usdReserves);
   await expect(page.getByTestId('panel')).toContainText('Health coverage');
 });
+
+test('queuing a manual budget for a planned ministry warns, then replaces the plan',async({page})=>{
+  await startCampaign(page);
+  await page.getByTestId('nav-controls').click();
+  await page.getByRole('button',{name:'Review ministry plan',exact:true}).click();
+  await page.getByTestId('confirm-btn').click();
+  const s=await page.evaluate(()=>(window as unknown as Dev).__klDev.state());
+  const cat=s.controls.plans[0].category;
+  await page.getByTestId('nav-policies').click();
+  await page.getByTestId(`budget-${cat}`).fill(String(Math.round(s.government.policies.budget[cat]*0.9/10e6)*10e6));
+  await page.getByTestId('queue-budget').click();
+  await expect(page.getByTestId(`plan-replaced-${cat}`)).toBeVisible();
+  await page.getByTestId('confirm-btn').click();
+  const after=await page.evaluate(()=>(window as unknown as Dev).__klDev.state());
+  expect(after.controls.plans).toHaveLength(0);
+  expect(after.government.pending.at(-1)?.label).toContain('ministry plan');
+});

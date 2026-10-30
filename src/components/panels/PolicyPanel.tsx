@@ -134,6 +134,9 @@ export function PolicyPanel() {
             <ul className="list-disc space-y-1 pl-4">
               {CATS.filter((k) => budget[k] !== pol.budget[k]).map((k) => <li key={k}>{BUDGET_LABELS[k]}: RM {(pol.budget[k] / 1e6).toFixed(0)}m → RM {(budget[k] / 1e6).toFixed(0)}m / month</li>)}
               <li>Effective from tomorrow 00:00.</li>
+              {g.controls.plans.filter((p) => budget[p.category] !== (pendingBudget(p.category) ?? pol.budget[p.category])).map((p) => (
+                <li key={p.category} className="text-amber-300" data-testid={`plan-replaced-${p.category}`}>Replaces the {BUDGET_LABELS[p.category]} ministry plan; its future annual appropriations are cancelled.</li>
+              ))}
             </ul>
           )}
         </ConfirmDialog>

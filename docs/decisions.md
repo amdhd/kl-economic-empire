@@ -196,8 +196,8 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
 - **D-026 Economic controls (user requested all four).** Sector corporate tax relief starts next month, expires after
   1–60 months and cannot overlap within a sector. It reduces tax on positive eligible profits only, including company
   domestic exposure; investment uses the same effective rate. Show static cost and actual closed-month receipts forgone.
-  Ministry plans schedule 1–5 annual appropriations starting next month, with nominal annual escalation. Manual policies
-  due at the same boundary apply after the plan. Cancelling removes future changes while retaining current funding.
+  Ministry plans schedule 1–5 annual appropriations starting next month, with nominal annual escalation. Queuing a
+  manual budget for a planned category replaces that plan (D-030). Cancelling removes future changes while retaining current funding.
   Health/education/safety outcomes are lagged synthetic coverage/readiness indices from real funded budgets, not official
   service statistics. Aggregate service quality retains its existing fiscal channel.
 - **D-027 Debt strategy.** Retain the existing amortising debt-pool abstraction, rather than falsely imply bullet bonds.
@@ -209,3 +209,60 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   or buys below the lower bound, subject to daily configured size, segregated inventory, USD-sale reserve floor, spreads
   and the same shared daily turnover cap as manual interventions. Pressure affects subsequent fixings, never guarantees
   a peg. No new RNG draws. Schema5 persists all controls; schema4 migrates to neutral defaults without resetting accounts.
+- **D-029 Reserve revaluation is outside the wealth score.** Public net worth still shows central-bank reserve equity
+  at the current MYR/USD rate. The wealth score values USD reserves at the opening rate (`scoreNetWorth`), so spreads and
+  trading losses still cost score, but exchange-rate moves do not count. Reason: review found that selling USD early and
+  buying late weakened the ringgit and raised the score by up to ~3 points, and random FX moves swung reserve equity by
+  −RM6bn to +RM34bn across seeds. The SWF's own USD holdings keep their existing market valuation.
+- **D-030 Manual budgets replace ministry plans.** Queuing a manual appropriation for a category with a ministry plan
+  cancels that plan's future annual steps, and the review dialog says so. Previously the plan's next annual step silently
+  overwrote the player's manual budget.
+- **D-031 Model generations (schema 6).** New national campaigns are "model 2": oil & gas and palm oil form a resource
+  sector outside the seven input–output industries, the federal development programme is modelled, and SOEs,
+  commodities, trading partners, fiscal rules and the equity wealth effect are active. Schema-5 saves migrate as
+  "model 1" with all of these off and their original calibration (`CAL_V1`, `BASE_BUDGET_V1`), so balances and outcomes
+  do not jump. Legacy KL saves are unaffected.
+- **D-032 Development expenditure (OFFICIAL RM85.0bn, Budget 2027).** Paid daily as capital outlays, bought from
+  construction, industry, ICT and social programmes, 60% capitalised as public assets, and accumulated in a separate
+  public-capital stock (depreciation 4%/yr) that raises every sector's productivity with elasticity 0.05. Because the
+  sector capital-output ratios describe the whole capital stock, model 2 scales the private stock and private investment
+  down by the public share of fixed investment; adding RM85bn on top double-counted public investment and drove
+  construction's calibrated exports negative. Opening deficit = (376.84 + 85.0 − 380.82)/GDP ≈ 4.0%.
+- **D-033 Resource sector and receipts.** Opening value added: upstream oil & gas RM111bn, palm oil RM48bn (APPROX scale);
+  the seven sectors are recalibrated so total GDP still equals the official figure. Petroleum income tax (38% statutory)
+  is paid on upstream profit with fixed costs; palm pays corporate tax and the export duty, whose opening rate is set so
+  receipts match the OFFICIAL RM1.914bn 2027 export duty estimate. PETRONAS (RM32bn APPROX dividend) and Khazanah
+  (payout of its listed dividends) pay the treasury. Every opening modelled receipt is subtracted from the residual
+  "other receipts", so opening revenue still equals the OFFICIAL RM380.8bn. Line 75200 (RM35.5bn, returns from
+  non-financial enterprises) is dominated by the PETRONAS dividend.
+- **D-034 SOE wealth accounting.** Public net worth includes changes in PETRONAS book equity (cash − debt) and Khazanah
+  NAV at market. A dividend or special dividend therefore moves cash between public accounts without creating wealth,
+  so extracting SOE cash cannot raise the wealth score. PNB is not modelled as a dividend source: its income goes to
+  unit holders, not the federal government.
+- **D-035 KL projects in national campaigns.** City projects' productivity, rent, service and tourism effects are scaled
+  by KL's share of national output (≈15%). Previously a RM4.5bn KL rail line raised productivity in every Malaysian
+  sector by up to 2%, a large free lunch exposed by the "commission everything" balance test.
+- **D-036 Commodities.** World prices are exogenous indices (oil reuses the existing oil cycle; palm, wheat and steel
+  have their own AR(1) cycles plus seeded supply/demand episodes). They come from a separate persisted RNG stream
+  (`world.rng`) so the existing seeds' draw order, prices and events are unchanged. Players control domestic
+  instruments only: RON95 ceiling and eligibility, wheat subsidy, steel safeguard duty, palm export duty.
+- **D-037 Fuel subsidy and core inflation.** The opening RON95 subsidy (17bn litres × 85% eligible × RM0.61 ≈ RM8.8bn,
+  APPROX) is carved out of the administration residual so total operating spending still equals the official estimate.
+  Households pay any change in their fuel bill out of other consumption, and the CPI carries pump prices at a 5.5% weight.
+  Because that direct real-income effect is now explicit, the behavioural spending and confidence penalties key off core
+  inflation (excluding administered fuel prices); otherwise a one-off pump-price change compounded through the existing
+  inflation→MPC→unemployment loop. Utilities feel 40% of crude moves (regulated gas, ICPT pass-through).
+- **D-038 Trading partners.** Eight partners with APPROX rounded trade shares. Bilateral surcharges are relative to
+  opening conditions. Imports follow a CES price index across partners (substitution elasticity 4: diversion means costs
+  rise less than the tariff). Partners mirror a share of surcharges after 60 days (de-escalate after 30). Agreements
+  need relations ≥ 50 and no dispute, take 180 days, and add 5% export access and 2% cheaper imports per tier (max 2).
+- **D-039 Fiscal rules.** Modelled on the Public Finance and Fiscal Responsibility Act 2023: deficit ≤ 3% of GDP, debt
+  ≤ 60% (or falling), golden rule. The deficit target glides from the opening deficit to the ceiling over 24 months.
+  Rules are not self-enforcing. Monthly credibility moves 15% toward a compliance target and shifts the sovereign
+  premium by −20bp to +50bp and the rating by up to ±1 notch; credibility below 50 lowers the stability score.
+  Loosening a rule costs credibility at once. The escape clause is justified by an output gap below −2% or an active
+  adverse macro shock (−2 points); otherwise −20 and capped. It lapses after 18 months. Model 2's deficit-premium and
+  rating thresholds start at 4.5% of GDP, because the real budget opens near 4%.
+- **D-040 Equity wealth effect.** Households hold an APPROX RM450bn of listed equity and spend 3% a year of gains or
+  losses on Bursa prices (smoothed over ~20 days). This is how share prices reach the real economy; trading itself still
+  never enters GDP.

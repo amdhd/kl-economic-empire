@@ -1,6 +1,10 @@
 import { sectorTax } from './policy-controls';
 import { calibrationFor } from './calibration';
-import { baselineFor } from '../data/economic-baseline';
+import { baselineFor, nationalV2 } from '../data/economic-baseline';
+import { COMMODITY_IMPORT, FUEL_CPI_WEIGHT, HOUSEHOLD_EQUITY0, PUBLIC_CAPITAL_ELASTICITY, WEALTH_MPC } from '../data/world';
+import { publicCapitalFactor } from './fiscal-rules';
+import { palmHouseholdDelta } from './soe';
+import { fuelPriceIndex, householdFuelBillDelta, wheatUserPrice } from './world';
 // Aggregate KL economy: households, 7 input–output sectors, labour, prices and investment.
 // See docs/economy-model.md for the equations; every rule here has a matching section there.
 import { BASE_TAX, CPI_WEIGHTS, INVESTMENT_GOODS, IO, SECTOR_IDS, SECTORS } from '../data/economic-baseline';
@@ -28,13 +32,56 @@ export interface DayEconomy {
   householdTax: number;
 }
 
-/** Import price index for a sector: FX × (foreign goods, energy). */
-function importPrice(s: GameState, j: SectorId): number {
+/** Share of crude-price moves reaching utilities' fuel costs in model 2 (ASSUMPTION; regulated gas, ICPT). */
+const UTILITY_OIL_PASSTHROUGH = 0.4;
+/** Share of steel imports replaced by domestic producers under a safeguard duty (ASSUMPTION). */
+const STEEL_SUBSTITUTION = 0.4;
+
+/**
+ * Imported inputs per unit of a sector's import requirement, in ringgit. `user` is what firms pay
+ * (duties included, subsidies netted); the other fields split it for settlement. Model 2 prices
+ * generic goods across trading partners (bilateral tariffs, diversion) and wheat/steel separately.
+ */
+export function importCost(s: GameState, j: SectorId) {
   const BASELINE = baselineFor(s);
   const e = s.external;
   const fxf = e.myrPerUsd / BASELINE.myrPerUsd;
   const es = SECTORS[j].energyImportShare;
-  return fxf * ((1 - es) * e.usPrice + es * e.oil) * (1 + s.trade.policy.tariff);
+  const mfn = s.trade.policy.tariff;
+  if (!nationalV2(s)) {
+    const cif = fxf * ((1 - es) * e.usPrice + es * e.oil);
+    return { user: cif * (1 + mfn), cif, mfnDuty: cif * mfn, bilateralDuty: 0, steelDuty: 0, steelSubstituted: 0, wheatQty: 0 };
+  }
+  const w = s.world;
+  const cw = COMMODITY_IMPORT[j]?.wheat ?? 0;
+  const cs = COMMODITY_IMPORT[j]?.steel ?? 0;
+  const generic = (1 - es - cw - cs) * e.usPrice * w.importPriceIndex;
+  const bilateralDuty = generic * w.importDutyShare;
+  const sub = STEEL_SUBSTITUTION * w.policy.steelSafeguard;
+  const steelImported = cs * w.prices.steel * (1 - sub);
+  const steelDuty = steelImported * w.policy.steelSafeguard;
+  // Domestic steel sells at import parity, so users pay the duty-inclusive price on all steel.
+  const steelUser = cs * w.prices.steel * (1 + w.policy.steelSafeguard);
+  // Power generation runs on regulated domestic gas and coal, with fuel costs passed to tariffs only
+  // partly (ICPT): utilities feel 40% of crude moves; other sectors buy fuel at world prices.
+  const energy = 1 + (j === 'util' ? UTILITY_OIL_PASSTHROUGH : 1) * (e.oil - 1);
+  const preMfnUser = generic + es * energy + cw * wheatUserPrice(s) + steelUser;
+  const cif = generic - bilateralDuty + es * energy + cw * w.prices.wheat + steelImported;
+  return {
+    user: fxf * preMfnUser * (1 + mfn),
+    cif: fxf * cif,
+    mfnDuty: fxf * cif * mfn,
+    bilateralDuty: fxf * bilateralDuty,
+    steelDuty: fxf * steelDuty,
+    steelSubstituted: cs * sub, // real domestic steel demand per unit of import requirement
+    wheatQty: cw,
+  };
+}
+
+/** Public infrastructure and capital raise every sector's productivity (model 2), 1 at opening. */
+export function productivityBoost(s: GameState, j: SectorId): number {
+  const pcf = nationalV2(s) ? publicCapitalFactor(s, PUBLIC_CAPITAL_ELASTICITY) : 1;
+  return (1 + s.sectors[j].infraBoost) * pcf;
 }
 
 /**
@@ -50,9 +97,11 @@ export function exportIndex(s: GameState, j: SectorId): number {
   const mix = SECTORS[j].exportMix;
   let idx = 0;
   idx += (mix.my ?? 0) * e.myDemand * Math.pow(s.sectors[j].price / (s.indicators.cpi / 100), -0.3);
-  idx += (mix.global ?? 0) * e.globalDemand * Math.pow(rel, -0.6);
+  // Model 2: goods exports are shared across trading partners, whose cycles, tariffs and agreements set access.
+  const access = nationalV2(s) ? s.world.exportAccess : 1;
+  idx += (mix.global ?? 0) * e.globalDemand * access * Math.pow(rel, -0.6);
   idx += (mix.tourism ?? 0) * e.tourism * (1 + s.government.tourismBoost) * levyHit * Math.pow(rel, -0.8);
-  idx += (mix.tech ?? 0) * Math.sqrt(e.techCycle * e.globalDemand) * Math.pow(rel, -0.5);
+  idx += (mix.tech ?? 0) * Math.sqrt(e.techCycle * e.globalDemand) * access * Math.pow(rel, -0.5);
   return idx * (1 + s.trade.readiness);
 }
 
@@ -70,7 +119,8 @@ export function householdDemand(s: GameState, transfersPaid: number) {
     wagesBy[j] = s.sectors[j].employment * CAL.wage0[j] * hh.wageIndex;
     wages += wagesBy[j];
   }
-  const other = hh.otherIncomeMonthly * PER_DAY;
+  // Palm smallholder profit and estate wages move with world palm prices (model 2, relative to opening).
+  const other = hh.otherIncomeMonthly * PER_DAY + palmHouseholdDelta(s);
   const householdTax = toMinor(tax.household * wages * SURCHARGE_BASE_SHARE) / 100;
   const hhRate = bank.lendingRate + HOUSEHOLD_RATE_PREMIUM;
   const interestH = (bank.loansH * hhRate) / 365;
@@ -79,7 +129,10 @@ export function householdDemand(s: GameState, transfersPaid: number) {
   // Permanent-income smoothing: households spend out of a blend of current and smoothed income,
   // drawing down savings when income dips (spec: DrawdownFromSavings).
   const permanentIncome = hh.permanentIncome + 0.012 * (disposable - hh.permanentIncome);
-  const consumption = Math.max(0, 0.5 * disposable + 0.5 * permanentIncome) * hh.mpc;
+  // Wealth effect: households spend a small share of listed-equity gains and losses (model 2).
+  const wealthSpend = nationalV2(s) ? (WEALTH_MPC / 365) * HOUSEHOLD_EQUITY0 * (hh.equityIndex - 1) : 0;
+  // Pump prices: extra fuel spending comes out of the household budget for other goods (model 2).
+  const consumption = Math.max(0, (0.5 * disposable + 0.5 * permanentIncome) * hh.mpc + wealthSpend - householdFuelBillDelta(s));
   const credit = hh.newCreditMonthly * PER_DAY;
   return { wagesBy, wages, other, householdTax, interestH, amortH, disposable, permanentIncome, consumption, credit };
 }
@@ -129,7 +182,11 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
       levy += visitors * sec.price * tax.consumption;
       consPurchasesReal += c / sec.price + visitors;
     }
-    const fr = (domesticNominal * (j === 'prop' ? mods.propDemand : 1)) / sec.price + xReal;
+    let fr = (domesticNominal * (j === 'prop' ? mods.propDemand : 1)) / sec.price + xReal;
+    // A steel safeguard shifts part of steel demand to domestic producers (yesterday's quantities).
+    if (j === 'ind' && nationalV2(s) && s.world.policy.steelSafeguard > 0) {
+      for (const k of SECTOR_IDS) fr += SECTORS[k].importShare * importCost(s, k).steelSubstituted * s.sectors[k].output;
+    }
     finalReal.push(fr);
     sectorTotal[j] = fr;
   }
@@ -142,22 +199,31 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
   const Ktot = SECTOR_IDS.reduce((a, j) => a + s.sectors[j].capital, 0);
   const rateF = bank.lendingRate;
   let tariffReceipts = 0;
+  let steelDutyReceipts = 0;
+  let bilateralReceipts = 0;
+  let wheatImports = 0;
   SECTOR_IDS.forEach((j, idx) => {
     const sec = s.sectors[j];
-    const cap = sec.capacity * (1 + sec.infraBoost) * (mods.capacity[j] ?? 1);
+    const boost = productivityBoost(s, j);
+    const cap = sec.capacity * boost * (mods.capacity[j] ?? 1);
     // Labour also limits output: staff can stretch ~8% above their normal productivity.
-    const laborCap = sec.employment * CAL.laborProd0[j] * sec.productivity * (1 + sec.infraBoost) * LABOR_STRETCH;
+    const laborCap = sec.employment * CAL.laborProd0[j] * sec.productivity * boost * LABOR_STRETCH;
     const demand = Math.max(0, Y[idx]);
     sec.demandCapped = Math.min(demand, cap);
     sec.utilization = Math.max(demand / cap, (demand / laborCap) * LABOR_STRETCH * NORMAL_UTIL);
     const out = Math.min(demand, cap, laborCap);
     sec.output = out;
     const gross = sec.price * out;
-    const imports = importPrice(s, j) / (1 + s.trade.policy.tariff) * SECTORS[j].importShare * out;
-    tariffReceipts += imports * s.trade.policy.tariff;
+    const ic = importCost(s, j);
+    const req = SECTORS[j].importShare * out;
+    const imports = ic.cif * req;
+    tariffReceipts += (ic.mfnDuty + ic.bilateralDuty) * req;
+    steelDutyReceipts += ic.steelDuty * req;
+    bilateralReceipts += ic.bilateralDuty * req;
+    wheatImports += ic.wheatQty * req;
     s.trade.mtdImports += imports;
     s.trade.mtdExports += exports[j] * (demand > 0 ? out / demand : 0) * sec.price;
-    let inter = imports * (1 + s.trade.policy.tariff);
+    let inter = ic.user * req;
     for (const i of SECTOR_IDS) inter += IO[i][j] * s.sectors[i].price * out;
     const va = gross - inter;
     const realVa = CAL.v[j] * out;
@@ -179,17 +245,23 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
   });
 
   const tariffPaid = post(s.government, 'importTariff', tariffReceipts);
+  const steelDutyPaid = post(s.government, 'commodityDuty', steelDutyReceipts);
+  if (nationalV2(s)) {
+    s.world.mtd.bilateralDuty += bilateralReceipts;
+    s.world.mtd.steelDuty += steelDutyPaid;
+    s.world.lastWheatImports = wheatImports;
+  }
   // Tariffs are net product taxes. They offset the domestic input-tax deduction in VA;
   // they do not create real output or enter base-price real GDP (opening tariff = zero).
-  gdpNominal += tariffPaid;
+  gdpNominal += tariffPaid + steelDutyPaid;
   // --- Prices: move toward cost-based targets with demand-pressure markups -----------------------
   const cpiIdx = s.indicators.cpi / 100;
   const nextP: Vec = zero();
   for (const j of SECTOR_IDS) {
     const sec = s.sectors[j];
-    let target = SECTORS[j].importShare * importPrice(s, j);
+    let target = SECTORS[j].importShare * importCost(s, j).user;
     for (const i of SECTOR_IDS) target += IO[i][j] * s.sectors[i].price;
-    const ulc = hh.wageIndex / sec.productivity / (1 + sec.infraBoost);
+    const ulc = hh.wageIndex / sec.productivity / productivityBoost(s, j);
     const markup = clamp(1 + 0.8 * (sec.utilization - NORMAL_UTIL), 0.85, 1.3);
     const ls = SECTORS[j].laborShare;
     target += CAL.v[j] * (ls * ulc + (1 - ls) * markup * cpiIdx);
@@ -219,6 +291,8 @@ export function computeCpi(s: GameState): number {
     const p = j === 'prop' ? s.households.rentIndex : j === 'cons' ? s.sectors[j].price * levyF : s.sectors[j].price;
     c += CPI_WEIGHTS[j] * p;
   }
+  // Model 2: household pump prices (capped for eligible buyers) carry their own CPI weight.
+  if (nationalV2(s)) c = (1 - FUEL_CPI_WEIGHT) * c + FUEL_CPI_WEIGHT * fuelPriceIndex(s);
   return 100 * c;
 }
 
@@ -230,7 +304,7 @@ export function weekly(s: GameState): void {
   for (const j of SECTOR_IDS) {
     const sec = s.sectors[j];
     // Hire toward the labour needed for demand that capital capacity can serve.
-    const need = sec.demandCapped / (CAL.laborProd0[j] * sec.productivity * (1 + sec.infraBoost));
+    const need = sec.demandCapped / (CAL.laborProd0[j] * sec.productivity * productivityBoost(s, j));
     sec.employment += 0.12 * (need - sec.employment);
     total += sec.employment;
   }
@@ -244,7 +318,7 @@ export function weekly(s: GameState): void {
  * `taxRate` is the rate that applied during the month. Sets next month's investment plans,
  * credit, wages, expectations and household behaviour.
  */
-export function monthClose(s: GameState, inflationYoY: number, unemployment: number, realIncomeGrowth: number, days: number): void {
+export function monthClose(s: GameState, inflationYoY: number, unemployment: number, realIncomeGrowth: number, days: number, coreInflation = inflationYoY): void {
   const BASELINE = baselineFor(s);
   const CAL = calibrationFor(s);
   const BASE_LEND_RATE = baselineFor(s).opr + 0.02;
@@ -322,9 +396,9 @@ export function monthClose(s: GameState, inflationYoY: number, unemployment: num
   hh.population *= 1 + 0.012 / 12;
 
   // Confidence and MPC (spec §8 reduced form)
-  const confTarget = clamp(0.6 - 2 * (unemployment - BASELINE.naturalUnemployment) - 2 * Math.max(0, inflationYoY - 0.03) + 1.5 * realIncomeGrowth - 0.15 * (0.5 - s.external.riskAppetite), 0.1, 0.95);
+  const confTarget = clamp(0.6 - 2 * (unemployment - BASELINE.naturalUnemployment) - 2 * Math.max(0, coreInflation - 0.03) + 1.5 * realIncomeGrowth - 0.15 * (0.5 - s.external.riskAppetite), 0.1, 0.95);
   hh.confidence += (confTarget - hh.confidence) * 0.35;
-  hh.mpc = clamp(BASE_MPC - 0.5 * (unemployment - BASELINE.naturalUnemployment) - 1.0 * Math.max(0, inflationYoY - 0.03) + 0.1 * (hh.confidence - 0.6), 0.7, 0.95);
+  hh.mpc = clamp(BASE_MPC - 0.5 * (unemployment - BASELINE.naturalUnemployment) - 1.0 * Math.max(0, coreInflation - 0.03) + 0.1 * (hh.confidence - 0.6), 0.7, 0.95);
 }
 
 /** New lending capacity this month: capital headroom × willingness. */

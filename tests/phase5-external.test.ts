@@ -188,6 +188,7 @@ describe('Phase 5 credit and fiscal stress', () => {
 
   it('unfunded capex and emergency balances are carried once and never paid again as operating arrears', () => {
     const s = createGame(513), gov = s.government;
+    s.fiscal.developmentAnnual = 0; // isolate project capex from the federal development programme
     applyCommand(s, { type: 'startProject', templateId: 'fibre' }, s.clock.hour * 60);
     gov.treasury = 0;
     gov.marketAccess = false;
@@ -198,7 +199,7 @@ describe('Phase 5 credit and fiscal stress', () => {
     expect(gov.pendingEmergency + gov.mtd.emergency).toBe(350e6);
     gov.treasury = 1e12;
     dailyGovernment(s, s.scheduler.lastDay + 1);
-    expect(gov.mtd.opex).toBeCloseTo(2 * operatingDue, 2);
+    expect(gov.mtd.opex).toBeCloseTo(2 * operatingDue, 1); // two postings, each rounded to the sen
     expect(gov.unpaidObligations).toBeLessThan(0.02);
     expect(gov.pendingEmergency + gov.mtd.emergency).toBeCloseTo(350e6, 2);
     expect(gov.mtd.capex).toBe(gov.projects[0].spent);

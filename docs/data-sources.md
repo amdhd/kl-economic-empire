@@ -147,3 +147,18 @@ No runtime downloads or historical spot-FX observations are implied. Chart refer
 Five-year display expansion: retain the latest60 common monthly CPI/labour observations (Sep2021–Aug2026) and20
 published GDP quarters (Q3 2021–Q2 2026). Each window follows its own latest published endpoint; do not extrapolate.
 The official five-year reference appears before simulated campaign charts. Both GDP axes explicitly show RM trillions.
+
+## Schema 6: fiscal, resource and trade references (31 Oct 2026)
+
+Official, read from Budget 2027 documents (belanjawan.mof.gov.my):
+- Development expenditure estimate 2027: RM85,000,000,000 (expenditure summary, "Ringkasan Keseluruhan", p.33).
+- Operating expenditure 2027: RM376,840,000,000 (same table). Total revenue 2027: RM380,816,996,000.
+- Export duty 2027 estimate: RM1,914,000,000 (revenue code 62100). Returns on investment from non-financial
+  enterprises 2027: RM35,492,468,000 (code 75200), dominated by the PETRONAS dividend.
+- Fiscal rule targets follow the Public Finance and Fiscal Responsibility Act 2023 (deficit 3% of GDP, debt 60%).
+
+Approximate public-scale references (rounded, recalled for calibration; verify before citing): PETRONAS dividend ≈ RM32bn
+and capex ≈ RM50bn a year; PETRONAS stakes ≈ 64% PETRONAS Chemicals, 51% PETRONAS Gas; Khazanah stakes ≈ Axiata 36%,
+IHH 26%, Telekom Malaysia 20%, CIMB 23%; RON95 ceiling RM1.99/L, ≈17bn litres a year, ≈85% eligible; partner trade
+shares; reference prices (Brent US$75/bbl, CPO RM4,000/t, wheat US$230/t, HRC steel US$520/t). Everything after the
+opening day is simulated.

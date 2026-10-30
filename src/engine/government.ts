@@ -1,5 +1,9 @@
 import { sectorTax, ministryOutcomes } from './policy-controls';
-import { baselineFor, budgetFor } from '../data/economic-baseline';
+import { baselineFor, budgetFor, nationalV2 } from '../data/economic-baseline';
+import { DEVELOPMENT_PURCHASES, KL_ECONOMY_SHARE, PUBLIC_CAPITAL_DEPRECIATION } from '../data/world';
+import { credibilityPremium } from './fiscal-rules';
+import { modelledResourceRevenue0 } from './soe';
+import { fuelSubsidyDaily, wheatSubsidyDaily, scheduleRetaliation } from './world';
 // Government treasury, debt, budgets, projects and tax settlement.
 // Every treasury movement goes through post(), which rounds to whole sen and records the exact
 // same amount in the month-to-date flow ledger — so the budget identity is testable exactly.
@@ -17,12 +21,23 @@ export const MAINTENANCE_RATE = 0.03;
 export const BOOST_SATURATION = 0.04;
 
 export const emptyFlows = (): GovMonthFlows => ({
-  taxCorporate: 0, taxProperty: 0, taxConsumption: 0, taxHousehold: 0, federalGrant: 0, importTariff: 0, exportSupport: 0, opex: 0, capex: 0,
+  taxCorporate: 0, taxProperty: 0, taxConsumption: 0, taxHousehold: 0, federalGrant: 0, importTariff: 0, exportSupport: 0,
+  soeDividend: 0, petroleumTax: 0, commodityDuty: 0, subsidy: 0, opex: 0, capex: 0,
   interest: 0, borrowing: 0, principal: 0, swfContribution: 0, swfTransferIn: 0, emergency: 0,
 });
 
-const INFLOWS: (keyof GovMonthFlows)[] = ['taxCorporate', 'taxProperty', 'taxConsumption', 'taxHousehold', 'federalGrant', 'importTariff', 'borrowing', 'swfTransferIn'];
+const INFLOWS: (keyof GovMonthFlows)[] = ['taxCorporate', 'taxProperty', 'taxConsumption', 'taxHousehold', 'federalGrant', 'importTariff', 'soeDividend', 'petroleumTax', 'commodityDuty', 'borrowing', 'swfTransferIn'];
 export const isInflow = (k: keyof GovMonthFlows) => INFLOWS.includes(k);
+
+/** Government revenue lines (borrowing and fund transfers are financing, not revenue). */
+export const REVENUE_KINDS: (keyof GovMonthFlows)[] = ['taxCorporate', 'taxProperty', 'taxConsumption', 'taxHousehold', 'federalGrant', 'importTariff', 'soeDividend', 'petroleumTax', 'commodityDuty'];
+/** Government expenditure lines (principal repayment and fund contributions are financing). */
+export const OUTLAY_KINDS: (keyof GovMonthFlows)[] = ['opex', 'capex', 'interest', 'emergency', 'exportSupport', 'subsidy'];
+const sumOf = (f: GovMonthFlows, kinds: (keyof GovMonthFlows)[]) => kinds.reduce((a, k) => a + (f[k] ?? 0), 0);
+export const revenueOf = (f: GovMonthFlows) => sumOf(f, REVENUE_KINDS);
+export const outlaysOf = (f: GovMonthFlows) => sumOf(f, OUTLAY_KINDS);
+export const interestOf = (f: GovMonthFlows) => f.interest ?? 0;
+export const capitalOf = (f: GovMonthFlows) => f.capex ?? 0;
 
 /** Moves cash in/out of the treasury. Returns the rounded MYR amount actually posted. */
 export function post(gov: GovernmentState, kind: keyof GovMonthFlows, amountMYR: number): number {
@@ -93,7 +108,9 @@ export function otherPublicReceiptsMonthly(s: GameState): number {
   const c = calibrationFor(s);
   const modeledTaxes = SECTOR_IDS.reduce((a, j) => a + Math.max(0, c.profit0[j]), 0) * BASE_TAX.corporate
     + BASE_TAX.property * PROPERTY_LEVY_BASE * c.Y0.prop + c.levyBase + c.hh.tax;
-  return Math.max(0, (380_816_996_000 - modeledTaxes * 365) / 12);
+  // Model 2 also models petroleum tax, palm tax and duty, and SOE dividends explicitly.
+  const resources = nationalV2(s) ? modelledResourceRevenue0() : 0;
+  return Math.max(0, (380_816_996_000 - modeledTaxes * 365 - resources) / 12);
 }
 
 /** Daily: grant receipts, interest accrual, opex/transfers/capex/emergency outlays with financing. */
@@ -120,7 +137,11 @@ export function dailyGovernment(s: GameState, today: number): GovDay {
   const capexDue = capexDueBy.reduce((a, c) => a + c.amt, 0);
   const emergencyDue = gov.pendingEmergency > 0 ? Math.min(gov.pendingEmergency, gov.pendingEmergency * 0.3 + 5e6) : 0;
   const arrearsDue = gov.unpaidObligations;
-  const totalDue = opexDue + maintenance + transfersDue + capexDue + emergencyDue + arrearsDue;
+  // Federal development programme (model 2) and price subsidies are obligations like any other.
+  const developmentDue = nationalV2(s) ? s.fiscal.developmentAnnual / 365 : 0;
+  const fuelDue = fuelSubsidyDaily(s);
+  const wheatDue = wheatSubsidyDaily(s);
+  const totalDue = opexDue + maintenance + transfersDue + capexDue + emergencyDue + arrearsDue + developmentDue + fuelDue + wheatDue;
 
   if (treasuryMYR(gov) < totalDue) {
     issueDebt(s, totalDue - treasuryMYR(gov) + pol.borrowing.cashBufferMonths * 0.25 * totalDue * 30, 'Bridge financing to meet daily obligations');
@@ -158,6 +179,16 @@ export function dailyGovernment(s: GameState, today: number): GovDay {
     purchases.health += paid * 0.3;
     purchases.ind += paid * 0.2;
   }
+  if (developmentDue > 0) {
+    const paid = post(gov, 'capex', developmentDue * paidFraction);
+    gov.publicAssets += paid * ASSET_CAPITALISATION;
+    for (const [sec, sh] of Object.entries(DEVELOPMENT_PURCHASES)) purchases[sec as SectorId] += paid * sh;
+    s.fiscal.publicCapital += paid / pCons;
+  }
+  if (nationalV2(s)) s.fiscal.publicCapital *= 1 - PUBLIC_CAPITAL_DEPRECIATION / 365;
+  // Unpaid subsidies are not carried as arrears: retailers are reimbursed only from available cash.
+  if (fuelDue > 0) s.world.mtd.fuelSubsidy += post(gov, 'subsidy', fuelDue * paidFraction);
+  if (wheatDue > 0) s.world.mtd.wheatSubsidy += post(gov, 'subsidy', wheatDue * paidFraction);
   // Projects retain unbuilt work and emergencies retain pendingEmergency. Carrying those same
   // shortfalls as opex arrears would pay them twice when cash becomes available.
   gov.unpaidObligations = Math.max(0, opexDue + maintenance + transfersDue + arrearsDue - operatingPaid - transfersPaid);
@@ -176,18 +207,21 @@ export function completeProject(s: GameState, id: number, today: number): void {
   const t = PROJECT_BY_ID[p.templateId];
   p.status = 'complete';
   p.completedDay = today;
+  // KL projects on the KL map: in model-2 national campaigns their economy-wide effects are scaled by
+  // KL's share of national output, so a city rail line cannot lift every Malaysian sector (D-035).
+  const k = nationalV2(s) ? KL_ECONOMY_SHARE : 1;
   const gains: string[] = [];
   for (const [sec, boost] of Object.entries(t.productivity)) {
     const st = s.sectors[sec as SectorId];
-    const eff = (boost as number) * Math.exp(-st.infraBoost / BOOST_SATURATION);
+    const eff = (boost as number) * k * Math.exp(-st.infraBoost / BOOST_SATURATION);
     st.infraBoost += eff;
-    gains.push(`${sec} productivity +${(eff * 100).toFixed(1)}%`);
+    gains.push(`${sec} productivity +${(eff * 100).toFixed(2)}%`);
   }
-  gov.housingFactor *= 1 + t.rentEffect;
-  gov.serviceBoost += t.serviceEffect;
+  gov.housingFactor *= 1 + t.rentEffect * k;
+  gov.serviceBoost += t.serviceEffect * k;
   gov.resilience = 1 - (1 - gov.resilience) * (1 - t.resilience);
-  gov.tourismBoost += t.tourism;
-  news(s, { kind: 'policy', tone: 'good', title: `Completed: ${p.name}`, body: `Benefits now active: ${gains.join(', ')}${t.rentEffect ? `, housing costs ${(t.rentEffect * 100).toFixed(1)}%` : ''}${t.resilience ? `, flood damage −${t.resilience * 100}%` : ''}.` });
+  gov.tourismBoost += t.tourism * k;
+  news(s, { kind: 'policy', tone: 'good', title: `Completed: ${p.name}`, body: `Benefits now active: ${gains.join(', ')}${t.rentEffect ? `, housing costs ${(t.rentEffect * k * 100).toFixed(2)}%` : ''}${t.resilience ? `, flood damage −${t.resilience * 100}%` : ''}.` });
 }
 
 export interface GovMonthClose {
@@ -215,7 +249,7 @@ export function monthCloseGovernment(s: GameState): GovMonthClose {
   // Scheduled amortisation (~10y average maturity), refinanced by new issuance at today's yield.
   const principalDue = debtMYR(gov) / s.controls.debt.averageMonths;
   const repaid = repayDebt(s, principalDue);
-  const outlays = gov.mtd.opex + gov.mtd.capex + gov.mtd.interest + gov.mtd.emergency + gov.mtd.exportSupport;
+  const outlays = outlaysOf(gov.mtd);
   const target = Math.max(0,pol.borrowing.cashBufferMonths * outlays - repaid * (1-s.controls.debt.refinance));
   if (treasuryMYR(gov) < target) issueDebt(s, target - treasuryMYR(gov), repaid > 0 ? 'Refinancing maturing bonds and rebuilding the cash buffer' : 'Rebuilding the cash buffer');
 
@@ -223,15 +257,21 @@ export function monthCloseGovernment(s: GameState): GovMonthClose {
   const gdp = gdpForRatios(s);
   const debtToGdp = debtMYR(gov) / gdp;
   const recent = s.reports.slice(-11);
-  const revenue12 = recent.reduce((a, r) => a + r.gov.taxCorporate + r.gov.taxProperty + r.gov.taxConsumption + r.gov.taxHousehold + r.gov.federalGrant + r.gov.importTariff, 0) + gov.mtd.taxCorporate + gov.mtd.taxProperty + gov.mtd.taxConsumption + gov.mtd.taxHousehold + gov.mtd.federalGrant + gov.mtd.importTariff;
-  const spend12 = recent.reduce((a, r) => a + r.gov.opex + r.gov.capex + r.gov.interest + r.gov.emergency + r.gov.exportSupport, 0) + outlays;
+  const revenue12 = recent.reduce((a, r) => a + revenueOf(r.gov), 0) + revenueOf(gov.mtd);
+  const spend12 = recent.reduce((a, r) => a + outlaysOf(r.gov), 0) + outlays;
   const months = recent.length + 1;
   const deficit = ((spend12 - revenue12) * (12 / months)) / gdp;
   const arrears = gov.mtdArrearsDays > 0 ? 1 : 0;
-  const premium = 0.004 + 0.08 * Math.max(0, debtToGdp - (s.baseline.profile === 'malaysia' ? 0.65 : 0.35)) + 0.25 * Math.max(0, deficit - 0.03) + 0.02 * arrears;
+  // Model 2 carries the real development budget, so its deficit starts near 4% of GDP: the deficit premium
+  // applies above that level, and fiscal-rule credibility adds or removes up to ~50bp.
+  const deficitFree = nationalV2(s) ? 0.045 : 0.03;
+  const premium = Math.max(0.0005, 0.004 + 0.08 * Math.max(0, debtToGdp - (s.baseline.profile === 'malaysia' ? 0.65 : 0.35)) + 0.25 * Math.max(0, deficit - deficitFree) + 0.02 * arrears
+    + (nationalV2(s) ? credibilityPremium(s) : 0));
   const prevRating = gov.creditRating;
   gov.bondYield = s.external.mgs10 + premium;
-  gov.creditRating = clamp(9 - 15 * Math.max(0, debtToGdp - (s.baseline.profile === 'malaysia' ? 0.6 : 0.3)) - 40 * Math.max(0, deficit - 0.025) - 3 * arrears, 0, 10);
+  const ratingFree = nationalV2(s) ? 0.045 : 0.025;
+  const credibilityNotches = nationalV2(s) ? (s.fiscal.credibility - 60) / 40 : 0;
+  gov.creditRating = clamp(9 - 15 * Math.max(0, debtToGdp - (s.baseline.profile === 'malaysia' ? 0.6 : 0.3)) - 40 * Math.max(0, deficit - ratingFree) - 3 * arrears + credibilityNotches, 0, 10);
   if (Math.floor(gov.creditRating) < Math.floor(prevRating)) {
     news(s, { kind: 'policy', tone: 'bad', title: `Credit rating downgraded to ${ratingLabel(gov.creditRating)}`, body: `Debt/GDP ${(debtToGdp * 100).toFixed(1)}%, deficit ${(deficit * 100).toFixed(1)}% of GDP. Borrowing costs rise.` });
     s.policyChurn += 4;
@@ -272,6 +312,13 @@ export function applyDuePolicies(s: GameState): void {
     if (p.kind === 'tax') Object.assign(gov.policies.tax, p.patch);
     else if (p.kind === 'budget') Object.assign(gov.policies.budget, p.patch);
     else if (p.kind === 'trade') Object.assign(s.trade.policy, p.patch);
+    else if (p.kind === 'commodity') Object.assign(s.world.policy, p.patch);
+    else if (p.kind === 'development') s.fiscal.developmentAnnual = (p.patch as { annual: number }).annual;
+    else if (p.kind === 'partner') {
+      const { partner, tariff } = p.patch as { partner: import('../types/game').PartnerId; tariff: number };
+      s.world.partners[partner].ourTariff = tariff;
+      scheduleRetaliation(s, partner, s.scheduler.lastDay);
+    }
     else Object.assign(gov.policies.borrowing, p.patch);
     news(s, { kind: 'policy', tone: 'neutral', title: `Now in force: ${p.label}` });
   }

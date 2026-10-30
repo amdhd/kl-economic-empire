@@ -90,3 +90,14 @@ it('tax previews respect incentive floors in the effective month',()=>{
   const estimate=estimateTaxChange(s,{...s.government.policies.tax,corporate:.1});
   expect(estimate.corporate/(100e6/30.4/(12/365))).toBeCloseTo(-.03,10);
 });
+it('a manual budget change replaces that ministry plan instead of being overwritten next year',()=>withoutEvents(()=>{
+  const s=createGame(806),old=s.government.policies.budget.health;
+  expect(act(s,{type:'ministryPlan',category:'health',monthly:old*1.5,growth:.05,years:3}).ok).toBe(true);
+  expect(act(s,{type:'ministryPlan',category:'safety',monthly:s.government.policies.budget.safety*1.1,growth:0,years:2}).ok).toBe(true);
+  const res=act(s,{type:'queueBudget',patch:{health:old*0.9}});
+  expect(res.ok).toBe(true);
+  expect(s.government.pending.at(-1)?.label).toContain('replaces Healthcare ministry plan');
+  expect(s.controls.plans.map(p=>p.category)).toEqual(['safety']);
+  runUntil(s,2028,2,2);
+  expect(s.government.policies.budget.health).toBe(Math.round(old*0.9/1e6)*1e6);
+}));

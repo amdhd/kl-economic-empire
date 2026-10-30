@@ -1,7 +1,7 @@
 import { baselineFor } from '../data/economic-baseline';
 // Read-only report inputs. Opening values are campaign creation, not January's closing accounts.
 import type { GameState, GovMonthFlows } from '../types/game';
-import { debtMYR, emptyFlows, treasuryMYR } from './government';
+import { debtMYR, emptyFlows, outlaysOf, revenueOf, treasuryMYR } from './government';
 import { annualRealOutput, publicNetWorth, scoreDrivers } from './indicators';
 import { navMYR } from './sovereign-fund';
 import { toMinor } from './util';
@@ -23,8 +23,8 @@ export function campaignReport(s: GameState) {
     approval: s.indicators.approval, netWorth: publicNetWorth(s) };
   const fundNetTransfers = s.fund.totalInjectedMYR - s.fund.totalWithdrawnMYR;
   const fundGain = closing.fundNav - opening.fundNav - fundNetTransfers;
-  const revenue = fiscal.taxCorporate + fiscal.taxProperty + fiscal.taxConsumption + fiscal.taxHousehold + fiscal.federalGrant + fiscal.importTariff;
-  const outlays = fiscal.opex + fiscal.capex + fiscal.interest + fiscal.emergency + fiscal.exportSupport;
+  const revenue = revenueOf(fiscal);
+  const outlays = outlaysOf(fiscal);
   return { opening, closing, fiscal, revenue, outlays, fiscalBalance: revenue - outlays,
     fundNetTransfers, fundGain, fundReturn: fundGain / opening.fundNav, drivers: scoreDrivers(s) };
 }

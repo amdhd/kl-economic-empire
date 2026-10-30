@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { BASE_BUDGET, NATIONAL_GDP, IO, SECTOR_IDS, SECTORS } from '../src/data/economic-baseline';
 import { bankIdentityGap } from '../src/engine/banks';
 import { CAL } from '../src/engine/calibration';
+import { KL_ECONOMY_SHARE, RESOURCE_VA0 } from '../src/data/world';
 import { COMPANY_BY_ID } from '../src/engine/companies';
 import { daily } from '../src/engine/economy';
 import { aggregateMods } from '../src/engine/external';
@@ -17,7 +18,8 @@ describe('calibration', () => {
       expect(CAL.X0[j]).toBeGreaterThan(0);
       expect(CAL.v[j]).toBeGreaterThan(0.2);
     }
-    expect(CAL.gdpDaily * 365).toBeCloseTo(NATIONAL_GDP, 2);
+    // Model 2: oil & gas and palm oil value added sit outside the seven sectors.
+    expect(CAL.gdpDaily * 365 + RESOURCE_VA0).toBeCloseTo(NATIONAL_GDP, 2);
   });
 
   it('has finite productive input coefficients and recovers gross output from final demand', () => {
@@ -118,12 +120,14 @@ describe('GDP measurement', () => {
     expect(grossOutput).toBeGreaterThan(e.gdpNominal * 1.5);
   });
 
-  it('nominal GDP equals the sum of sector value added plus the consumption levy', () => {
+  it('nominal GDP equals sector value added plus resource value added plus product taxes', () => {
     const s = createGame(22);
     runUntil(s, 2027, 2, 1, 1);
     const r = s.reports.at(-1)!;
     const va = SECTOR_IDS.reduce((a, j) => a + r.gdpBySector[j], 0);
-    expect(r.nominalGdp - va).toBeCloseTo(r.gov.taxConsumption, -3);
+    expect(r.resourceGdp).toBeGreaterThan(0);
+    // Palm export duty is paid out of resource value added; steel safeguard duty is zero at opening.
+    expect(r.nominalGdp - va - r.resourceGdp!).toBeCloseTo(r.gov.taxConsumption + r.gov.importTariff, -3);
   });
 });
 
@@ -184,7 +188,7 @@ describe('causal chains (events disabled, same seed)', () => {
     expect(p.status).toBe('building');
     expect(p.spent).toBeGreaterThan(0);
     expect(base.government.treasury - build.government.treasury).toBe(Math.round(p.spent * 100));
-    expect(build.government.mtd.capex).toBe(p.spent);
+    expect(build.government.mtd.capex - base.government.mtd.capex).toBeCloseTo(p.spent, 2);
     for (const j of ['prop', 'ind', 'tech', 'util'] as const) {
       expect(build.sectors[j].output).toBeGreaterThan(base.sectors[j].output);
     }
@@ -248,12 +252,12 @@ describe('project economics (balance rules)', () => {
     });
     const p = s.government.projects[0];
     expect(p.status).toBe('complete');
-    expect(s.government.publicAssets).toBeLessThan(45e9 + p.spent * 0.61);
     const base = withoutEvents(() => {
       const g = createGame(41);
       runUntil(g, 2027, 7, 1, 1);
       return g;
     });
+    expect(s.government.publicAssets - base.government.publicAssets).toBeLessThan(p.spent * 0.61);
     // June opex includes maintenance on top of the same budget
     expect(s.reports.at(-1)!.gov.opex).toBeGreaterThan(base.reports.at(-1)!.gov.opex + 0.5e9 * 0.03 / 12 * 0.9);
   });
@@ -273,11 +277,21 @@ describe('project economics (balance rules)', () => {
 
   it('productivity gains in the same sector saturate', async () => {
     const { completeProject } = await import('../src/engine/government');
-    const s = createGame(43);
+    const s = createGame(43, 'balanced', 'legacy-kl'); // city scale, where projects carry full effect
     for (const t of ['brt', 'lrt', 'heritage']) applyCommand(s, { type: 'startProject', templateId: t }, s.clock.hour * 60);
     for (const p of s.government.projects) completeProject(s, p.id, 0);
     expect(s.sectors.cons.infraBoost).toBeLessThan(0.008 + 0.02 + 0.006);
     expect(s.sectors.cons.infraBoost).toBeGreaterThan(0.02);
+  });
+
+  it('in national campaigns a KL project lifts national sectors only by KL’s share of output', async () => {
+    const { completeProject } = await import('../src/engine/government');
+    const city = createGame(44, 'balanced', 'legacy-kl'), nation = createGame(44);
+    for (const s of [city, nation]) {
+      applyCommand(s, { type: 'startProject', templateId: 'lrt' }, s.clock.hour * 60);
+      completeProject(s, s.government.projects[0].id, 0);
+    }
+    expect(nation.sectors.cons.infraBoost).toBeCloseTo(city.sectors.cons.infraBoost * KL_ECONOMY_SHARE, 6);
   });
 
   it('commissioning everything is not a free lunch for public net worth', () => {

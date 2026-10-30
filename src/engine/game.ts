@@ -4,11 +4,19 @@ import { COMPANIES } from '../data/companies';
 import { BASE_TAX, BASELINE, LEGACY_BASELINE, LEGACY_BUDGET, BUDGET_LABELS, SECTOR_IDS, SECTORS, TAX_LABELS } from '../data/economic-baseline';
 import { BASE_BUDGET as nationalBudget } from '../data/economic-baseline';
 import { initialCentralBank, interveneFx } from './trade-fx';
+import { DEVELOPMENT_ANNUAL0, RESOURCE_VA0 } from '../data/world';
+import { exitEscape, initialFiscal, invokeEscape, setFiscalRule } from './fiscal-rules';
+import { initialSoe, khazanahTrade, setKhazanahPayout, setPetronasPolicy, soeEquity, soeSpecialDividend } from './soe';
+import { initialWorld, startNegotiation, validateCommodityPolicy } from './world';
+import { outputGap } from './scheduler';
 import { PROJECT_BY_ID } from '../data/projects';
 import type {
   BorrowingPolicy, BudgetCategory, BudgetPolicy, Currency, GameSpeed, GameState, ScenarioId, SectorState, TaxPolicy, TickerId,
 } from '../types/game';
 import { BASE_MPC, CAL, LEGACY_CAL, CAPITAL_GROWTH0 } from './calibration';
+import type { CommodityPolicy, FiscalRule, PartnerId, PendingPolicy } from '../types/game';
+import { PARTNERS } from '../data/world';
+const PARTNER_NAMES = Object.fromEntries(Object.entries(PARTNERS).map(([k, v]) => [k, v.name])) as Record<PartnerId, string>;
 import { accumulate } from './clock';
 import { initialCompany } from './companies';
 import { computeCpi } from './economy';
@@ -24,7 +32,7 @@ import { seedRng } from './rng';
 import { klDay, klParts, klToEpochMin, monthKey } from './time';
 import { clamp, news, pushBounded, toMinor } from './util';
 
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 export const START = { year: 2027, month: 1, day: 1, hour: 8 };
 export const CAMPAIGN_MONTHS = 24;
 
@@ -67,7 +75,8 @@ function createWithProfile(seed: number, scenario: ScenarioId, profile: 'malaysi
   const employed = SECTOR_IDS.reduce((a, j) => a + CAL.L0[j], 0);
   const loans = BASELINE.householdLoans + BASELINE.firmLoans;
   const capital = loans * BASELINE.bankCapitalRatio;
-  const gdpAnnual = CAL.gdpDaily * 365;
+  // Model 2: oil & gas and palm oil value added sit outside the seven calibrated sectors.
+  const gdpAnnual = CAL.gdpDaily * 365 + (profile === 'malaysia' ? RESOURCE_VA0 : 0);
 
   const s = {
     controls: initialControls(),
@@ -97,7 +106,7 @@ function createWithProfile(seed: number, scenario: ScenarioId, profile: 'malaysi
       population: BASELINE.population, laborForce: BASELINE.laborForce, employed, wageIndex: 1, savings: BASELINE.householdSavings,
       loans: BASELINE.householdLoans, mpc: BASE_MPC, permanentIncome: CAL.hh.disposable, confidence: 0.6, expectedInflation: 0.02, rentIndex: 1,
       lastMonthDisposable: CAL.hh.disposable * 30.4, lastMonthReal: CAL.hh.disposable * 30.4,
-      otherIncomeMonthly: (CAL.hh.other * 365) / 12, newCreditMonthly: (CAL.hh.credit * 365) / 12,
+      otherIncomeMonthly: (CAL.hh.other * 365) / 12, newCreditMonthly: (CAL.hh.credit * 365) / 12, equityIndex: 1,
       mtd: { wages: 0, transfers: 0, other: 0, tax: 0, debtService: 0, disposable: 0, consumption: 0, rent: 0 },
     },
     bank: {
@@ -107,6 +116,10 @@ function createWithProfile(seed: number, scenario: ScenarioId, profile: 'malaysi
     },
     external: initialExternal(BASELINE),
     trade: { trackingStartDay: startDay, policy: { tariff: 0, exportBudgetMonthly: 0 }, readiness: 0, mtdExports: 0, mtdImports: 0, history: [] },
+    world: initialWorld(seed, profile === 'malaysia'),
+    soe: initialSoe(profile === 'malaysia'),
+    // Opening deficit for the glide path: official 2027 revenue vs operating + development spending.
+    fiscal: initialFiscal(profile === 'malaysia' ? DEVELOPMENT_ANNUAL0 : 0, profile === 'malaysia' ? (376_840_000_000 + DEVELOPMENT_ANNUAL0 - 380_816_996_000) / gdpAnnual : 0),
     centralBank: initialCentralBank(profile, BASELINE.myrPerUsd),
     events: { active: [], nextId: 1, log: [] },
     indicators: {
@@ -117,7 +130,7 @@ function createWithProfile(seed: number, scenario: ScenarioId, profile: 'malaysi
       score: { growth: 50, wealth: 50, satisfaction: 62, stability: 80, total: 0, caps: [] },
     },
     baseline: {
-      profile, openingTreasury: BASELINE.treasury, openingDebt: BASELINE.debt,
+      profile, model: 2, openingTreasury: BASELINE.treasury, openingDebt: BASELINE.debt,
       realGdpAnnual: gdpAnnual, nominalGdpAnnual: gdpAnnual, publicNetWorth: 0, employment: employed,
       realDisposablePerCapita: (CAL.hh.disposable * 365) / BASELINE.population,
       rentBurden: (CAL.hh.consumption * SECTORS.prop.consumption) / CAL.hh.disposable,
@@ -130,6 +143,7 @@ function createWithProfile(seed: number, scenario: ScenarioId, profile: 'malaysi
   seedHistory(s, startDay);
   s.indicators.cpi = computeCpi(s);
   s.scheduler.startNav = navMYR(s);
+  s.soe.openingEquity = soeEquity(s);
   s.baseline.publicNetWorth = publicNetWorth(s);
   s.indicators.publicNetWorth = s.baseline.publicNetWorth;
   s.indicators.score = computeScore(s);
@@ -155,6 +169,16 @@ export type Command =
   | { type: 'fxBand'; enabled: boolean; lower: number; upper: number; dailyUSD: number; reserveFloorUSD: number }
 
   | { type: 'queueTrade'; tariff: number; exportBudgetMonthly: number }
+  | { type: 'queueCommodity'; patch: Partial<CommodityPolicy> }
+  | { type: 'setDevelopment'; annual: number }
+  | { type: 'setFiscalRule'; patch: Partial<FiscalRule> }
+  | { type: 'fiscalEscape'; invoke: boolean }
+  | { type: 'partnerTariff'; partner: PartnerId; tariff: number }
+  | { type: 'negotiateAgreement'; partner: PartnerId }
+  | { type: 'petronasPolicy'; dividendAnnual: number; capexAnnual: number }
+  | { type: 'soeSpecialDividend'; entity: 'petronas' | 'khazanah'; amount: number }
+  | { type: 'khazanahPayout'; payout: number }
+  | { type: 'khazanahTrade'; ticker: TickerId; side: 'buy' | 'sell'; fraction: number }
   | { type: 'interveneFx'; side: 'buyUSD' | 'sellUSD'; usdMinor: number }
   | { type: 'queueTax'; patch: Partial<TaxPolicy> }
   | { type: 'queueBudget'; patch: Partial<BudgetPolicy> }
@@ -195,6 +219,84 @@ function dispatch(s: GameState, cmd: Command, atMin: number): CommandResult {
   switch (cmd.type) {
     case 'sectorIncentive': case 'ministryPlan': case 'cancelMinistryPlan': case 'debtStrategy': case 'fxBand': return controlCommand(s, cmd, atMin);
     case 'interveneFx': return interveneFx(s, cmd.side, cmd.usdMinor, atMin);
+    case 'queueCommodity': {
+      if (!s.world.enabled) return { ok: false, message: 'Commodity policy is available in new Malaysia campaigns.' };
+      const err = validateCommodityPolicy(cmd.patch);
+      if (err) return { ok: false, message: err };
+      const cur = { ...s.world.policy, ...Object.assign({}, ...gov.pending.filter((p) => p.kind === 'commodity').map((p) => p.patch)) } as CommodityPolicy;
+      const patch: Partial<CommodityPolicy> = {};
+      const parts: string[] = [];
+      const fmt: Record<keyof CommodityPolicy, (v: number) => string> = {
+        fuelCeiling: (v) => `RON95 ceiling RM${v.toFixed(2)}/L`, fuelEligible: (v) => `ceiling for ${(v * 100).toFixed(0)}% of volume`,
+        wheatSubsidy: (v) => `wheat subsidy ${(v * 100).toFixed(0)}% of price rises`, steelSafeguard: (v) => `steel safeguard ${(v * 100).toFixed(1)}%`,
+        palmExportDuty: (v) => `palm export duty ${(v * 100).toFixed(1)}%`,
+      };
+      for (const [k, raw] of Object.entries(cmd.patch) as [keyof CommodityPolicy, number][]) {
+        const v = k === 'fuelCeiling' ? Math.round(raw * 100) / 100 : Math.round(raw * 1000) / 1000;
+        if (Math.abs(v - cur[k]) < 1e-9) continue;
+        patch[k] = v;
+        parts.push(fmt[k](v));
+      }
+      if (!parts.length) return { ok: false, message: 'No change to queue.' };
+      // Subsidy cuts are politically costly, as in every country that has tried them.
+      if (patch.fuelCeiling !== undefined && patch.fuelCeiling > cur.fuelCeiling) s.policyChurn += ((patch.fuelCeiling - cur.fuelCeiling) / cur.fuelCeiling) * 25;
+      if (patch.fuelEligible !== undefined && patch.fuelEligible < cur.fuelEligible) s.policyChurn += (cur.fuelEligible - patch.fuelEligible) * 12;
+      return queue(s, 'commodity', patch, `Commodities: ${parts.join('; ')}`, firstOfNextMonth(atMin), atMin);
+    }
+    case 'setDevelopment': {
+      if (!s.world.enabled) return { ok: false, message: 'The development budget is modelled in new Malaysia campaigns.' };
+      if (!Number.isFinite(cmd.annual) || cmd.annual < 0 || cmd.annual > 200e9) return { ok: false, message: 'Development spending must be RM0–200bn a year.' };
+      const annual = Math.round(cmd.annual / 1e8) * 1e8;
+      const pendingDev = gov.pending.filter((p) => p.kind === 'development').at(-1)?.patch as { annual: number } | undefined;
+      if (annual === (pendingDev?.annual ?? s.fiscal.developmentAnnual)) return { ok: false, message: 'No change to queue.' };
+      return queue(s, 'development', { annual }, `Development expenditure RM${(annual / 1e9).toFixed(1)}bn a year`, firstOfNextMonth(atMin), atMin);
+    }
+    case 'setFiscalRule': {
+      if (!s.world.enabled) return { ok: false, message: 'Fiscal rules apply to new Malaysia campaigns.' };
+      const r = setFiscalRule(s, cmd.patch);
+      if (r.ok) logPolicy(s, atMin, atMin, `Fiscal rule: deficit ≤ ${(s.fiscal.rule.deficitCap * 100).toFixed(1)}% of GDP, debt ≤ ${(s.fiscal.rule.debtCap * 100).toFixed(0)}%, golden rule ${s.fiscal.rule.goldenRule ? 'on' : 'off'}`);
+      return r;
+    }
+    case 'fiscalEscape': {
+      if (!s.world.enabled) return { ok: false, message: 'Fiscal rules apply to new Malaysia campaigns.' };
+      const r = cmd.invoke ? invokeEscape(s, outputGap(s)) : exitEscape(s);
+      if (r.ok) logPolicy(s, atMin, atMin, cmd.invoke ? 'Fiscal escape clause invoked' : 'Fiscal escape clause ended');
+      return r;
+    }
+    case 'partnerTariff': {
+      if (!s.world.enabled) return { ok: false, message: 'Trade partners are available in new Malaysia campaigns.' };
+      if (!(cmd.partner in s.world.partners) || !Number.isFinite(cmd.tariff) || cmd.tariff < 0 || cmd.tariff > 0.5) return { ok: false, message: 'Choose a partner and a 0–50% surcharge.' };
+      const tariff = Math.round(cmd.tariff * 1000) / 1000;
+      const pend = gov.pending.filter((p) => p.kind === 'partner' && (p.patch as { partner: PartnerId }).partner === cmd.partner).at(-1)?.patch as { tariff: number } | undefined;
+      if (tariff === (pend?.tariff ?? s.world.partners[cmd.partner].ourTariff)) return { ok: false, message: 'No change to queue.' };
+      if (tariff > 0) s.world.partners[cmd.partner].negotiationDoneDay = null;
+      return queue(s, 'partner', { partner: cmd.partner, tariff }, `Surcharge on imports from ${PARTNER_NAMES[cmd.partner]}: ${(tariff * 100).toFixed(1)}%`, firstOfNextMonth(atMin), atMin);
+    }
+    case 'negotiateAgreement': {
+      const r = startNegotiation(s, cmd.partner, atMin);
+      if (r.ok) logPolicy(s, atMin, atMin, `Opened trade talks with ${PARTNER_NAMES[cmd.partner]}`);
+      return r;
+    }
+    case 'petronasPolicy': {
+      const r = setPetronasPolicy(s, cmd.dividendAnnual, cmd.capexAnnual);
+      if (r.ok) logPolicy(s, atMin, atMin, r.message);
+      return r;
+    }
+    case 'soeSpecialDividend': {
+      const r = soeSpecialDividend(s, cmd.entity, cmd.amount);
+      if (r.ok) logPolicy(s, atMin, atMin, r.message);
+      return r;
+    }
+    case 'khazanahPayout': {
+      const r = setKhazanahPayout(s, cmd.payout);
+      if (r.ok) logPolicy(s, atMin, atMin, r.message);
+      return r;
+    }
+    case 'khazanahTrade': {
+      const r = khazanahTrade(s, cmd.ticker, cmd.side, cmd.fraction, atMin);
+      if (r.ok) logPolicy(s, atMin, atMin, r.message);
+      return r;
+    }
     case 'queueTrade': {
       if (!Number.isFinite(cmd.tariff) || cmd.tariff < 0 || cmd.tariff > 0.2 || !Number.isFinite(cmd.exportBudgetMonthly) || cmd.exportBudgetMonthly < 0 || cmd.exportBudgetMonthly > 2e9) return { ok: false, message: 'Tariff must be 0–20%; export support RM 0–2bn/month.' };
       const patch = { tariff: Math.round(cmd.tariff * 1000) / 1000, exportBudgetMonthly: Math.round(cmd.exportBudgetMonthly / 1e6) * 1e6 };
@@ -233,6 +335,13 @@ function dispatch(s: GameState, cmd: Command, atMin: number): CommandResult {
         if (val < cur && (k === 'transfers' || k === 'health' || k === 'services')) s.policyChurn += ((cur - val) / cur) * 10;
       }
       if (!parts.length) return { ok: false, message: 'No change to queue.' };
+      // A manual appropriation replaces that ministry's multi-year plan; otherwise the plan's next
+      // annual step would silently overwrite the player's decision (docs/decisions.md D-030).
+      const replaced = s.controls.plans.filter((pl) => pl.category in patch);
+      if (replaced.length) {
+        s.controls.plans = s.controls.plans.filter((pl) => !(pl.category in patch));
+        parts.push(`replaces ${replaced.map((pl) => BUDGET_LABELS[pl.category]).join(', ')} ministry plan`);
+      }
       const p = klParts(atMin);
       return queue(s, 'budget', patch, parts.join('; '), klToEpochMin(p.year, p.month, p.day) + 1440, atMin);
     }
@@ -326,7 +435,7 @@ function pendingValue(s: GameState, kind: 'tax' | 'budget', key: string): number
   return v;
 }
 
-function queue(s: GameState, kind: 'tax' | 'budget' | 'trade', patch: object, label: string, effectiveMin: number, atMin: number): CommandResult {
+function queue(s: GameState, kind: PendingPolicy['kind'], patch: object, label: string, effectiveMin: number, atMin: number): CommandResult {
   s.government.pending.push({ id: s.government.nextId++, createdMin: atMin, effectiveMin, kind, patch, label });
   logPolicy(s, atMin, effectiveMin, label);
   const p = klParts(effectiveMin);

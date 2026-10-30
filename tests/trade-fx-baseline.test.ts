@@ -3,9 +3,11 @@ import { BASE_BUDGET, BASELINE, BASE_TAX, LEGACY_BASELINE, NATIONAL_GDP, SECTOR_
 import { CAL, LEGACY_CAL } from '../src/engine/calibration';
 import { domesticExposure } from '../src/engine/companies';
 import { COMPANIES } from '../src/data/companies';
-import { applyCommand, createGame, runHeadless } from '../src/engine/game';
+import { applyCommand, createGame, runHeadless, SCHEMA_VERSION } from '../src/engine/game';
+import { FUEL_SUBSIDY0 } from '../src/data/world';
+import { modelledResourceRevenue0 } from '../src/engine/soe';
 import { isInflow, otherPublicReceiptsMonthly } from '../src/engine/government';
-import { publicNetWorth, scoreDrivers } from '../src/engine/indicators';
+import { publicNetWorth, reserveEquityChange, scoreDrivers, scoreNetWorth } from '../src/engine/indicators';
 import { quoteIntervention } from '../src/engine/trade-fx';
 import { deserialize, serialize } from '../src/persistence/save';
 import { fullMoneyMinor } from '../src/utils/format';
@@ -22,7 +24,8 @@ describe('dated Malaysia opening, with separate legacy calibration', () => {
     expect(s.government.treasury).toBe(8_865_574_579 * 100);
     expect(s.government.debt).toBe(1_378_895 * 1e6 * 100);
     expect(BASE_BUDGET.health * 12).toBe(40_954_794_000);
-    expect(Object.values(BASE_BUDGET).reduce((a, b) => a + b, 0) * 12 + 61_013_000_000).toBeCloseTo(376_840_000_000, 2);
+    // Model 2 carries the RON95 subsidy as its own line; operating spending still totals the official estimate.
+    expect(Object.values(BASE_BUDGET).reduce((a, b) => a + b, 0) * 12 + 61_013_000_000 + FUEL_SUBSIDY0).toBeCloseTo(376_840_000_000, 2);
     expect(s.centralBank.usdReserves).toBe(116.4e9 * 100);
     expect(s.external.opr).toBe(0.0275);
     expect(s.government.policies.borrowing.maxDebtToGdp).toBeGreaterThan(s.indicators.debtToGdp);
@@ -34,7 +37,7 @@ describe('dated Malaysia opening, with separate legacy calibration', () => {
     const taxesDaily = SECTOR_IDS.reduce((a, j) => a + Math.max(0, CAL.profit0[j]) * BASE_TAX.corporate, 0)
       + BASE_TAX.property * 0.5 * CAL.Y0.prop + CAL.levyBase + CAL.hh.tax;
     const other = otherPublicReceiptsMonthly(s);
-    expect(taxesDaily * 365 + other * 12).toBeCloseTo(380_816_996_000, 2);
+    expect(taxesDaily * 365 + modelledResourceRevenue0() + other * 12).toBeCloseTo(380_816_996_000, 2);
     s.government.policies.tax.corporate = 0.35;
     expect(otherPublicReceiptsMonthly(s)).toBe(other);
   });
@@ -59,7 +62,7 @@ describe('dated Malaysia opening, with separate legacy calibration', () => {
     delete file.state.government.mtd.importTariff;
     delete file.state.government.mtd.exportSupport;
     const restored = deserialize(JSON.stringify(file));
-    expect(restored.schemaVersion).toBe(5);
+    expect(restored.schemaVersion).toBe(SCHEMA_VERSION);
     expect(restored.baseline.profile).toBe('legacy-kl');
     expect(restored.baseline.openingTreasury).toBe(LEGACY_BASELINE.treasury);
     expect(restored.government.treasury).toBe(old.government.treasury);
@@ -190,6 +193,30 @@ describe('reserve-backed central-bank FX', () => {
     expect(s.centralBank.pressure).toBe(0);
     expect(publicNetWorth(s)).toBeLessThan(wealth);
     expect(s.government).toEqual(before.government); expect(s.fund).toEqual(before.fund);
+  });
+
+  it('reserve revaluation shows in public net worth but never in the wealth score; spreads still cost score', () => {
+    const s = createGame(725), score = scoreNetWorth(s), wealth = publicNetWorth(s);
+    s.external.myrPerUsd *= 1.1; // a large ringgit move, random or self-induced
+    expect(reserveEquityChange(s)).toBeGreaterThan(40e9);
+    expect(reserveEquityChange(s, true)).toBe(0);
+    // Only the SWF's own USD holdings revalue in the score; the reserve account does not.
+    expect(scoreNetWorth(s) - score).toBeCloseTo(publicNetWorth(s) - wealth - reserveEquityChange(s), 0);
+    const afterMove = scoreNetWorth(s);
+    expect(act(s, { type: 'interveneFx', side: 'buyUSD', usdMinor: 500e6 * 100 }).ok).toBe(true);
+    expect(scoreNetWorth(s)).toBeLessThan(afterMove);
+  });
+
+  it('pumping the ringgit with interventions does not raise the wealth score', () => {
+    for (const seed of [2027, 11, 42]) {
+      const base = createGame(seed), pumped = createGame(seed), total = 24 * 731;
+      runHeadless(base, total);
+      for (let d = 0; d < 60; d++) { act(pumped, { type: 'interveneFx', side: 'sellUSD', usdMinor: 1e9 * 100 }); runHeadless(pumped, 24); }
+      runHeadless(pumped, total - 24 * 105);
+      for (let d = 0; d < 45; d++) { act(pumped, { type: 'interveneFx', side: 'buyUSD', usdMinor: 1e9 * 100 }); runHeadless(pumped, 24); }
+      expect(pumped.external.myrPerUsd).toBeGreaterThan(base.external.myrPerUsd);
+      expect(scoreDrivers(pumped).rawWealthScore).toBeLessThanOrEqual(scoreDrivers(base).rawWealthScore + 0.5);
+    }
   });
 
   it('round-trips active policy, balances, pressure and RNG then continues deterministically', () => {

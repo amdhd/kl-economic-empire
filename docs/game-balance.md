@@ -171,3 +171,23 @@ Verification for this expansion: strict build,147 unit/invariant/campaign tests,
 Browser checks include full-digit treasury/SWF cash, official source links, laptop navigation scrolling, trade policy
 month-boundary timing, FX inventory settlement and treasury reconciliation. Manual screenshots at1600×900 and1280×800
 confirm the balance footer fits without horizontal overflow. No player saves were used for screenshots.
+
+## Schema 6 pass — fiscal rules, SOEs, commodities and partners (31 October 2026)
+
+Seeds 2027, 11, 42, 201–203 (`npm run balance -- --seeds …`), model-2 national campaigns. Means of fictional replays:
+
+| Strategy | Score | Range | Growth | Wealth | Approval | Wins |
+|---|---:|---:|---:|---:|---:|---:|
+| Hands-off | 52.38 | 38.29–64.68 | 34.37 | 42.74 | 71.15 | 0/6 |
+| Balanced growth | 52.37 | 38.62–64.72 | 36.49 | 40.77 | 72.35 | 0/6 |
+| Tax maximiser | 37.90 | 24.89–44.76 | 0 | 67.63 | 29.49 | 0/6 |
+| Investment heavy | 53.07 | 39.42–65.35 | 36.74 | 42.23 | 72.38 | 0/6 |
+| Austerity | 27.82 | 23.83–39.84 | 0 | 64.14 | 17.14 | 0/6 |
+| Adaptive | 53.43 | 46.40–63.24 | 37.73 | 41.34 | 73.39 | 0/6 |
+| Adverse recession | 31.07 | 13.57–55.45 | 16.52 | 31.97 | 40.12 | 0/6 |
+
+Doing nothing now leaves the deficit near 3.7% of GDP against a glide path to 3%, so fiscal credibility drifts from 60
+toward the mid-40s, raising yields and lowering the stability score: consolidation is a real objective. Austerity scores
+lower than before because deep development cuts erode public capital and the large demand multiplier (see
+economy-model "Known limitation") amplifies the contraction. Bots still never win; 75 stays provisional pending
+human playtesting.

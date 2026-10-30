@@ -2,7 +2,9 @@ import { baselineFor } from '../data/economic-baseline';
 // Satisfaction, approval and campaign score. All weights/thresholds are transparent constants.
 import { EVENT_BY_ID } from '../data/events';
 import type { GameState, MonthlyReport, ScoreBreakdown } from '../types/game';
-import { debtMYR, treasuryMYR } from './government';
+import { debtMYR, revenueOf, treasuryMYR } from './government';
+import { nationalV2 } from '../data/economic-baseline';
+import { soeEquity } from './soe';
 import { navMYR } from './sovereign-fund';
 import { daysInMonth, klDay } from './time';
 import { clamp } from './util';
@@ -51,8 +53,8 @@ export function scoreDrivers(s: GameState) {
   const liabilities = debtMYR(s.government) + s.government.unpaidObligations;
   // A negative opening net worth must not earn score merely by inflating nominal liabilities.
   const realWealthChange = s.baseline.profile === 'malaysia'
-    ? (publicNetWorth(s) + liabilities) / (s.indicators.cpi / 100) - liabilities - s.baseline.publicNetWorth
-    : publicNetWorth(s) / (s.indicators.cpi / 100) - s.baseline.publicNetWorth;
+    ? (scoreNetWorth(s) + liabilities) / (s.indicators.cpi / 100) - liabilities - s.baseline.publicNetWorth
+    : scoreNetWorth(s) / (s.indicators.cpi / 100) - s.baseline.publicNetWorth;
   const income = reports.at(-1)?.realDisposablePerCapita ?? s.baseline.realDisposablePerCapita;
   const wealthCreditFactor = clamp(Math.min(income / s.baseline.realDisposablePerCapita,
     realOutput / s.baseline.realGdpAnnual, s.government.serviceQuality / BASELINE.serviceQuality), 0, 1);
@@ -61,8 +63,25 @@ export function scoreDrivers(s: GameState) {
     wealthCreditFactor, rawWealthScore };
 }
 
+/** Change in segregated reserve-account equity since campaign start. With `atOpeningFx`, USD reserves are
+ * valued at the opening rate: spreads and trading losses still count, FX revaluation does not. */
+export function reserveEquityChange(s: GameState, atOpeningFx = false): number {
+  const cb = s.centralBank;
+  const fx = atOpeningFx ? baselineFor(s).myrPerUsd : s.external.myrPerUsd;
+  return cb.usdReserves / 100 * fx + cb.myrCash / 100 - cb.openingEquityMYR;
+}
+
 export function publicNetWorth(s: GameState): number {
-  return treasuryMYR(s.government) + navMYR(s) + s.government.publicAssets - debtMYR(s.government) - s.government.unpaidObligations + (s.centralBank.usdReserves / 100 * s.external.myrPerUsd + s.centralBank.myrCash / 100 - s.centralBank.openingEquityMYR);
+  return treasuryMYR(s.government) + navMYR(s) + s.government.publicAssets - debtMYR(s.government) - s.government.unpaidObligations + reserveEquityChange(s)
+    // State enterprises are public wealth: only changes since the start count, so a dividend that moves
+    // cash from PETRONAS or Khazanah to the treasury leaves net worth unchanged.
+    + soeEquity(s) - s.soe.openingEquity;
+}
+
+/** Net worth used by the wealth score. Reserve revaluation is excluded, so neither random FX moves nor
+ * pressure the player creates with interventions can earn score (docs/decisions.md D-029). */
+export function scoreNetWorth(s: GameState): number {
+  return publicNetWorth(s) - reserveEquityChange(s) + reserveEquityChange(s, true);
 }
 
 export function unemploymentRate(s: GameState): number {
@@ -110,8 +129,10 @@ export function computeScore(s: GameState): ScoreBreakdown {
 
   // Stability: inflation deviation, debt service, banking stress.
   const infl = recent.length ? recent.reduce((a, r) => a + Math.abs(r.inflationYoY - 0.025), 0) / recent.length : 0;
-  const interestToRevenue = recent.length ? recent.reduce((a, r) => a + r.gov.interest, 0) / Math.max(1, recent.reduce((a, r) => a + r.gov.taxCorporate + r.gov.taxProperty + r.gov.taxConsumption + r.gov.taxHousehold + r.gov.federalGrant + r.gov.importTariff, 0)) : 0.07;
-  const stability = clamp(95 - 1000 * Math.max(0, infl - 0.0125) - 150 * Math.max(0, interestToRevenue - 0.1) - 4000 * Math.max(0, s.bank.nplRate - 0.002) - (s.government.daysInArrears > 0 ? 20 : 0), 0, 100);
+  const interestToRevenue = recent.length ? recent.reduce((a, r) => a + r.gov.interest, 0) / Math.max(1, recent.reduce((a, r) => a + revenueOf(r.gov), 0)) : 0.07;
+  const stability = clamp(95 - 1000 * Math.max(0, infl - 0.0125) - 150 * Math.max(0, interestToRevenue - 0.1) - 4000 * Math.max(0, s.bank.nplRate - 0.002) - (s.government.daysInArrears > 0 ? 20 : 0)
+    // Model 2: abandoning the fiscal rules erodes financial stability.
+    - (nationalV2(s) ? 0.3 * Math.max(0, 50 - s.fiscal.credibility) : 0), 0, 100);
 
   let total = SCORE_WEIGHTS.growth * growth + SCORE_WEIGHTS.wealth * wealth + SCORE_WEIGHTS.satisfaction * satisfaction + SCORE_WEIGHTS.stability * stability;
   if (s.government.insolvent) {

@@ -1,5 +1,8 @@
 import { applyPlans, automaticFx } from './policy-controls';
-import { baselineFor, budgetFor } from '../data/economic-baseline';
+import { baselineFor, budgetFor, nationalV2 } from '../data/economic-baseline';
+import { updateFiscal } from './fiscal-rules';
+import { dailyResources, monthCloseSoe } from './soe';
+import { coreCpiOf, updateWorld, weeklyWorld } from './world';
 // Deterministic hourly tick. Ordering within a tick (see docs/decisions.md D-004):
 //   1. advance clock one hour
 //   2. if a KL day boundary was crossed: settle the day that just ENDED (external → government →
@@ -16,7 +19,7 @@ import { dailyCompanies, monthCloseCompanies } from './companies';
 import { daily, monthClose as economyMonthClose, resetMonthToDate, weekly } from './economy';
 import { expireEvents, weeklyEvents } from './events';
 import { aggregateMods, updateExternal, type AggregatedMods } from './external';
-import { applyDuePolicies, dailyGovernment, debtMYR, monthCloseGovernment, treasuryMYR } from './government';
+import { applyDuePolicies, dailyGovernment, debtMYR, monthCloseGovernment, outlaysOf, revenueOf, treasuryMYR } from './government';
 import { computeScore, outcomeLabel, publicNetWorth, unemploymentRate, updateSatisfaction } from './indicators';
 import { isOpen } from './market-calendar';
 import { expireOrders, monthCloseFund, navMYR, processQueuedOrders, receiveDividends } from './sovereign-fund';
@@ -39,6 +42,7 @@ export function runHourTick(s: GameState): void {
     if (p.weekday === 1 && today > s.scheduler.lastWeekDay) {
       weekly(s);
       weeklyEvents(s, today);
+      weeklyWorld(s, today);
       s.scheduler.lastWeekDay = today;
     }
     const mk = monthKey(p.year, p.month);
@@ -71,8 +75,15 @@ function settleDay(s: GameState, day: number): AggregatedMods {
   const mods = aggregateMods(s, day);
   updateExternal(s, mods, s.indicators.inflationYoY, p.day, p.month, outputGap(s));
   automaticFx(s);
+  updateWorld(s, day);
   const gov = dailyGovernment(s, day);
+  const res = dailyResources(s, gov.purchases);
   const e = daily(s, mods, gov);
+  e.gdpNominal += res.gdpNominal;
+  s.world.mtd.resourceVa += res.gdpNominal;
+  e.gdpReal += res.gdpReal;
+  // Households track listed-equity prices with a lag of a few weeks (wealth effect input).
+  if (nationalV2(s)) s.households.equityIndex += 0.05 * (s.market.indices.MY.value / 1000 - s.households.equityIndex);
   dailyCompanies(s, day);
   // Every agent receives the last valid day's shock before expiry.
   expireEvents(s, day + 1);
@@ -110,6 +121,7 @@ function closeMonth(s: GameState, key: number, mods: AggregatedMods): void {
   // dividends are paid to holders at the close of the declaring month
   receiveDividends(s, divs);
   monthCloseFund(s);
+  monthCloseSoe(s, key, divs, Math.max(1, s.scheduler.mtdDays));
   const govClose = monthCloseGovernment(s);
 
   const ind = s.indicators;
@@ -131,6 +143,11 @@ function closeMonth(s: GameState, key: number, mods: AggregatedMods): void {
   ind.inflationMoM = prev ? ind.cpi / prev.cpi - 1 : ind.cpi / 100 - 1;
   const u = unemploymentRate(s);
   ind.unemployment = u;
+  // Core inflation excludes administered pump prices, whose direct real-income effect households already
+  // feel through the fuel bill (model 2); behavioural spending responses key off core inflation.
+  const coreCpi = nationalV2(s) ? coreCpiOf(s) : ind.cpi;
+  const coreYearAgo = yearAgo?.coreCpi;
+  const coreInflation = !nationalV2(s) ? ind.inflationYoY : coreYearAgo ? coreCpi / coreYearAgo - 1 : yearAgo ? ind.inflationYoY : Math.pow(coreCpi / 100, 12 / months) - 1;
 
   const hh = s.households;
   const cpiF = ind.cpi / 100;
@@ -139,13 +156,13 @@ function closeMonth(s: GameState, key: number, mods: AggregatedMods): void {
   const realIncomeGrowth = realDispPerCap / s.baseline.realDisposablePerCapita - 1;
 
   monthCloseBank(s, mods, u);
-  economyMonthClose(s, ind.inflationYoY, u, realIncomeGrowth, days);
+  economyMonthClose(s, ind.inflationYoY, u, realIncomeGrowth, days, coreInflation);
   updateSatisfaction(s, realDispPerCap, rentBurden, ind.inflationYoY);
 
   ind.debtToGdp = debtMYR(s.government) / ind.nominalGdpAnnual;
   const g = govClose.flows;
-  const revenue = g.taxCorporate + g.taxProperty + g.taxConsumption + g.taxHousehold + g.federalGrant + g.importTariff;
-  const spend = g.opex + g.capex + g.interest + g.emergency + g.exportSupport;
+  const revenue = revenueOf(g);
+  const spend = outlaysOf(g);
   ind.deficitToGdp = ((spend - revenue) * (365 / days)) / ind.nominalGdpAnnual;
   ind.publicNetWorth = publicNetWorth(s);
   const tax = s.government.policies.tax;
@@ -165,7 +182,9 @@ function closeMonth(s: GameState, key: number, mods: AggregatedMods): void {
     nominalGdp: nominal,
     realGdp: real,
     gdpBySector,
+    resourceGdp: s.world.mtd.resourceVa,
     cpi: ind.cpi,
+    coreCpi,
     inflationYoY: ind.inflationYoY,
     unemployment: u,
     employment: hh.employed,
@@ -193,6 +212,7 @@ function closeMonth(s: GameState, key: number, mods: AggregatedMods): void {
   };
   report.notes = explainMonth(s, report, prev, govClose.corporateTax);
   pushBounded(s.reports, report, 60);
+  if (nationalV2(s)) updateFiscal(s, key, outputGap(s));
   ind.score = computeScore(s);
   report.score = ind.score;
   news(s, {
@@ -206,6 +226,7 @@ function closeMonth(s: GameState, key: number, mods: AggregatedMods): void {
   s.trade.history = s.trade.history.slice(-60);
   s.trade.mtdExports = 0;
   s.trade.mtdImports = 0;
+  s.world.mtd = { fuelSubsidy: 0, wheatSubsidy: 0, palmDuty: 0, steelDuty: 0, bilateralDuty: 0, resourceVa: 0 };
   resetMonthToDate(s);
   s.scheduler.mtdGdpNominal = 0;
   s.scheduler.mtdGdpReal = 0;
