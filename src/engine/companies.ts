@@ -33,7 +33,7 @@ export function initialCompany(c: CompanySeed, startMonthKey: number, klTax: num
     history,
     cash: c.cash,
     debt: c.debt,
-    retained: 0,
+    retained: history.reduce((total, h) => total + h.netIncome - h.dividends, 0),
     shares: c.shares,
     revenueShock: 1,
     sentiment: 0,
@@ -93,6 +93,7 @@ export function monthCloseCompanies(s: GameState, monthKey: number): Dividend[] 
   const out: Dividend[] = [];
   for (const c of COMPANIES) {
     const st = s.companies[c.id];
+    if (st.history.at(-1)!.monthKey >= monthKey) continue;
     const m = st.mtd;
     const ebitda = m.revenue - m.laborCost - m.energyCost - m.otherCost;
     const ebit = ebitda - m.depreciation;
@@ -105,7 +106,7 @@ export function monthCloseCompanies(s: GameState, monthKey: number): Dividend[] 
     let dividends = 0;
     if (quarterEnd) {
       const q = st.history.slice(-2).reduce((a, h) => a + h.netIncome, 0) + netIncome;
-      dividends = Math.max(0, Math.min(q * c.payout, st.cash * 0.5));
+      dividends = Math.max(0, Math.min(q * c.payout, st.cash * 0.5, st.retained + netIncome));
       st.cash -= dividends;
       st.lastDps = dividends / st.shares;
       if (dividends > 0) out.push({ id: c.id, dps: st.lastDps });

@@ -5,7 +5,7 @@ import { BASE_BUDGET, BASELINE, BUDGET_LABELS, BUDGET_PURCHASES, SECTOR_IDS } fr
 import { PROJECT_BY_ID } from '../data/projects';
 import type { BudgetCategory, GameState, GovMonthFlows, GovernmentState, SectorId } from '../types/game';
 import { PROPERTY_LEVY_BASE, type Vec } from './calibration';
-import { clamp, news, nowMin, toMinor } from './util';
+import { assertSafeMinor, clamp, news, nowMin, pushBounded, toMinor } from './util';
 
 export const emptyFlows = (): GovMonthFlows => ({
   taxCorporate: 0, taxProperty: 0, taxConsumption: 0, taxHousehold: 0, federalGrant: 0, opex: 0, capex: 0,
@@ -17,9 +17,15 @@ export const isInflow = (k: keyof GovMonthFlows) => INFLOWS.includes(k);
 
 /** Moves cash in/out of the treasury. Returns the rounded MYR amount actually posted. */
 export function post(gov: GovernmentState, kind: keyof GovMonthFlows, amountMYR: number): number {
+  if (!Number.isFinite(amountMYR)) throw new Error('Invalid treasury amount');
   if (!(amountMYR > 0)) return 0;
-  const minor = toMinor(amountMYR);
-  gov.treasury += isInflow(kind) ? minor : -minor;
+  const minor = isInflow(kind) ? toMinor(amountMYR) : Math.min(toMinor(amountMYR), gov.treasury);
+  const signed = isInflow(kind) ? minor : -minor;
+  const balance = gov.treasury + signed;
+  assertSafeMinor(balance);
+  if (balance < 0) throw new Error('Treasury payment requires financing');
+  gov.treasury = balance;
+  pushBounded(gov.ledger, { kind, amountMinor: signed, balanceMinor: balance }, 800);
   gov.mtd[kind] += minor / 100;
   return minor / 100;
 }
@@ -36,11 +42,12 @@ export function gdpForRatios(s: GameState): number {
 /** Issue bonds. Respects market access and the player's debt/GDP cap. Returns MYR issued. */
 export function issueDebt(s: GameState, amountMYR: number, reason: string, quiet = false): number {
   const gov = s.government;
-  if (!gov.marketAccess || amountMYR <= 0) return 0;
+  if (!Number.isFinite(amountMYR) || !gov.marketAccess || amountMYR <= 0) return 0;
   const cap = gov.policies.borrowing.maxDebtToGdp * gdpForRatios(s);
   const room = Math.max(0, cap - debtMYR(gov));
   const amt = Math.min(amountMYR, room);
   if (amt < 1e6) return 0;
+  assertSafeMinor(gov.debt + toMinor(amt));
   const posted = post(gov, 'borrowing', amt);
   const before = debtMYR(gov);
   gov.debt += toMinor(posted);
@@ -51,6 +58,7 @@ export function issueDebt(s: GameState, amountMYR: number, reason: string, quiet
 
 export function repayDebt(s: GameState, amountMYR: number): number {
   const gov = s.government;
+  if (!Number.isFinite(amountMYR)) return 0;
   const amt = Math.min(amountMYR, treasuryMYR(gov), debtMYR(gov));
   if (amt <= 0) return 0;
   const posted = post(gov, 'principal', amt);
