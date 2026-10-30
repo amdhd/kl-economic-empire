@@ -75,7 +75,10 @@ describe('24-month campaign', () => {
   });
 
   it('adverse global recession scenario is harder than the balanced baseline', () => {
-    const scores = [101, 102, 103].map((seed) => [play(seed, [], 'balanced').indicators.score.total, play(seed, [], 'recession').indicators.score.total]);
+    // Single-seed outcomes are bimodal (~40 vs ~70), far wider than the scenario effect, so compare
+    // a 20-seed average (see docs/decisions.md D-P2-05).
+    const seeds = Array.from({ length: 20 }, (_, i) => 201 + i);
+    const scores = seeds.map((seed) => [play(seed, [], 'balanced').indicators.score.total, play(seed, [], 'recession').indicators.score.total]);
     const avg = (i: number) => scores.reduce((a, x) => a + x[i], 0) / scores.length;
     expect(avg(1)).toBeLessThan(avg(0));
   });

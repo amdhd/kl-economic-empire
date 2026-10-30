@@ -105,6 +105,52 @@ export function isTradingDay(ex: Exchange, epochMin: number): boolean {
   return ex === 'MY' ? !isBursaHoliday(p) : !isNyseHoliday(p);
 }
 
+/** Whether a local calendar date (in the exchange's own timezone) is a trading day. */
+export function isTradingDate(ex: Exchange, year: number, month: number, day: number): boolean {
+  const wd = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+  if (wd === 0 || wd === 6) return false;
+  const p = { year, month, day };
+  return ex === 'MY' ? !isBursaHoliday(p) : !isNyseHoliday(p);
+}
+
+/**
+ * The `count` most recent trading dates strictly before `beforeDay`, oldest first.
+ * Days are "local day numbers": Date.UTC(localY, localM, localD) / 86 400 000.
+ */
+export function previousTradingDays(ex: Exchange, beforeDay: number, count: number): number[] {
+  const out: number[] = [];
+  for (let d = beforeDay - 1; out.length < count; d--) {
+    const dt = new Date(d * 86400000);
+    if (isTradingDate(ex, dt.getUTCFullYear(), dt.getUTCMonth() + 1, dt.getUTCDate())) out.push(d);
+  }
+  return out.reverse();
+}
+
+/** Epoch minutes of the whole-hour economic ticks at which the exchange is open on a local day. */
+export function sessionTickMinutes(ex: Exchange, localDay: number): number[] {
+  const dt = new Date(localDay * 86400000);
+  const key = dt.getUTCFullYear() * 10000 + (dt.getUTCMonth() + 1) * 100 + dt.getUTCDate();
+  const out: number[] = [];
+  // Local midnight is within UTC-14h..UTC+14h of UTC midnight; scan whole hours across that window.
+  for (let t = localDay * 1440 - 14 * 60; t < localDay * 1440 + 38 * 60; t += 60) {
+    if (sessionDateKey(ex, t) === key && isOpen(ex, t)) out.push(t);
+  }
+  return out;
+}
+
+/** Local day number of the exchange's current calendar date at an instant. */
+export function localDayOf(ex: Exchange, epochMin: number): number {
+  const p = localParts(ex, epochMin);
+  return Date.UTC(p.year, p.month - 1, p.day) / 86400000;
+}
+
+/** Next instant (epoch minutes, 30-minute steps) at which an open session closes or breaks. */
+export function nextClose(ex: Exchange, fromMin: number): number {
+  const start = Math.ceil(fromMin / 30) * 30;
+  for (let t = start; t < start + 60 * 24 * 14; t += 30) if (!isOpen(ex, t)) return t;
+  return start;
+}
+
 /** Session phase at an instant. Open intervals are half-open [open, close). */
 export function sessionPhase(ex: Exchange, epochMin: number): SessionPhase {
   if (!isTradingDay(ex, epochMin)) return 'closed-day';
