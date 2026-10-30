@@ -302,3 +302,7 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   against opening (2025) GDP, so the same ringgit deficit reads higher in the game, as the panel states.
 
 - **D-047 Cloud saves (user-directed).** Optional Firebase email/password sign-in with console-provisioned account; no social login. Realtime Database stores versioned JSON snapshots because campaign saves may exceed Firestore document limits. Local saving is first and independent. Slots opt into session sync through upload/load; revision transactions reject concurrent or unseen overwrites. Missing configuration leaves the game local-only. No economic rules change.
+- **D-048 Cloud sync volume.** Saves are 2–5 MB, and daily autosaves would upload every ~24 real seconds at 3×. Routine
+  autosaves are coalesced per slot and throttled to one upload per 5 minutes; pause, tab hide, manual slot saves and
+  campaign end upload immediately; only the newest snapshot is sent, and snapshots the game just serialized skip
+  re-validation. Rules also require the email/password provider (`email_verified` is optional; see docs/cloud-saves.md).

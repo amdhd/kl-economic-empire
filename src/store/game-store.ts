@@ -1,4 +1,4 @@
-import { syncCloud } from '../persistence/cloud';
+import { flushCloud, syncCloud } from '../persistence/cloud';
 // Thin UI store. The engine mutates `game` in place; `rev` bumps whenever economic state changes
 // (hourly tick or player command) so selectors re-run. The visual clock is published separately
 // and throttled so the whole tree does not re-render every frame.
@@ -38,7 +38,8 @@ interface Store {
   command: (c: Command) => CommandResult;
   toast: (tone: Toast['tone'], text: string) => void;
   newGame: (seed: number, scenario: ScenarioId) => void;
-  save: (slot: SlotId, label?: string) => Promise<void>;
+  /** `cloud: 'throttle'` coalesces routine autosaves into at most one upload per few minutes. */
+  save: (slot: SlotId, label?: string, cloud?: 'now' | 'throttle') => Promise<void>;
   load: (slot: SlotId) => Promise<boolean>;
   setShowNewGame: (v: boolean) => void;
   setShowHelp: (v: boolean) => void;
@@ -101,14 +102,14 @@ export const useGame = create<Store>((set, get) => ({
     set({ game, rev: get().rev + 1, uiMinute: displayMinutes(game.clock), selection: null, panel: null, showNewGame: false });
     lastAutosaveDay = klDay(game.clock.hour * 60);
   },
-  save: async (slot, label) => {
+  save: async (slot, label, cloud = 'now') => {
     // Dev tooling: automated test tabs set this so they never overwrite the player's saves.
     if (import.meta.env.DEV && sessionStorage.getItem('klDevNoSave')) return;
     const g = get().game;
     try {
       const snapshot = serialize(g, label ?? slot);
       await writeSlot(slot, snapshot);
-      syncCloud(slot, snapshot);
+      void syncCloud(slot, snapshot, cloud === 'now');
       set({ lastSaved: new Date().toLocaleTimeString() });
       if (slot !== 'autosave') get().toast('good', `Saved to ${slot}.`);
     } catch (e) {
@@ -173,7 +174,7 @@ export const useGame = create<Store>((set, get) => ({
     const day = klDay(g.clock.hour * 60);
     if (ticks > 0 && day !== lastAutosaveDay) {
       lastAutosaveDay = day;
-      void st.save('autosave', 'Autosave');
+      void st.save('autosave', 'Autosave', 'throttle');
     }
   },
 }));
@@ -199,7 +200,8 @@ export function startGameLoop(): () => void {
         st.pause();
         st.toast('neutral', 'Auto-paused while the tab was hidden.');
       }
-      void st.save('autosave', 'Autosave');
+      // Leaving the tab is the moment to get any throttled cloud progress off this device.
+      void st.save('autosave', 'Autosave').then(flushCloud);
     }
     last = performance.now(); // never catch up
   };
