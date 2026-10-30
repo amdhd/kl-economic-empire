@@ -73,3 +73,10 @@ click either to open its account panel. Treasury uses federal deposits at BNM on
 Schema4 preserves older KL saves with their original money and calibration. Start a new campaign to use the national
 baseline and sourced reserve inventory; existing saves are not silently converted. Trade history in upgraded saves
 starts from the upgrade date, so the first recorded month is partial.
+
+### Economic controls
+
+Open **Economic controls** in the Government rail for sector tax relief, multi-year ministry appropriations,
+new-debt term/refinancing strategy and automatic reserve-limited FX bands. Review dialogs show fiscal costs and
+tradeoffs. Ministry outcomes are synthetic coverage/readiness indices; debt uses an amortising pool, not bullet bonds.
+Schema5 saves preserve these settings; older saves receive neutral controls without changing money or RNG.

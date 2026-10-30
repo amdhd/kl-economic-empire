@@ -192,3 +192,20 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
 - **D-025 GDP chart units.** Format historical GDP ticks/tooltips as explicit MYR trillions (e.g. RM2.18tn),
   and dates as quarter/year. Bare billion values near2000 were easily mistaken for calendar years. This changes
   presentation only; source values remain quarterly nominal GDP ×4 in RM billion, with seasonality retained.
+
+- **D-026 Economic controls (user requested all four).** Sector corporate tax relief starts next month, expires after
+  1–60 months and cannot overlap within a sector. It reduces tax on positive eligible profits only, including company
+  domestic exposure; investment uses the same effective rate. Show static cost and actual closed-month receipts forgone.
+  Ministry plans schedule 1–5 annual appropriations starting next month, with nominal annual escalation. Manual policies
+  due at the same boundary apply after the plan. Cancelling removes future changes while retaining current funding.
+  Health/education/safety outcomes are lagged synthetic coverage/readiness indices from real funded budgets, not official
+  service statistics. Aggregate service quality retains its existing fiscal channel.
+- **D-027 Debt strategy.** Retain the existing amortising debt-pool abstraction, rather than falsely imply bullet bonds.
+  Select 3/10/20-year terms for new issuance, with coupon adjustment −0.20/0/+0.50pp. Weighted term and coupon of existing
+  debt change only when new debt is issued. Monthly scheduled principal uses weighted term. A refinancing share below100%
+  reduces the rebuilt liquidity target by the corresponding share of principal actually paid; it does not prohibit
+  essential bridge financing or bypass debt caps/market access. No new debt is invented during save migration.
+- **D-028 FX band.** Optional automatic controller checks each daily fixing once, sells USD above the upper MYR/USD bound
+  or buys below the lower bound, subject to daily configured size, segregated inventory, USD-sale reserve floor, spreads
+  and the same shared daily turnover cap as manual interventions. Pressure affects subsequent fixings, never guarantees
+  a peg. No new RNG draws. Schema5 persists all controls; schema4 migrates to neutral defaults without resetting accounts.

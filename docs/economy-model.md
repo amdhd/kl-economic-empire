@@ -473,3 +473,40 @@ Before settlements, campaign charts display their opening state as one marked po
 operating+capex+interest+emergency+export support minus taxes+other public receipts+tariffs. Exclude borrowing, principal
 repayment and both SWF transfers. Positive means deficit; negative means surplus. MTD uses current postings, monthly
 history uses closed reports. This is the existing cash accounting model, not an accrual deficit or GDP annualisation.
+
+## Additional economic controls (schema5)
+
+Sector relief: `effectiveCorporateRate_j = max(0, statutoryRate − activeRelief_j)`. Relief0–15pp starts on the next
+calendar month's first minute and expires after1–60 months. Settlement uses the period just ended (`boundary−1minute`),
+so February relief cannot touch January. Corporate sector receipts, featured-company domestic tax and private investment
+use this same rate. No loss refunds. Closed-month tax expenditure = statutory tax on positive sector profits minus actual
+corporate receipts, rounded to sen; it is forgone revenue, not another treasury outflow. Overlapping incentives are rejected.
+
+Ministry plans: monthly appropriation0–RM50bn, annual escalation−10% to15%, horizon1–5 years. First applies next month;
+subsequent appropriations apply every12 months. Reject a plan exceeding the budget ceiling in any scheduled year.
+Daily settlement still pays through the normal treasury/financing/arrears path. No funds are reserved or granted upfront.
+Cancelling affects future scheduled changes, retaining the current budget. Plans run after period settlement and before
+manual policies due at the same boundary, so manual overrides win. No time skip or offline catch-up is introduced.
+For health, services and safety, `realFundingRatio = budget / profileOpeningBudget / CPIrelative × clamp(1−arrearsDays/30,0,1)`;
+`outcomeTarget = clamp(62 × realFundingRatio^.6 + serviceBoost×100,0,98)` and `outcome += .25×(target−outcome)` monthly.
+These diagnostic synthetic coverage/readiness indices expose individual budget outcomes; aggregate satisfaction retains
+the existing service-quality channel, avoiding a second approval boost from the same expenditure.
+
+Debt remains an amortising pool. On issuance, weighted term = `(oldDebt×oldTerm + newDebt×selectedTerm)/(oldDebt+newDebt)`.
+Selected terms36/120/240 months price new coupons at current bond yield−0.002/+0/+0.005 respectively. Existing average
+coupon is weighted by principal as before. Scheduled monthly principal = debt/weightedTerm, paid from available cash.
+Cash-buffer rebuilding target = `max(0, configuredBufferMonths×monthlyOutlays − principalActuallyPaid×(1−refinanceShare))`.
+Refinance share0–100% therefore trades lower borrowing against lower liquidity; essential daily financing remains subject
+to debt cap/access rules. This is not a bullet-bond maturity ladder or a guarantee all desired refinancing is available.
+
+Automatic FX bands: bounds3.2–6.5 MYR/USD, strictly ordered; configured daily operation>0 up toUSD1bn; reserve floor0–200bn.
+After daily external fixing, if above upper bound sell USD; below lower buy USD; inside band do nothing. Size is the
+minimum of configured cap, remaining shared daily turnover and available inventory (for sales, reserves above the floor;
+for buys, MYRcash/(FX×1.002)). Round down to cents and execute through the manual intervention function. Both currency legs,
+spread and inventory constraints remain identical. Floor applies to automatic USD sales; manual operations remain separately
+player-directed. Pressure begins at the next fixing. Persist controller status; insufficient inventory pauses execution,
+not fiscal spending. Migration enables no controller, grants no cash and consumes no RNG. Tests cover timing, expiry,
+revenue/investment propagation, appropriation schedules, funding outcomes, debt terms/rollover, FX bounds and save continuity.
+
+Validation for economic controls: strict build and lint pass;156 unit/invariant/campaign tests and24 browser tests pass.
+The browser control test reviews all four settings, checks the selected debt coupon and observes automatic reserve sales.

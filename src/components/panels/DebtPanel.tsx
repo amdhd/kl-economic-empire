@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { debtMYR, isInflow, ratingLabel, treasuryMYR } from '../../engine/government';
+import { debtMYR, isInflow, newIssueCoupon, ratingLabel, treasuryMYR } from '../../engine/government';
 import type { GovMonthFlows } from '../../types/game';
 import { klDayLabel } from '../../engine/time';
 import { useGame, useGameState } from '../../store/game-store';
@@ -30,7 +30,7 @@ export function DebtPanel() {
       <div className="grid grid-cols-4 gap-3 rounded-xl bg-slate-900/40 p-3">
         <Stat label="Treasury" value={money(treasuryMYR(gov))} />
         <Stat label="Debt" value={money(debtMYR(gov))} sub={`${pct(g.indicators.debtToGdp)} of GDP`} />
-        <Stat label="New-issue yield" value={pct(gov.bondYield, 2)} sub={`avg cost ${pct(gov.avgDebtRate, 2)}`} />
+        <Stat label="New-issue yield" value={pct(newIssueCoupon(g), 2)} sub={`avg cost ${pct(gov.avgDebtRate, 2)}`} />
         <Stat label="Credit rating" value={ratingLabel(gov.creditRating)} sub={gov.marketAccess ? 'market access' : 'NO market access'} tone={gov.marketAccess ? undefined : 'down'} />
         <Stat label="Interest (last mo.)" value={last ? money(last.gov.interest) : '—'} />
         <Stat label="Public assets" value={money(gov.publicAssets)} sub="depreciated infrastructure" />
@@ -68,7 +68,7 @@ export function DebtPanel() {
             <input type="range" min={0.1} max={0.8} step={0.05} value={cap} onChange={(e) => setCap(Number(e.target.value))} />
           </label>
         </div>
-        <p className="mt-1 text-[11.5px] text-slate-400">At each month end, maturing bonds (~1/120 of debt) are repaid and new bonds are issued to restore the cash buffer — never above the cap. Debt above ~35% of GDP or deficits above 3% raise yields and risk downgrades.</p>
+        <p className="mt-1 text-[11.5px] text-slate-400">Monthly principal is debt divided by the weighted amortisation term ({g.controls.debt.averageMonths.toFixed(1)} months). The refinancing strategy adjusts cash-buffer rebuilding; essential bridge financing still obeys the debt cap and market access. Debt above {g.baseline.profile === 'malaysia' ? '65%' : '35%'} of GDP or deficits above 3% raise the risk premium. Set terms and refinancing in Economic controls.</p>
         <button className="btn mt-2" disabled={buf === gov.policies.borrowing.cashBufferMonths && cap === gov.policies.borrowing.maxDebtToGdp} onClick={() => command({ type: 'setBorrowing', patch: { cashBufferMonths: buf, maxDebtToGdp: cap } })}>Apply rule</button>
       </Section>
       <Section title="Discretionary operations">
@@ -81,7 +81,7 @@ export function DebtPanel() {
       </Section>
       {confirm && (
         <ConfirmDialog title={confirm === 'issue' ? `Issue RM ${amt}m of bonds` : `Repay RM ${amt}m of debt`} confirmLabel="Confirm" onCancel={() => setConfirm(null)} onConfirm={() => { command({ type: confirm === 'issue' ? 'issueBonds' : 'repayDebt', amount: amt * 1e6 }); setConfirm(null); }}>
-          {confirm === 'issue' ? `Treasury +RM ${amt}m and debt +RM ${amt}m at ≈${pct(gov.bondYield, 2)}. Borrowing is not income; net worth is unchanged until the money is spent.` : `Treasury and debt both fall by RM ${amt}m, saving ≈${money(amt * 1e6 * gov.avgDebtRate)} interest a year.`}
+          {confirm === 'issue' ? `Treasury +RM ${amt}m and debt +RM ${amt}m at ≈${pct(newIssueCoupon(g), 2)}. Borrowing is not income; net worth is unchanged until the money is spent.` : `Treasury and debt both fall by RM ${amt}m, saving ≈${money(amt * 1e6 * gov.avgDebtRate)} interest a year.`}
         </ConfirmDialog>
       )}
     </PanelShell>

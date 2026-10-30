@@ -6,6 +6,7 @@ const ITEMS: { id: PanelId; label: string; icon: string; group: string }[] = [
   { id: 'policies', label: 'Taxes & budget', icon: '⚖', group: 'Government' },
   { id: 'projects', label: 'Projects', icon: '🏗', group: 'Government' },
   { id: 'debt', label: 'Treasury & debt', icon: '🏦', group: 'Government' },
+  { id: 'controls', label: 'Economic controls', icon: '⚙', group: 'Government' },
   { id: 'trade', label: 'Trade & central bank', icon: '⇄', group: 'Government' },
   { id: 'markets', label: 'Stock markets', icon: '📈', group: 'Markets' },
   { id: 'fund', label: 'Sovereign fund', icon: '💼', group: 'Markets' },

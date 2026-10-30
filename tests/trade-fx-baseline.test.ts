@@ -59,7 +59,7 @@ describe('dated Malaysia opening, with separate legacy calibration', () => {
     delete file.state.government.mtd.importTariff;
     delete file.state.government.mtd.exportSupport;
     const restored = deserialize(JSON.stringify(file));
-    expect(restored.schemaVersion).toBe(4);
+    expect(restored.schemaVersion).toBe(5);
     expect(restored.baseline.profile).toBe('legacy-kl');
     expect(restored.baseline.openingTreasury).toBe(LEGACY_BASELINE.treasury);
     expect(restored.government.treasury).toBe(old.government.treasury);

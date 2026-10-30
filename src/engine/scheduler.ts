@@ -1,3 +1,4 @@
+import { applyPlans, automaticFx } from './policy-controls';
 import { baselineFor, budgetFor } from '../data/economic-baseline';
 // Deterministic hourly tick. Ordering within a tick (see docs/decisions.md D-004):
 //   1. advance clock one hour
@@ -47,6 +48,7 @@ export function runHourTick(s: GameState): void {
     }
   }
 
+  applyPlans(s);
   applyDuePolicies(s);
   hourlyMarket(s, t);
   for (const ex of ['MY', 'US'] as const) if (isOpen(ex, t)) processQueuedOrders(s, ex, t);
@@ -68,6 +70,7 @@ function settleDay(s: GameState, day: number): AggregatedMods {
   const p = klParts(klDayStartMin(day + 1));
   const mods = aggregateMods(s, day);
   updateExternal(s, mods, s.indicators.inflationYoY, p.day, p.month, outputGap(s));
+  automaticFx(s);
   const gov = dailyGovernment(s, day);
   const e = daily(s, mods, gov);
   dailyCompanies(s, day);

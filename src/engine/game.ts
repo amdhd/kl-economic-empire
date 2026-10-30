@@ -1,4 +1,5 @@
 // Game construction, typed player commands, and the real-time driver.
+import { initialControls, controlCommand } from './policy-controls';
 import { COMPANIES } from '../data/companies';
 import { BASE_TAX, BASELINE, LEGACY_BASELINE, LEGACY_BUDGET, BUDGET_LABELS, SECTOR_IDS, SECTORS, TAX_LABELS } from '../data/economic-baseline';
 import { BASE_BUDGET as nationalBudget } from '../data/economic-baseline';
@@ -23,7 +24,7 @@ import { seedRng } from './rng';
 import { klDay, klParts, klToEpochMin, monthKey } from './time';
 import { clamp, news, pushBounded, toMinor } from './util';
 
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 export const START = { year: 2027, month: 1, day: 1, hour: 8 };
 export const CAMPAIGN_MONTHS = 24;
 
@@ -69,6 +70,7 @@ function createWithProfile(seed: number, scenario: ScenarioId, profile: 'malaysi
   const gdpAnnual = CAL.gdpDaily * 365;
 
   const s = {
+    controls: initialControls(),
     schemaVersion: SCHEMA_VERSION,
     campaignId: `kl-${seed}-${scenario}`,
     seed,
@@ -146,6 +148,12 @@ function createWithProfile(seed: number, scenario: ScenarioId, profile: 'malaysi
 
 // ------------------------------------------------------------------ commands
 export type Command =
+  | { type: 'sectorIncentive'; sector: import('../types/game').SectorId; cut: number; months: number }
+  | { type: 'ministryPlan'; category: BudgetCategory; monthly: number; growth: number; years: number }
+  | { type: 'cancelMinistryPlan'; category: BudgetCategory }
+  | { type: 'debtStrategy'; termMonths: number; refinance: number }
+  | { type: 'fxBand'; enabled: boolean; lower: number; upper: number; dailyUSD: number; reserveFloorUSD: number }
+
   | { type: 'queueTrade'; tariff: number; exportBudgetMonthly: number }
   | { type: 'interveneFx'; side: 'buyUSD' | 'sellUSD'; usdMinor: number }
   | { type: 'queueTax'; patch: Partial<TaxPolicy> }
@@ -185,6 +193,7 @@ function firstOfNextMonth(atMin: number): number {
 function dispatch(s: GameState, cmd: Command, atMin: number): CommandResult {
   const gov = s.government;
   switch (cmd.type) {
+    case 'sectorIncentive': case 'ministryPlan': case 'cancelMinistryPlan': case 'debtStrategy': case 'fxBand': return controlCommand(s, cmd, atMin);
     case 'interveneFx': return interveneFx(s, cmd.side, cmd.usdMinor, atMin);
     case 'queueTrade': {
       if (!Number.isFinite(cmd.tariff) || cmd.tariff < 0 || cmd.tariff > 0.2 || !Number.isFinite(cmd.exportBudgetMonthly) || cmd.exportBudgetMonthly < 0 || cmd.exportBudgetMonthly > 2e9) return { ok: false, message: 'Tariff must be 0–20%; export support RM 0–2bn/month.' };

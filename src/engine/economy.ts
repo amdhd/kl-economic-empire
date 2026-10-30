@@ -1,3 +1,4 @@
+import { sectorTax } from './policy-controls';
 import { calibrationFor } from './calibration';
 import { baselineFor } from '../data/economic-baseline';
 // Aggregate KL economy: households, 7 input–output sectors, labour, prices and investment.
@@ -249,7 +250,7 @@ export function monthClose(s: GameState, inflationYoY: number, unemployment: num
   const BASE_LEND_RATE = baselineFor(s).opr + 0.02;
   const hh = s.households;
   const bank = s.bank;
-  const taxRate = s.government.policies.tax.corporate;
+
 
   // Profits → distributions and internal funds (normalised to an average-length month)
   const perAvgMonth = 365 / 12 / days;
@@ -259,7 +260,7 @@ export function monthClose(s: GameState, inflationYoY: number, unemployment: num
   for (const j of SECTOR_IDS) {
     const sec = s.sectors[j];
     const profit = sec.mtd.profit;
-    const afterTax = profit - Math.max(0, sec.mtd.taxableProfit) * taxRate;
+    const afterTax = profit - Math.max(0, sec.mtd.taxableProfit) * sectorTax(s,j);
     sec.lastMonthProfit = profit;
     distributed += Math.max(0, afterTax) * BASELINE.transferShareToHouseholdsOfProfit * perAvgMonth;
     sec.retained = Math.max(0, afterTax) * (1 - BASELINE.transferShareToHouseholdsOfProfit) * perAvgMonth;

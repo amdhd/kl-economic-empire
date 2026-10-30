@@ -1,3 +1,4 @@
+import { initialControls, validateControls } from '../engine/policy-controls';
 // Versioned save format. Saving never mutates game state or advances the clock.
 import { assertSafeMinor } from '../engine/util';
 import { SCHEMA_VERSION } from '../engine/game';
@@ -41,6 +42,7 @@ export function findNonFinite(v: unknown, path = 'state'): string | null {
 type Migration = (s: Record<string, unknown>) => Record<string, unknown>;
 /** migrations[n] upgrades a state from schema n to n+1. */
 const MIGRATIONS: Record<number, Migration> = {
+  4: state => { (state as unknown as GameState).controls ??= initialControls(); return state; },
   // v1 → v2 (master): projects track real work done (for construction-cost escalation).
   1: (s) => {
     const gov = s.government as { projects: { spent: number; work?: number }[] };
@@ -104,6 +106,7 @@ export function deserialize(json: string): GameState {
     st.schemaVersion = v;
   }
   const s = st as unknown as GameState;
+  validateControls(s.controls);
   const bad = findNonFinite(s);
   if (bad) throw new Error(`Corrupt save: non-finite number at ${bad}`);
   for (const key of ['clock', 'scheduler', 'rng', 'government', 'fund', 'market', 'sectors', 'households', 'bank', 'external', 'trade', 'centralBank'] as const) {

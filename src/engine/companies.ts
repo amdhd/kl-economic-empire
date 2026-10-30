@@ -1,3 +1,4 @@
+import { sectorTax } from './policy-controls';
 import { calibrationFor } from './calibration';
 import { baselineFor } from '../data/economic-baseline';
 // Featured listed companies (40). Their KL revenue is a *share of* the sector aggregates, so they
@@ -104,7 +105,7 @@ export function monthCloseCompanies(s: GameState, monthKey: number): Dividend[] 
     const ebitda = m.revenue - m.laborCost - m.energyCost - m.otherCost;
     const ebit = ebitda - m.depreciation;
     const pbt = ebit - m.interest;
-    const taxKL = Math.max(0, pbt * domesticExposure(c, profile)) * klTax;
+    const taxKL = Math.max(0, pbt * domesticExposure(c, profile)) * sectorTax(s,c.sector);
     const taxOther = Math.max(0, pbt * (1 - domesticExposure(c, profile))) * OTHER_TAX[c.exchange];
     const netIncome = pbt - taxKL - taxOther;
     // Simplified accrual→cash: depreciation ≈ maintenance capex, so cash moves by net income.

@@ -1,0 +1,33 @@
+import { expect, test } from '@playwright/test';
+import { runHours, startCampaign } from './helpers';
+import type { GameState } from '../src/types/game';
+type Dev = {__klDev:{state:()=>GameState}};
+
+test('all four economic controls can be reviewed, applied and observed in simulation',async({page})=>{
+  await startCampaign(page);
+  await page.getByTestId('nav-controls').click();
+  await page.getByTestId('review-incentive').click();
+  await expect(page.getByRole('dialog')).toContainText('5pp relief');
+  await page.getByTestId('confirm-btn').click();
+  await page.getByRole('button',{name:'Review ministry plan',exact:true}).click();
+  await page.getByTestId('confirm-btn').click();
+  await page.getByLabel('New debt term').selectOption('36');
+  await page.getByRole('button',{name:'Review debt strategy',exact:true}).click();
+  await page.getByTestId('confirm-btn').click();
+  await page.getByTestId('nav-debt').click();
+  await expect(page.getByTestId('panel')).toContainText('4.00%');
+  await page.getByTestId('nav-controls').click();
+  await page.getByLabel('Upper',{exact:true}).fill('4');
+  await page.getByRole('button',{name:'Review & enable band',exact:true}).click();
+  await page.getByTestId('confirm-btn').click();
+  const before=await page.evaluate(()=>(window as unknown as Dev).__klDev.state());
+  expect(before.controls.incentives[0].cut).toBe(.05);
+  expect(before.controls.plans).toHaveLength(1);
+  expect(before.controls.debt.newTermMonths).toBe(36);
+  expect(before.controls.fxBand.enabled).toBe(true);
+  await runHours(page,16);
+  const after=await page.evaluate(()=>(window as unknown as Dev).__klDev.state());
+  expect(after.centralBank.tx.some(t=>t.side==='sellUSD')).toBe(true);
+  expect(after.centralBank.usdReserves).toBeLessThan(before.centralBank.usdReserves);
+  await expect(page.getByTestId('panel')).toContainText('Health coverage');
+});

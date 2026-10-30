@@ -493,6 +493,14 @@ export interface PlayerAction {
 }
 
 export interface GameState {
+  controls: {
+    lastTaxReliefMYR: number;
+    incentives: { sector: SectorId; cut: number; startMin: number; endMin: number }[];
+    plans: { category: BudgetCategory; monthly: number; growth: number; remaining: number; nextMonth: number }[];
+    outcomes: { health: number; services: number; safety: number };
+    debt: { newTermMonths: number; averageMonths: number; refinance: number };
+    fxBand: { enabled: boolean; lower: number; upper: number; dailyUSD: number; reserveFloorUSD: number; status: string };
+  };
   schemaVersion: number;
   campaignId: string;
   seed: number;

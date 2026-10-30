@@ -1,3 +1,4 @@
+import { ControlsPanel } from '../components/panels/ControlsPanel';
 import { Component, useEffect, useState, type ReactNode } from 'react';
 import { BottomBar } from '../components/hud/BottomBar';
 import { Districts } from '../components/hud/Districts';
@@ -23,6 +24,7 @@ import { startGameLoop, useGame, type PanelId } from '../store/game-store';
 import type { ScenarioId } from '../types/game';
 
 const PANELS: Record<PanelId, () => ReactNode> = {
+  controls: () => <ControlsPanel />,
   trade: () => <TradePanel />,
   sources: () => <SourcesPanel />,
   overview: () => <OverviewPanel />,

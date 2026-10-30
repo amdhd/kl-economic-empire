@@ -1,3 +1,4 @@
+import { sectorTax, ministryOutcomes } from './policy-controls';
 import { baselineFor, budgetFor } from '../data/economic-baseline';
 // Government treasury, debt, budgets, projects and tax settlement.
 // Every treasury movement goes through post(), which rounds to whole sen and records the exact
@@ -47,6 +48,8 @@ export function gdpForRatios(s: GameState): number {
   return Math.max(s.indicators.nominalGdpAnnual, 1e9);
 }
 
+export const newIssueCoupon = (s: GameState) => s.government.bondYield + (s.controls.debt.newTermMonths === 240 ? .005 : s.controls.debt.newTermMonths === 36 ? -.002 : 0);
+
 /** Issue bonds. Respects market access and the player's debt/GDP cap. Returns MYR issued. */
 export function issueDebt(s: GameState, amountMYR: number, reason: string, quiet = false): number {
   const gov = s.government;
@@ -58,9 +61,11 @@ export function issueDebt(s: GameState, amountMYR: number, reason: string, quiet
   assertSafeMinor(gov.debt + toMinor(amt));
   const posted = post(gov, 'borrowing', amt);
   const before = debtMYR(gov);
+  s.controls.debt.averageMonths = (before*s.controls.debt.averageMonths + posted*s.controls.debt.newTermMonths)/(before+posted);
   gov.debt += toMinor(posted);
-  gov.avgDebtRate = (before * gov.avgDebtRate + posted * gov.bondYield) / (before + posted);
-  if (!quiet) news(s, { kind: 'policy', tone: 'neutral', title: `KL bonds issued: RM ${(posted / 1e6).toFixed(0)}m`, body: `${reason}. Coupon ≈ ${(gov.bondYield * 100).toFixed(2)}%.` });
+  const coupon = newIssueCoupon(s);
+  gov.avgDebtRate = (before * gov.avgDebtRate + posted * coupon) / (before + posted);
+  if (!quiet) news(s, { kind: 'policy', tone: 'neutral', title: `KL bonds issued: RM ${(posted / 1e6).toFixed(0)}m`, body: `${reason}. Coupon ≈ ${(coupon * 100).toFixed(2)}%.` });
   return posted;
 }
 
@@ -196,9 +201,8 @@ export function monthCloseGovernment(s: GameState): GovMonthClose {
   const BASE_BUDGET = budgetFor(s);
   const gov = s.government;
   const pol = gov.policies;
-  let taxable = 0;
-  for (const j of SECTOR_IDS) taxable += Math.max(0, s.sectors[j].mtd.taxableProfit);
-  const corporateTax = post(gov, 'taxCorporate', taxable * pol.tax.corporate);
+  const corporateTax = post(gov, 'taxCorporate', SECTOR_IDS.reduce((sum,j) => sum + Math.max(0,s.sectors[j].mtd.taxableProfit)*sectorTax(s,j),0));
+  s.controls.lastTaxReliefMYR = Math.max(0,(toMinor(SECTOR_IDS.reduce((sum,j)=>sum+Math.max(0,s.sectors[j].mtd.taxableProfit)*pol.tax.corporate,0))-toMinor(corporateTax))/100);
   const propertyLevy = post(gov, 'taxProperty', pol.tax.property * PROPERTY_LEVY_BASE * s.sectors.prop.mtd.nominalOutput);
 
   // Interest: pay the accrued amount; refinance if short.
@@ -209,10 +213,10 @@ export function monthCloseGovernment(s: GameState): GovMonthClose {
   gov.accruedInterest = 0;
 
   // Scheduled amortisation (~10y average maturity), refinanced by new issuance at today's yield.
-  const principalDue = debtMYR(gov) / 120;
+  const principalDue = debtMYR(gov) / s.controls.debt.averageMonths;
   const repaid = repayDebt(s, principalDue);
   const outlays = gov.mtd.opex + gov.mtd.capex + gov.mtd.interest + gov.mtd.emergency + gov.mtd.exportSupport;
-  const target = pol.borrowing.cashBufferMonths * outlays;
+  const target = Math.max(0,pol.borrowing.cashBufferMonths * outlays - repaid * (1-s.controls.debt.refinance));
   if (treasuryMYR(gov) < target) issueDebt(s, target - treasuryMYR(gov), repaid > 0 ? 'Refinancing maturing bonds and rebuilding the cash buffer' : 'Rebuilding the cash buffer');
 
   // Fiscal risk premium and rating
@@ -239,6 +243,7 @@ export function monthCloseGovernment(s: GameState): GovMonthClose {
   const base = BASE_BUDGET.health + BASE_BUDGET.services + BASE_BUDGET.safety;
   const real = ((pol.budget.health + pol.budget.services + pol.budget.safety) / cpiF / base) * (1 - (gov.mtdArrearsDays / 30) * 0.5);
   const targetSq = clamp(0.62 * Math.pow(Math.max(real, 0.1), 0.6) + gov.serviceBoost - 0.004 * (s.households.population / baselineFor(s).population * 2.1 - 2.1) * 10, 0.05, 0.98);
+  ministryOutcomes(s);
   gov.serviceQuality += (targetSq - gov.serviceQuality) * 0.25;
 
   gov.publicAssets *= 1 - 0.03 / 12;
