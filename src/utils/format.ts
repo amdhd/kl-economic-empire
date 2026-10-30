@@ -60,3 +60,10 @@ export function sharePrice(value: number, currency: Currency): string {
 }
 
 export const currencySymbol = (c: Currency) => SYMBOL[c];
+
+/** Full digits, preserving every integer sen/cents without compact suffixes. */
+export function fullMoneyMinor(minor: number, currency: Currency = 'MYR'): string {
+  if (!Number.isSafeInteger(minor)) return '—';
+  const a = Math.abs(minor);
+  return `${minor < 0 ? '−' : ''}${SYMBOL[currency]} ${fmt0.format(Math.floor(a / 100))}.${String(a % 100).padStart(2, '0')}`;
+}

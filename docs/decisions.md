@@ -82,3 +82,203 @@ renumbered here as D-P3-xx (restatements of conventions already recorded above �
   Reports panels gained its unique views instead (realised P&L and dividend totals, treasury journal, month-to-date flows,
   company statements, reconciliation residuals). Save schema 3 chains master's v2 (project `work`) and Phase 3's v2
   (fund totals, treasury journal); the v2→v3 step fills whichever fields are missing, so saves from either branch load.
+
+## Phase 4 — interconnected economy acceptance audit
+
+- **D-P4-01 Scope.** Keep the existing seven-sector economy (the milestone's six sectors are a minimum), household,
+  bank, fiscal and project systems. Audit their causal behavior and strengthen the existing invariant suite rather
+  than replace the model. External-shock score adjustment, tax/wealth scoring and human calibration of the victory
+  bar remain Phase 6 work. The explicitly optional district overlays remain deferred; no district geography or
+  synthetic allocation rules are introduced by this audit.
+- **D-P4-02 Static fiscal previews.** Quote fictional MYR per average month (365/12 days). Corporate previews use the
+  latest closed month's positive sector profits, normalised for its calendar length; other previews use current
+  prices and demand. Reuse the settlement household spending calculation without changing state or consuming RNG.
+  Keep resident consumer spending tax-inclusive and visitor spending tax-exclusive, and freeze current tourism
+  demand for this all-else-equal preview. Never divide historical receipts by the currently effective rate: these
+  may refer to different tax regimes, including a zero-rate month. Project quotes use the current construction
+  index for cost, disbursement and upkeep; template costs remain base-price costs. These are forecast corrections,
+  not changes to settlement, economic parameters or the save schema.
+
+## Phase 5 — external markets, credit and shock propagation
+
+Plan: retain the existing external/credit/valuation systems; test the three acceptance chains and stress paths;
+correct event-period settlement and fiscal arrears; expose event causes and lifecycle in the UI; verify and commit.
+
+- **D-P5-01 Event periods.** Events apply on KL days `startDay <= day < endDay`. Macro modifiers ramp in over seven
+  days; company shocks retain their existing revenue/sentiment smoothing. Finish every accrual for the last valid
+  day before expiring an event. Monthly bank decisions use modifiers from the final settled day, so newly spawned
+  Monday/month-start events cannot change the month just ended. Initial recession events enter the same bounded
+  history/news path as random events. Expiry removes direct modifiers; prices, credit plans, capital and company
+  sentiment can retain lagged consequences. No extra RNG draws are introduced.
+- **D-P5-02 Unpaid spending.** `unpaidObligations` carries unpaid operating/transfer obligations and unpaid interest.
+  Unbuilt project work and `pendingEmergency` already carry their own unpaid balances; never also book those
+  amounts as operating arrears. Daily operating arrears are due less actual posted operating payments. Commitments
+  remain subject to financing and the existing 30-day/no-market-access insolvency rule. No state fields change;
+  old recorded arrears remain payable, with no speculative historical adjustment on load.
+- **D-P5-03 Scope.** Keep seven domestic sectors plus the external Malaysia/US/global drivers as the Phase 5 model.
+  Add causal and accounting coverage for credit stress, geographical tax/earnings separation, FX, rates, market
+  response and fiscal failure. Preserve the existing fictional calibrations and defer score/threshold tuning and
+  optional map overlays to later work.
+
+## Phase 6 — campaign, calibration and polish
+
+Plan: correct calendar-based scoring and true opening/closing comparisons; add transparent sustainability and
+bounded external-condition adjustments; run shared strategies across multiple seeds; finish the term report,
+modal/keyboard and save checks; profile browser play at 3×; verify and commit.
+
+- **D-P6-01 Score calibration.** Annualise the last three months' real GDP using their actual total days. Adjust
+  the 3.5% growth benchmark by a symmetric, capped ±1 percentage point estimate from *elapsed* recorded macro
+  events, never future exposure or player actions. This only partly cushions external shocks; it is not a
+  counterfactual economy. Deflate public net wealth by CPI. Additional wealth credit above 50 is scaled by the
+  weakest of real disposable income, real output and service quality relative to their opening levels (0–100%).
+  Genuine losses keep their full penalty. Preserve component weights, hard failure caps and the 75/60 victory
+  gate pending human playtesting; do not claim automated replay as human validation. No saved fields change.
+- **D-P6-02 Term report.** Opening means campaign creation, not the first monthly close. Show actual calendar
+  run rates, transfer-adjusted fund gain, cumulative fiscal flows, score explanations and inspectable full retained
+  policy/event history. Reset visual fractional time at the exact campaign boundary. Existing save schema 3 stays
+  valid; imported historical scores retain their prior calibration while current previews use the new formula.
+- **D-P6-03 Validation/tooling.** Share scripted strategies between campaign tests and a Node/Vite command-line
+  balance runner. Both remain outside player controls. Profile real 3× browser play and tick/serialization costs
+  with explicit machine/sample caveats. Modal help uses the deliberation-pause preference; speed shortcuts cannot
+  resume a paused deliberation dialog. Validate corrupt saves before they can restore an unusable clock or economy.
+
+## Malaysia baseline, trade and central-bank FX — user-directed expansion
+
+- **D-018 Scope override (31 Oct 2026).** The user explicitly chose “Switch the economic baseline to Malaysia,
+  keeping the KL map.” New campaigns therefore use dated Malaysian GDP, federal debt/cash proxy and federal
+  operating estimates. This supersedes the original city-only fiscal scope in §§1, 2, 8 and 10. Keep the title,
+  verified KL geography and fictional presidency, securities, future events and economic paths. Preserve legacy
+  KL saves, including their original calibration, rather than silently resetting/scaling their money or history.
+- **D-019 Observation boundaries.** Pin official data available on 31 Oct 2026, with reference dates and units.
+  GDP is the sum of DOSM 2025 nominal quarters; the real game series is rebased to opening prices. Cash uses
+  federal deposits at BNM only, expressly a narrow proxy rather than consolidated treasury cash. The 2027
+  operating estimates are allocations, not actual spending. Group education/higher education, defence/home
+  affairs, works/transport operations and pensions into existing controls. Other operations are a derived residual;
+  exclude debt service (paid separately) and development capital appropriations (projects remain commissioned).
+  Do not claim the seven fictional sector splits, taxes, loans, SWF or public asset stock are national statistics.
+- **D-020 Fiscal scale.** Solve sector scale so value added plus the opening product levy equals observed nominal
+  GDP exactly. Keep positive residual exports. Calibrate fixed omitted federal receipts to the official 2027
+  total less the modeled opening tax base; changing tax sliders cannot move that residual. Existing `federalGrant`
+  storage key means “other public receipts” nationally and still means the old grant in legacy saves. National
+  debt cap starts at 80% (a game rule, not a legal limit); risk/rating debt thresholds are 65%/60%, keeping the
+  old 35%/30% thresholds for KL. Normalize population pressure and transfers to the matching profile. National
+  company tax/demand exposure combines KL and rest-of-Malaysia weights; global exposure stays separate.
+- **D-021 Trade.** Tariffs (0–20%) and export services (RM0–2bn/month) are effective next month. Tariffs charge
+  actual imported production inputs and increase costs; net product-tax treatment prevents counting that same
+  domestic transfer as lost GDP. Export services require actual cash, buy domestic services and build bounded
+  demand access over 90 days. No unpaid discretionary support is carried as an essential fiscal obligation.
+  Measured exports are capacity-rationed sector deliveries; imports are production inputs, not complete customs
+  or balance-of-payments statistics. These are modeled flows, not calibrated official merchandise totals.
+- **D-022 Central bank.** User-directed FX control supersedes D-012's prohibition on player central-bank action;
+  OPR remains automatic. Use the BNM foreign-currency reserve component, excluding gold/SDRs/IMF/other assets.
+  A separate fictional RM5bn sterilisation inventory permits purchases without printing fiscal cash. Reserve
+  operations cannot transfer to treasury/SWF; both currency legs, fees and turnover are journalled. Effect is
+  temporary, bounded pressure on the next daily fixing, not a guaranteed peg. Subtract opening portfolio equity
+  when adding central-bank gains/losses to modeled public wealth. For the negative national opening net worth,
+  deflate asset values and retain nominal liabilities in scoring, preventing inflation alone from earning wealth
+  credit. The initial FX anchor is an implied reserve valuation ratio, expressly not an observed spot quote.
+- **D-023 Compatibility and balances.** Schema 4 chains 1→2→3→4. Persist profile, opening cash/debt, trade and CB
+  accounts. Legacy saves receive zero new reserve inventory; do not reconstruct trade activity that was never
+  recorded. Label their first upgraded trade month partial. Keep all prior clocks/RNG/cash/history. Display exact
+  treasury sen and both SWF cash currencies beside “Month closes in”; distinguish spendable cash from fund NAV.
+
+- **D-024 Historical chart references.** On user request, display pinned DOSM GDP, CPI/inflation and unemployment
+  history separately from campaign charts. Historical quarterly nominal GDP is annualised by multiplying by four,
+  retaining seasonality; it is not a rolling annual series. Official CPI retains 2010=100, separately from campaign
+  opening=100. Campaign charts show a visible opening point before any daily/monthly settlements. No invented
+  historical FX series: explicitly identify the opening FX anchor as an implied reserve valuation. Deficit display
+  uses paid expenditure less public receipts, excluding financing, debt principal and SWF transfers; positive is deficit.
+
+- **D-025 GDP chart units.** Format historical GDP ticks/tooltips as explicit MYR trillions (e.g. RM2.18tn),
+  and dates as quarter/year. Bare billion values near2000 were easily mistaken for calendar years. This changes
+  presentation only; source values remain quarterly nominal GDP ×4 in RM billion, with seasonality retained.
+
+- **D-026 Economic controls (user requested all four).** Sector corporate tax relief starts next month, expires after
+  1–60 months and cannot overlap within a sector. It reduces tax on positive eligible profits only, including company
+  domestic exposure; investment uses the same effective rate. Show static cost and actual closed-month receipts forgone.
+  Ministry plans schedule 1–5 annual appropriations starting next month, with nominal annual escalation. Queuing a
+  manual budget for a planned category replaces that plan (D-030). Cancelling removes future changes while retaining current funding.
+  Health/education/safety outcomes are lagged synthetic coverage/readiness indices from real funded budgets, not official
+  service statistics. Aggregate service quality retains its existing fiscal channel.
+- **D-027 Debt strategy.** Retain the existing amortising debt-pool abstraction, rather than falsely imply bullet bonds.
+  Select 3/10/20-year terms for new issuance, with coupon adjustment −0.20/0/+0.50pp. Weighted term and coupon of existing
+  debt change only when new debt is issued. Monthly scheduled principal uses weighted term. A refinancing share below100%
+  reduces the rebuilt liquidity target by the corresponding share of principal actually paid; it does not prohibit
+  essential bridge financing or bypass debt caps/market access. No new debt is invented during save migration.
+- **D-028 FX band.** Optional automatic controller checks each daily fixing once, sells USD above the upper MYR/USD bound
+  or buys below the lower bound, subject to daily configured size, segregated inventory, USD-sale reserve floor, spreads
+  and the same shared daily turnover cap as manual interventions. Pressure affects subsequent fixings, never guarantees
+  a peg. No new RNG draws. Schema5 persists all controls; schema4 migrates to neutral defaults without resetting accounts.
+- **D-029 Reserve revaluation is outside the wealth score.** Public net worth still shows central-bank reserve equity
+  at the current MYR/USD rate. The wealth score values USD reserves at the opening rate (`scoreNetWorth`), so spreads and
+  trading losses still cost score, but exchange-rate moves do not count. Reason: review found that selling USD early and
+  buying late weakened the ringgit and raised the score by up to ~3 points, and random FX moves swung reserve equity by
+  −RM6bn to +RM34bn across seeds. The SWF's own USD holdings keep their existing market valuation.
+- **D-030 Manual budgets replace ministry plans.** Queuing a manual appropriation for a category with a ministry plan
+  cancels that plan's future annual steps, and the review dialog says so. Previously the plan's next annual step silently
+  overwrote the player's manual budget.
+- **D-031 Model generations (schema 6).** New national campaigns are "model 2": oil & gas and palm oil form a resource
+  sector outside the seven input–output industries, the federal development programme is modelled, and SOEs,
+  commodities, trading partners, fiscal rules and the equity wealth effect are active. Schema-5 saves migrate as
+  "model 1" with all of these off and their original calibration (`CAL_V1`, `BASE_BUDGET_V1`), so balances and outcomes
+  do not jump. Legacy KL saves are unaffected.
+- **D-032 Development expenditure (OFFICIAL RM85.0bn, Budget 2027).** Paid daily as capital outlays, bought from
+  construction, industry, ICT and social programmes, 60% capitalised as public assets, and accumulated in a separate
+  public-capital stock (depreciation 4%/yr) that raises every sector's productivity with elasticity 0.05. Because the
+  sector capital-output ratios describe the whole capital stock, model 2 scales the private stock and private investment
+  down by the public share of fixed investment; adding RM85bn on top double-counted public investment and drove
+  construction's calibrated exports negative. Opening deficit = (376.84 + 85.0 − 380.82)/GDP ≈ 4.0%.
+- **D-033 Resource sector and receipts.** Opening value added: upstream oil & gas RM111bn, palm oil RM48bn (APPROX scale);
+  the seven sectors are recalibrated so total GDP still equals the official figure. Petroleum income tax (38% statutory)
+  is paid on upstream profit with fixed costs; palm pays corporate tax and the export duty, whose opening rate is set so
+  receipts match the OFFICIAL RM1.914bn 2027 export duty estimate. PETRONAS (RM32bn APPROX dividend) and Khazanah
+  (payout of its listed dividends) pay the treasury. Every opening modelled receipt is subtracted from the residual
+  "other receipts", so opening revenue still equals the OFFICIAL RM380.8bn. Line 75200 (RM35.5bn, returns from
+  non-financial enterprises) is dominated by the PETRONAS dividend.
+- **D-034 SOE wealth accounting.** Public net worth includes changes in PETRONAS book equity (cash − debt) and Khazanah
+  NAV at market. A dividend or special dividend therefore moves cash between public accounts without creating wealth,
+  so extracting SOE cash cannot raise the wealth score. PNB is not modelled as a dividend source: its income goes to
+  unit holders, not the federal government.
+- **D-035 KL projects in national campaigns.** City projects' productivity, rent, service and tourism effects are scaled
+  by KL's share of national output (≈15%). Previously a RM4.5bn KL rail line raised productivity in every Malaysian
+  sector by up to 2%, a large free lunch exposed by the "commission everything" balance test.
+- **D-036 Commodities.** World prices are exogenous indices (oil reuses the existing oil cycle; palm, wheat and steel
+  have their own AR(1) cycles plus seeded supply/demand episodes). They come from a separate persisted RNG stream
+  (`world.rng`) so the existing seeds' draw order, prices and events are unchanged. Players control domestic
+  instruments only: RON95 ceiling and eligibility, wheat subsidy, steel safeguard duty, palm export duty.
+- **D-037 Fuel subsidy and core inflation.** The opening RON95 subsidy (17bn litres × 85% eligible × RM0.61 ≈ RM8.8bn,
+  APPROX) is carved out of the administration residual so total operating spending still equals the official estimate.
+  Households pay any change in their fuel bill out of other consumption, and the CPI carries pump prices at a 5.5% weight.
+  Because that direct real-income effect is now explicit, the behavioural spending and confidence penalties key off core
+  inflation (excluding administered fuel prices); otherwise a one-off pump-price change compounded through the existing
+  inflation→MPC→unemployment loop. Utilities feel 40% of crude moves (regulated gas, ICPT pass-through).
+- **D-038 Trading partners.** Eight partners with APPROX rounded trade shares. Bilateral surcharges are relative to
+  opening conditions. Imports follow a CES price index across partners (substitution elasticity 4: diversion means costs
+  rise less than the tariff). Partners mirror a share of surcharges after 60 days (de-escalate after 30). Agreements
+  need relations ≥ 50 and no dispute, take 180 days, and add 5% export access and 2% cheaper imports per tier (max 2).
+- **D-039 Fiscal rules.** Modelled on the Public Finance and Fiscal Responsibility Act 2023: deficit ≤ 3% of GDP, debt
+  ≤ 60% (or falling), golden rule. The deficit target glides from the opening deficit to the ceiling over 24 months.
+  Rules are not self-enforcing. Monthly credibility moves 15% toward a compliance target and shifts the sovereign
+  premium by −20bp to +50bp and the rating by up to ±1 notch; credibility below 50 lowers the stability score.
+  Loosening a rule costs credibility at once. The escape clause is justified by an output gap below −2% or an active
+  adverse macro shock (−2 points); otherwise −20 and capped. It lapses after 18 months. Model 2's deficit-premium and
+  rating thresholds start at 4.5% of GDP, because the real budget opens near 4%.
+- **D-040 Equity wealth effect.** Households hold an APPROX RM450bn of listed equity and spend 3% a year of gains or
+  losses on Bursa prices (smoothed over ~20 days). This is how share prices reach the real economy; trading itself still
+  never enters GDP.
+
+- **D-041 City-first info views (user-directed UI, 31 Oct 2026).** The reference screenshots supersede §11's
+  persistent left navigation and top stat rows: a single Info views button opens the category grid; the chosen
+  inspector appears beside it, while clock/speed, key indicators and exact treasury/fund cash remain in a bottom
+  dock. Categories stay open until toggled, and a panel can remain open with the menu hidden. District camera
+  shortcuts move into a compact location picker. Original SVG icons and charcoal/cyan glass take visual cues
+  from the references without copying game assets. Population uses existing household totals and sector job
+  shares; do not fabricate birth/death, age, homelessness or geographic overlays absent from the model. No
+  economic rules, saved game fields, RNG draws or clock behavior change.
+
+- **D-042 Info-view dismissal and market space (user correction, 31 Oct 2026).** Supersedes D-041's independent
+  panel visibility: switching Info views off dismisses the active category panel and company selection, returning
+  to the map. Reopening starts with categories only. Market windows use available workspace width, a compact
+  title/subtitle/status header and inline index sparklines. The company list owns bounded vertical/horizontal
+  scrolling; fixed header/filter/footer rows never compete with it through nested percentage-height scrollers.
+  Ordinary inspectors retain their body scroll. No simulation behavior changes.

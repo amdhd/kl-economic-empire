@@ -68,3 +68,126 @@ to events better than these simple bots. Re-tune the bar if human playtests win 
 - Seeds with early event clusters (11, 42) keep growth scores low for everyone; consider scoring growth against a
   benchmark that partly adjusts for external shocks.
 - Wealth still rewards tax-maximising strongly; it's balanced only by the satisfaction penalty.
+
+## Phase 4 acceptance audit (2026-10-31)
+
+No economic coefficients, scoring weights, event hazards, RNG draw order or victory threshold were tuned in this
+pass. The acceptance tests now pin tax effective dates and the six-month capacity lag, paid construction demand
+before productivity benefits, finite IO calibration and GDP separation from confirmed filled trades. Fiscal and
+project forecast fixes change displayed estimates only. Historical replay tables above remain historical samples;
+they are not a new balance result. External-event seed variance, the tax/wealth incentive and the victory bar's
+dependence on scripted bots still require Phase 6 work and human playtesting.
+
+## Phase 5 correctness pass (2026-10-31)
+
+Shock timing and fiscal stress now have focused regression coverage. Company shocks include their final active
+day; monthly bank decisions use the final settled day's stress rather than the new calendar day's events.
+Unfunded capex and emergency work are no longer duplicated into operating arrears. These corrections can change
+campaign outcomes even though event hazards, random draws, macro coefficients, scoring and victory thresholds
+were not tuned. Earlier balance tables are historical and should not be treated as current calibration.
+
+The full campaign suite still compares adaptive play over 12 seeds and recession/balanced scenarios over 20 seeds.
+External-shock score variance, the tax/wealth incentive and human calibration of the victory threshold remain
+Phase 6 work. Historical arrears in existing saves are preserved; no retroactive expenditure reconstruction is
+attempted.
+
+## Phase 6 calibration (2026-10-31)
+
+This pass changes scoring, not simulated policy flows, event probabilities or RNG draws. The same 12 seeds were
+run before and after: **2027, 11, 42, 201–209**. Strategies share `tools/campaigns.ts`; adaptive combines the
+balanced-growth script with monthly counter-cyclical transfers/development. Adverse recession is hands-off in
+the recession scenario. The before run uses the Phase 5 score. All table values are means of fictional replays.
+
+| Strategy | Score before | Score after | Wealth before | Wealth after | Approval (unchanged) | Wins after |
+|---|---:|---:|---:|---:|---:|---:|
+| Hands-off | 53.79 | 52.80 | 51.44 | 50.50 | 63.21 | 0/12 |
+| Balanced growth | 52.17 | 51.34 | 50.37 | 49.77 | 61.88 | 0/12 |
+| Tax maximiser | 47.66 | 44.04 | 87.37 | 74.06 | 34.00 | 0/12 |
+| All projects | 51.08 | 50.21 | 47.34 | 46.90 | 62.87 | 0/12 |
+| Austerity | 44.71 | 42.91 | 76.92 | 70.93 | 36.27 | 0/12 |
+| Adaptive | 57.12 | 56.10 | 49.18 | 48.61 | 70.53 | 0/12 |
+| Adverse recession | 48.83 | 50.07 | 42.08 | 41.86 | 60.90 | 0/12 |
+
+Changes: actual-day annualisation removes calendar luck; CPI deflation and income/output/service sustainability
+reduce tax/austerity wealth credit; a symmetric ±1 pp benchmark adjustment partly cushions recorded external
+shocks. Caps and 75/60 victory criteria are unchanged. Fiscal taxes still legitimately add public wealth; the
+score now also evaluates whether that wealth was sustained without degrading living standards.
+
+**Separate validation set: seeds 401–412**, with no further tuning after seeing its results:
+
+| Strategy | Mean score | Range | Mean approval | Wins |
+|---|---:|---:|---:|---:|
+| Hands-off | 56.79 | 42.86–71.17 | 68.94 | 0/12 |
+| Balanced growth | 57.26 | 43.82–75.06 | 70.02 | 1/12 |
+| Tax maximiser | 44.44 | 41.28–46.23 | 35.78 | 0/12 |
+| All projects | 56.17 | 41.92–72.67 | 71.15 | 0/12 |
+| Austerity | 42.75 | 39.76–46.47 | 38.67 | 0/12 |
+| Adaptive | 59.86 | 49.47–70.71 | 73.53 | 0/12 |
+| Adverse recession | 48.52 | 35.37–60.91 | 60.59 | 0/12 |
+
+Adaptive play still gives the best mean, but seed variance remains substantial and simple bots rarely win.
+The external adjustment is intentionally limited to 3 total points; it does not erase a recession or fully solve
+the early-cluster problem. Keep 75 provisional until human playtesting (see `docs/playtesting.md`), rather than
+lower it just to make scripted bots win. Re-run with `npm run balance` or pass `--seeds` and `--output`; generated
+JSON goes under ignored `artifacts/`, separate from Playwright's disposable output directory.
+
+## National baseline pass — 31 October 2026
+
+The user changed new campaigns to Malaysia observations (D-018–D-023). Keep legacy save calibration intact. The national
+opening debt/GDP is about68.1% because debt is Q2 2026 and the denominator is observed2025 nominal GDP; this mixed-date
+ratio is a game opening calculation, not MOF's contemporaneous63.1% figure. Start with a fictional80% borrowing cap and
+65%/60% spread/rating thresholds. The narrow BNM cash proxy means bridge financing can still occur during a month.
+
+The reduced taxes initially underfunded national operations because several federal tax categories were absent. Fix a
+non-policy-responsive residual so opening total annual receipts equal the MOF2027 estimateRM380.816996bn. Do not alter
+receipts to guarantee later solvency. Operating estimates totalRM376.84bn including the separately settled debt-service
+reference. Published development capex is not automatically appropriated; commissioned game projects remain separate.
+
+Strategy scripts now express spending as fractions of the sourced budgets; old absolute KL-sized amounts caused cuts
+that contradicted their strategy names. `investment_heavy` keeps a national-compatible80% cap instead of cutting it to60%.
+The old isolated Phase5 fiscal stress regression explicitly retains its original KL profile; national campaigns are also
+covered by full-engine causal, accounting, strategy and save tests. National scoring does not reward inflation of a
+negative opening net worth; it deflates modeled assets while retaining nominal liabilities.
+
+Six-seed check (`npm run balance -- --seeds 2027,11,42,201,202,203 --output artifacts/malaysia-balance.json`):
+
+| Strategy | Mean score | Range | Mean approval | Wins |
+|---|---:|---:|---:|---:|
+| Hands off |56.06|44.61–68.77|69.90|0/6|
+| Balanced growth |54.99|36.21–71.23|69.91|0/6|
+| Tax maximiser |46.08|43.99–48.34|35.09|0/6|
+| Investment heavy |59.16|41.86–73.85|73.61|0/6|
+| Austerity |42.98|41.57–44.31|34.35|0/6|
+| Adaptive |58.06|49.04–69.96|73.85|0/6|
+| Adverse recession |24.43|12.97–50.71|29.07|0/6|
+
+These are deterministic bot replays, not human playtesting, and do not exercise optimized trade/FX strategies. National
+infrastructure spending remains a set of KL projects relative to a larger national economy, so the benefit is smaller.
+Keep victory75/approval60 pending human testing; this pass does not claim retuning the whole campaign. Early clustered
+bad shocks remain a material balance issue. Monetary intervention elasticities are bounded fictional assumptions and
+need human feedback. Keep comparisons multi-seed; no new RNG draws were introduced by trade/FX or migrations.
+
+Verification for this expansion: strict build,147 unit/invariant/campaign tests,23 Playwright browser tests and lint pass.
+Browser checks include full-digit treasury/SWF cash, official source links, laptop navigation scrolling, trade policy
+month-boundary timing, FX inventory settlement and treasury reconciliation. Manual screenshots at1600×900 and1280×800
+confirm the balance footer fits without horizontal overflow. No player saves were used for screenshots.
+
+## Schema 6 pass — fiscal rules, SOEs, commodities and partners (31 October 2026)
+
+Seeds 2027, 11, 42, 201–203 (`npm run balance -- --seeds …`), model-2 national campaigns. Means of fictional replays:
+
+| Strategy | Score | Range | Growth | Wealth | Approval | Wins |
+|---|---:|---:|---:|---:|---:|---:|
+| Hands-off | 52.38 | 38.29–64.68 | 34.37 | 42.74 | 71.15 | 0/6 |
+| Balanced growth | 52.37 | 38.62–64.72 | 36.49 | 40.77 | 72.35 | 0/6 |
+| Tax maximiser | 37.90 | 24.89–44.76 | 0 | 67.63 | 29.49 | 0/6 |
+| Investment heavy | 53.07 | 39.42–65.35 | 36.74 | 42.23 | 72.38 | 0/6 |
+| Austerity | 27.82 | 23.83–39.84 | 0 | 64.14 | 17.14 | 0/6 |
+| Adaptive | 53.43 | 46.40–63.24 | 37.73 | 41.34 | 73.39 | 0/6 |
+| Adverse recession | 31.07 | 13.57–55.45 | 16.52 | 31.97 | 40.12 | 0/6 |
+
+Doing nothing now leaves the deficit near 3.7% of GDP against a glide path to 3%, so fiscal credibility drifts from 60
+toward the mid-40s, raising yields and lowering the stability score: consolidation is a real objective. Austerity scores
+lower than before because deep development cuts erode public capital and the large demand multiplier (see
+economy-model "Known limitation") amplifies the contraction. Bots still never win; 75 stays provisional pending
+human playtesting.

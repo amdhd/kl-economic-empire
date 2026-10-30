@@ -67,6 +67,8 @@ export interface CompanySeed {
   payout: number;
   vol: number; // annualised idiosyncratic volatility
   rateSensitivity: number; // valuation duration multiplier
+  /** Share of operating costs priced off world commodity indices (model 2; ASSUMPTION). */
+  commodityCost?: Partial<Record<'wheat' | 'steel' | 'palm', number>>;
   geo?: GeoPoint;
 }
 
@@ -210,7 +212,7 @@ export interface FundState {
 
 // ---------------------------------------------------------------- government
 export interface TaxPolicy {
-  corporate: number; // on KL-taxable profits
+  corporate: number; // on taxable profits within the campaign jurisdiction
   property: number; // commercial assessment on rental value
   consumption: number; // levy on consumer & visitor spending
   household: number; // income surcharge (progressive)
@@ -234,8 +236,8 @@ export interface PendingPolicy {
   id: number;
   createdMin: number;
   effectiveMin: number;
-  kind: 'tax' | 'budget' | 'borrowing';
-  patch: Partial<TaxPolicy> | Partial<BudgetPolicy> | Partial<BorrowingPolicy>;
+  kind: 'tax' | 'budget' | 'borrowing' | 'trade' | 'commodity' | 'development' | 'partner';
+  patch: Partial<TaxPolicy> | Partial<BudgetPolicy> | Partial<BorrowingPolicy> | Partial<TradePolicy> | Partial<CommodityPolicy> | { annual: number } | { partner: PartnerId; tariff: number };
   label: string;
 }
 
@@ -275,6 +277,12 @@ export interface GovMonthFlows {
   taxConsumption: number;
   taxHousehold: number;
   federalGrant: number;
+  importTariff: number;
+  exportSupport: number;
+  soeDividend: number; // PETRONAS and Khazanah dividends to the treasury
+  petroleumTax: number; // petroleum income tax on upstream profit
+  commodityDuty: number; // palm export duty and steel safeguard duty
+  subsidy: number; // fuel price ceiling and wheat subsidies
   opex: number;
   capex: number;
   interest: number;
@@ -352,6 +360,8 @@ export interface HouseholdState {
   lastMonthReal: number;
   otherIncomeMonthly: number; // distributed profits/rents, MYR per month
   newCreditMonthly: number; // household credit granted for the current month, MYR
+  /** Smoothed listed-equity price index relative to campaign start (1 = opening), for the wealth effect. */
+  equityIndex: number;
   mtd: { wages: number; transfers: number; other: number; tax: number; debtService: number; disposable: number; consumption: number; rent: number };
 }
 
@@ -445,7 +455,11 @@ export interface MonthlyReport {
   nominalGdp: number;
   realGdp: number;
   gdpBySector: Record<SectorId, number>;
+  /** Oil & gas and palm oil value added outside the seven sectors (model 2). */
+  resourceGdp?: number;
   cpi: number;
+  /** CPI excluding administered pump prices (model 2). */
+  coreCpi?: number;
   inflationYoY: number;
   unemployment: number;
   employment: number;
@@ -491,6 +505,14 @@ export interface PlayerAction {
 }
 
 export interface GameState {
+  controls: {
+    lastTaxReliefMYR: number;
+    incentives: { sector: SectorId; cut: number; startMin: number; endMin: number }[];
+    plans: { category: BudgetCategory; monthly: number; growth: number; remaining: number; nextMonth: number }[];
+    outcomes: { health: number; services: number; safety: number };
+    debt: { newTermMonths: number; averageMonths: number; refinance: number };
+    fxBand: { enabled: boolean; lower: number; upper: number; dailyUSD: number; reserveFloorUSD: number; status: string };
+  };
   schemaVersion: number;
   campaignId: string;
   seed: number;
@@ -506,6 +528,11 @@ export interface GameState {
   households: HouseholdState;
   bank: BankState;
   external: ExternalState;
+  trade: TradeState;
+  centralBank: CentralBankState;
+  world: WorldState;
+  soe: SoeState;
+  fiscal: FiscalState;
   events: { active: ActiveEvent[]; nextId: number; log: ActiveEvent[] };
   indicators: Indicators;
   baseline: BaselineSnapshot;
@@ -520,7 +547,30 @@ export interface GameState {
   policyChurn: number;
 }
 
+export interface TradePolicy { tariff: number; exportBudgetMonthly: number }
+export interface TradeState {
+  trackingStartDay: number;
+  policy: TradePolicy;
+  readiness: number;
+  mtdExports: number;
+  mtdImports: number;
+  history: { monthKey: number; exports: number; imports: number; tariff: number; support: number }[];
+}
+export interface CentralBankState {
+  usdReserves: number; // US cents; usable FX component only, excludes gold/SDRs/IMF
+  myrCash: number; // sen; segregated, cannot be transferred to treasury or SWF
+  openingEquityMYR: number;
+  pressure: number; // log FX effect, decays daily
+  dailyUsdUsed: number;
+  lastInterventionDay: number;
+  tx: { atMin: number; side: 'buyUSD' | 'sellUSD'; usdMinor: number; myrMinor: number; rate: number }[];
+}
 export interface BaselineSnapshot {
+  profile: 'malaysia' | 'legacy-kl';
+  /** National model generation: 1 = schema-5 calibration (no resource sector, no development budget). */
+  model: 1 | 2;
+  openingTreasury: number;
+  openingDebt: number;
   realGdpAnnual: number;
   nominalGdpAnnual: number;
   publicNetWorth: number;
@@ -530,3 +580,123 @@ export interface BaselineSnapshot {
 }
 
 export type ScenarioId = 'balanced' | 'recession';
+
+// ---------------------------------------------------------------- world: commodities & partners
+export type CommodityId = 'oil' | 'palm' | 'wheat' | 'steel';
+export type PartnerId = 'SG' | 'CN' | 'US' | 'EU' | 'JP' | 'ASEAN' | 'IN' | 'ROW';
+
+export interface CommodityPolicy {
+  fuelCeiling: number; // RM per litre for eligible buyers
+  fuelEligible: number; // share of volume eligible for the ceiling price (0..1)
+  wheatSubsidy: number; // share of wheat import cost above the reference price paid by the treasury (0..1)
+  steelSafeguard: number; // safeguard duty on imported steel (0..0.5)
+  palmExportDuty: number; // export duty on dutiable crude palm oil (0..0.2)
+}
+
+export interface CommodityEpisode {
+  id: number;
+  templateId: string;
+  commodity: CommodityId;
+  title: string;
+  startDay: number;
+  endDay: number;
+  shock: number; // log price shock at full strength
+  volume: number; // log volume shock at full strength (palm only)
+}
+
+export interface PartnerState {
+  ourTariff: number; // surcharge on imports from this partner, above existing conditions
+  theirTariff: number; // surcharge the partner applies to Malaysian exports
+  relations: number; // 0..100
+  agreement: number; // deeper trade-agreement tiers concluded (0..2)
+  negotiationDoneDay: number | null;
+  retaliationDay: number | null; // day the partner next re-sets its tariff
+  retaliationTarget: number;
+}
+
+export interface WorldState {
+  enabled: boolean;
+  rng: RngState;
+  cycles: Record<string, number>; // commodity and partner AR(1) states
+  prices: Record<CommodityId, number>; // index, 1 = reference
+  gasIndex: number; // slow-moving gas/LNG price index (lags oil)
+  palmVolume: number;
+  episodes: CommodityEpisode[];
+  episodeLog: CommodityEpisode[];
+  nextId: number;
+  policy: CommodityPolicy;
+  partners: Record<PartnerId, PartnerState>;
+  /** Derived each day, read by the economy and companies. */
+  exportAccess: number;
+  importPriceIndex: number; // CES user-price index of non-commodity imports across partners
+  importDutyShare: number; // share of that import bill collected as bilateral duty
+  history: { t: number; oil: number; palm: number; wheat: number; steel: number }[];
+  /** Quantities from the last settled day, used to pay next day's subsidy obligations. */
+  lastWheatImports: number; // MYR of wheat imports at reference prices per day
+  mtdPalmProfit: number; // plantation operating profit this month, taxed at close
+  mtd: { fuelSubsidy: number; wheatSubsidy: number; palmDuty: number; steelDuty: number; bilateralDuty: number; resourceVa: number };
+}
+
+// ---------------------------------------------------------------- state-owned enterprises
+export interface PetronasState {
+  enabled: boolean;
+  cash: number; // MYR
+  debt: number; // MYR
+  production: number; // upstream volume index (1 = opening)
+  capexAnnual: number; // policy, MYR/yr
+  capexAvg: number; // 365-day average actual capex, MYR/yr
+  dividendAnnual: number; // policy, MYR/yr, paid monthly
+  shares: Partial<Record<TickerId, number>>; // listed subsidiaries
+  mtd: { revenue: number; upstreamVa: number; taxableProfit: number; pita: number; subsidiaryDividends: number; capex: number; dividend: number; profitAfterTax: number };
+  history: { monthKey: number; revenue: number; pita: number; profitAfterTax: number; dividend: number; capex: number; production: number; cash: number; debt: number }[];
+}
+
+export interface KhazanahState {
+  enabled: boolean;
+  cash: number; // MYR
+  shares: Partial<Record<TickerId, number>>;
+  payout: number; // share of dividend income paid to the government
+  accrued: number; // dividend income not yet paid on
+  mtdIncome: number;
+  history: { monthKey: number; income: number; dividend: number; nav: number }[];
+  tx: { atMin: number; ticker: TickerId; side: 'buy' | 'sell'; shares: number; price: number; value: number }[];
+}
+
+export interface SoeState {
+  petronas: PetronasState;
+  khazanah: KhazanahState;
+  /** Opening equity (PETRONAS book cash − debt + Khazanah NAV), so wealth counts only changes. */
+  openingEquity: number;
+}
+
+// ---------------------------------------------------------------- fiscal rules
+export interface FiscalRule {
+  deficitCap: number; // share of GDP
+  debtCap: number; // share of GDP
+  goldenRule: boolean; // borrow only for development spending
+}
+
+export interface FiscalMonth {
+  monthKey: number;
+  revenue: number; // annualised, MYR
+  outlays: number;
+  deficit: number; // share of GDP, 12-month window
+  primaryDeficit: number;
+  currentBalance: number; // revenue − operating outlays − interest, share of GDP
+  structuralDeficit: number;
+  debt: number; // share of GDP
+  target: number; // glide-path deficit target, share of GDP
+  compliant: { deficit: boolean; debt: boolean; golden: boolean };
+  credibility: number;
+}
+
+export interface FiscalState {
+  developmentAnnual: number; // policy, MYR/yr
+  publicCapital: number; // base-price MYR
+  publicCapital0: number;
+  rule: FiscalRule;
+  credibility: number; // 0..100
+  escape: { active: boolean; sinceMonth: number; justified: boolean } | null;
+  openingDeficit: number; // share of GDP, anchors the glide path
+  history: FiscalMonth[];
+}

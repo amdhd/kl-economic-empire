@@ -1,6 +1,11 @@
+import { PopulationPanel } from '../components/panels/PopulationPanel';
+import { ControlsPanel } from '../components/panels/ControlsPanel';
+import { CommoditiesPanel } from '../components/panels/CommoditiesPanel';
+import { FiscalPanel } from '../components/panels/FiscalPanel';
+import { PartnersPanel } from '../components/panels/PartnersPanel';
+import { SoePanel } from '../components/panels/SoePanel';
 import { Component, useEffect, useState, type ReactNode } from 'react';
 import { BottomBar } from '../components/hud/BottomBar';
-import { Districts } from '../components/hud/Districts';
 import { LeftRail } from '../components/hud/LeftRail';
 import { StatsStrip } from '../components/hud/StatsStrip';
 import { Toasts } from '../components/hud/Toasts';
@@ -14,6 +19,8 @@ import { ObjectivesPanel } from '../components/panels/ObjectivesPanel';
 import { OverviewPanel } from '../components/panels/OverviewPanel';
 import { PolicyPanel } from '../components/panels/PolicyPanel';
 import { ProjectsPanel } from '../components/panels/ProjectsPanel';
+import { TradePanel } from '../components/panels/TradePanel';
+import { SourcesPanel } from '../components/panels/SourcesPanel';
 import { ReportsPanel } from '../components/panels/ReportsPanel';
 import { MapView } from '../map/MapView';
 import { readSlot } from '../persistence/storage';
@@ -21,6 +28,14 @@ import { startGameLoop, useGame, type PanelId } from '../store/game-store';
 import type { ScenarioId } from '../types/game';
 
 const PANELS: Record<PanelId, () => ReactNode> = {
+  population: () => <PopulationPanel />,
+  controls: () => <ControlsPanel />,
+  fiscal: () => <FiscalPanel />,
+  commodities: () => <CommoditiesPanel />,
+  partners: () => <PartnersPanel />,
+  soe: () => <SoePanel />,
+  trade: () => <TradePanel />,
+  sources: () => <SourcesPanel />,
   overview: () => <OverviewPanel />,
   policies: () => <PolicyPanel />,
   projects: () => <ProjectsPanel />,
@@ -52,6 +67,7 @@ class ErrorBoundary extends Component<{ children: ReactNode; label: string }, { 
 
 export function App() {
   useEffect(() => startGameLoop(), []);
+  const [menuOpen, setMenuOpen] = useState(false);
   const panel = useGame((s) => s.panel);
   const selection = useGame((s) => s.selection);
   const showNewGame = useGame((s) => s.showNewGame);
@@ -61,24 +77,25 @@ export function App() {
       <ErrorBoundary label="Map">
         <MapView />
       </ErrorBoundary>
-      <div className="pointer-events-none absolute inset-0 z-10 flex flex-col gap-2 p-3">
-        <TopBar />
-        <StatsStrip />
-        <div className="flex min-h-0 flex-1 gap-2">
-          <div className="flex flex-col gap-2">
-            <LeftRail />
-            <Districts />
-          </div>
-          <div className="min-h-0 flex-1">
+      <div className="game-overlay pointer-events-none absolute inset-0 z-10 flex flex-col">
+        <TopBar menuOpen={menuOpen} onToggleMenu={() => {
+          if (menuOpen) {
+            useGame.getState().setPanel(null);
+            useGame.getState().select(null);
+          }
+          setMenuOpen(!menuOpen);
+        }} />
+        <div className="workspace flex min-h-0 flex-1 items-start gap-3">
+          {menuOpen && <LeftRail />}
+          <div className={`panel-slot min-h-0 ${panel === 'markets' ? 'panel-slot-wide' : ''}`}>
             {panel && <ErrorBoundary label="Panel">{PANELS[panel]()}</ErrorBoundary>}
           </div>
-          {selection?.kind === 'company' && (
-            <ErrorBoundary label="Company panel">
-              <CompanyPanel key={selection.id} id={selection.id} />
-            </ErrorBoundary>
-          )}
+          {selection?.kind === 'company' && <div className="company-slot min-h-0 ml-auto"><ErrorBoundary label="Company panel"><CompanyPanel key={selection.id} id={selection.id} /></ErrorBoundary></div>}
         </div>
-        <BottomBar />
+        <div className="bottom-dock pointer-events-auto">
+          <StatsStrip />
+          <BottomBar />
+        </div>
       </div>
       <Toasts />
       {showNewGame && <NewGameModal />}
@@ -102,10 +119,10 @@ function NewGameModal() {
         <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-300">Alternate history · 2027</div>
         <h1 className="mt-1 text-[28px] font-black tracking-tight text-white">KL Economic Empire</h1>
         <p className="mt-2 text-[13px] leading-relaxed text-slate-300">
-          Kuala Lumpur has been granted sweeping economic autonomy and you are its first President. Set taxes and budgets, build infrastructure, and run a sovereign wealth fund across 40 simulated Malaysian and US equities. Can you make KL richer and more livable in 24 months — without a fiscal or financial crisis?
+          Lead a fictional Malaysian presidency from the Kuala Lumpur skyline. New campaigns start with dated Malaysian GDP, federal debt and operating budget figures. Set taxes and budgets, build infrastructure, and run a sovereign wealth fund across 40 simulated Malaysian and US equities. Can you make Malaysia richer and more livable in 24 months — without a fiscal or financial crisis?
         </p>
         <p className="mt-2 rounded-lg bg-amber-400/10 p-2 text-[11.5px] text-amber-200 ring-1 ring-amber-300/20">
-          Fiction: real KL has no president with these powers. Company names and tickers are real; every price, financial statement and event is simulated. Not investment advice.
+          Alternate-history powers and all future outcomes are fictional. Official starting figures have different reference dates; see Baseline & sources. Company names and tickers are real; every price, financial statement and event is simulated. Not investment advice.
         </p>
         <div className="mt-4 grid grid-cols-2 gap-3">
           {([['balanced', 'Balanced start', 'Calm global backdrop; seeded random events.'], ['recession', 'Adverse: global recession', 'Begins in a global slowdown and credit crunch.']] as const).map(([id, t, d]) => (
@@ -146,6 +163,9 @@ function HelpModal() {
         </ul>
         <div className="mb-1 mt-3 font-semibold text-white">Accounting rules</div>
         <p>Trades swap cash for shares (only costs reduce NAV). Bonds bring cash and debt. Treasury⇄fund transfers are not revenue. GDP is value added, so share trading never moves it. Taxes start the next month; projects pay off on completion.</p>
+        <div className="mb-1 mt-3 font-semibold text-white">Campaign score</div>
+        <p>Growth uses actual calendar days and a small external-shock adjustment. Wealth is CPI-adjusted; gains earn less credit when real income, output or services fall. Open Objectives for the calculation and final fiscal report. Victory needs 75 points, 60 approval and solvency; the threshold still needs human playtesting.</p>
+        <p className="mt-2 text-[11px] text-amber-200">{useGame.getState().pauseOnDialogs ? 'Clock paused while help is open.' : 'Clock continues: deliberation pause is disabled in Save / Load.'} Speed shortcuts are disabled in dialogs.</p>
         <button className="btn mt-4" onClick={() => setShowHelp(false)}>Close</button>
       </div>
     </div>

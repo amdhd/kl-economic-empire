@@ -30,7 +30,7 @@ export function CompanyPanel({ id }: { id: TickerId }) {
         <Section title="Monthly results (fictional)">
           <table className="data num">
             <thead>
-              <tr><th>Month</th><th className="text-right">Revenue</th><th className="text-right">EBITDA</th><th className="text-right">Net</th><th className="text-right">KL tax</th></tr>
+              <tr><th>Month</th><th className="text-right">Revenue</th><th className="text-right">EBITDA</th><th className="text-right">Net</th><th className="text-right">Domestic tax</th></tr>
             </thead>
             <tbody>
               <tr className="text-slate-400" title="Month-to-date accrual; closes at month end">

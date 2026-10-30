@@ -9,9 +9,10 @@ export function reconcileMonth(
   flows: GovMonthFlows,
   treasury: number,
   debt: number,
+  opening = { treasury: BASELINE.treasury, debt: BASELINE.debt },
 ): NonNullable<MonthlyReport['reconciliation']> {
-  const openingTreasuryMinor = toMinor(previous?.treasury ?? BASELINE.treasury);
-  const openingDebtMinor = toMinor(previous?.debt ?? BASELINE.debt);
+  const openingTreasuryMinor = toMinor(previous?.treasury ?? opening.treasury);
+  const openingDebtMinor = toMinor(previous?.debt ?? opening.debt);
   const netCashMinor = (Object.keys(flows) as (keyof GovMonthFlows)[]).reduce(
     (total, kind) => total + toMinor(flows[kind]) * (isInflow(kind) ? 1 : -1),
     0,

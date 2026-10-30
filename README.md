@@ -24,6 +24,8 @@ npm run dev        # http://localhost:5173
 | `npm test` | Vitest: clock, calendars, orders, accounting invariants, causal chains, 24-month campaign suite |
 | `npm run e2e` | Playwright browser tests (first time: `npx playwright install chromium`). `E2E_PORT=5174 npm run e2e` runs a separate server so parallel worktrees don't test each other |
 | `npm run lint` / `npm run format` | ESLint / Prettier |
+| `npm run balance` | Dev-only multi-seed strategy comparison; JSON in `artifacts/balance.json`. Optional `-- --seeds 401,402 --output artifacts/check.json` |
+| `npm run profile` | Dev-only engine timings plus isolated 12-second real 3× Chromium sample across a month close; port 5176, results in `artifacts/` |
 
 No backend, accounts or paid APIs. The map uses free **OpenFreeMap** vector tiles (needs internet; the simulation
 keeps running offline and the map shows a fallback message).
@@ -51,3 +53,30 @@ tests/           Vitest suites        e2e/  Playwright specs        docs/  desig
 
 See `PROJECT_SPEC.md` (source of truth), `docs/decisions.md`, `docs/economy-model.md`, `docs/game-balance.md`
 and `docs/data-sources.md`.
+
+The campaign report explains calendar-adjusted growth, a small capped external-shock adjustment, sustainable real
+public wealth, cumulative fiscal flows and fund gain excluding transfers. Human validation of the 75-point victory
+bar is pending; see `docs/playtesting.md`. Browser profiling includes hosted-map/rendering costs, so results depend
+on the machine and network; measured results are in `docs/performance.md`. Neither developer script adds time-skip
+controls to the player UI.
+
+### Malaysia baseline, trade and forex
+
+New campaigns now start from dated official Malaysian GDP, federal debt, a treasury cash proxy and2027 operating
+allocations, while retaining the KL map. **Baseline & sources** explains reference dates, groupings, links and remaining
+model assumptions. Prices, companies' financials, future economic outcomes and events remain fictional.
+
+Open **Trade & central bank** to queue import tariffs/export services for next month and buy/sell USD using segregated
+central-bank inventory. OPR remains automatic. Treasury and SWF cash appear in full digits beside **Month closes in**;
+click either to open its account panel. Treasury uses federal deposits at BNM only, not all government cash.
+
+Schema4 preserves older KL saves with their original money and calibration. Start a new campaign to use the national
+baseline and sourced reserve inventory; existing saves are not silently converted. Trade history in upgraded saves
+starts from the upgrade date, so the first recorded month is partial.
+
+### Economic controls
+
+Open **Economic controls** in the Government rail for sector tax relief, multi-year ministry appropriations,
+new-debt term/refinancing strategy and automatic reserve-limited FX bands. Review dialogs show fiscal costs and
+tradeoffs. Ministry outcomes are synthetic coverage/readiness indices; debt uses an amortising pool, not bullet bonds.
+Schema5 saves preserve these settings; older saves receive neutral controls without changing money or RNG.

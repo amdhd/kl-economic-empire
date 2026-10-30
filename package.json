@@ -12,7 +12,9 @@
     "e2e": "playwright test",
     "lint": "eslint .",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"tests/**/*.ts\" \"e2e/**/*.ts\"",
-    "campaign": "vitest run tests/campaign.test.ts"
+    "campaign": "vitest run tests/campaign.test.ts",
+    "balance": "node scripts/balance.mjs",
+    "profile": "node scripts/profile.mjs"
   },
   "dependencies": {
     "maplibre-gl": "^6.16.0",

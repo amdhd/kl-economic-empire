@@ -11,6 +11,7 @@ async function begin(page: Page) {
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('/');
   await page.getByTestId('start-campaign').click();
+  await page.getByTestId('info-views').click();
   return errors;
 }
 
@@ -106,5 +107,5 @@ test('settled monthly report reconciles cash and debt to zero sen; treasury jour
   await expect(page.getByTestId('cash-residual')).toHaveText('RM 0.00');
   await expect(page.getByTestId('debt-residual')).toHaveText('RM 0.00');
   await page.getByTestId('nav-debt').click();
-  await expect(page.getByTestId('treasury-journal')).toContainText('Federal grant');
+  await expect(page.getByTestId('treasury-journal')).toContainText('Other public receipts');
 });

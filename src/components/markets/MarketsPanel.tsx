@@ -15,7 +15,7 @@ export function MarketsPanel() {
   const selected = selection?.kind === 'company' ? selection.id : null;
   const [tab, setTab] = useState<MarketTab>(() => (selected ? COMPANY_BY_ID[selected].exchange : 'MY'));
   return (
-    <PanelShell title="Stock markets" subtitle="20 Bursa Malaysia (MYR) + 20 S&P 500 (USD) names · fictional prices" width={760} right={<ExchangeStatusChips game={g} nowMin={displayMinutes(g.clock)} />}>
+    <PanelShell title="Stock markets" subtitle="20 Bursa Malaysia (MYR) + 20 S&P 500 (USD) names · fictional prices" width={1120} bodyLayout="fill" right={<ExchangeStatusChips game={g} nowMin={displayMinutes(g.clock)} />}>
       <MarketBrowser game={g} rev={rev} tab={tab} onTab={setTab} selected={selected} onSelect={(id) => select({ kind: 'company', id })} />
     </PanelShell>
   );

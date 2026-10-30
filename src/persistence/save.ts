@@ -1,6 +1,13 @@
+import { initialControls, validateControls } from '../engine/policy-controls';
 // Versioned save format. Saving never mutates game state or advances the clock.
 import { assertSafeMinor } from '../engine/util';
 import { SCHEMA_VERSION } from '../engine/game';
+import { COMPANIES } from '../data/companies';
+import { LEGACY_BASELINE, SECTOR_IDS } from '../data/economic-baseline';
+import { initialCentralBank } from '../engine/trade-fx';
+import { initialFiscal, validateFiscal } from '../engine/fiscal-rules';
+import { initialSoe, validateSoe } from '../engine/soe';
+import { initialWorld, validateCommodityPolicy, validateWorld } from '../engine/world';
 import type { GameState } from '../types/game';
 
 export interface SaveFile {
@@ -38,6 +45,24 @@ export function findNonFinite(v: unknown, path = 'state'): string | null {
 type Migration = (s: Record<string, unknown>) => Record<string, unknown>;
 /** migrations[n] upgrades a state from schema n to n+1. */
 const MIGRATIONS: Record<number, Migration> = {
+  4: state => { (state as unknown as GameState).controls ??= initialControls(); return state; },
+  // v5 → v6: resource sector, SOEs, commodities, trading partners and fiscal rules. Existing campaigns keep
+  // their calibration (model 1) with these systems switched off, so balances and outcomes are unchanged.
+  5: (state) => {
+    const s = state as unknown as GameState;
+    s.baseline.model ??= 1;
+    s.world ??= initialWorld(s.seed, false);
+    s.soe ??= initialSoe(false);
+    s.fiscal ??= initialFiscal(0, 0);
+    s.households.equityIndex ??= 1;
+    for (const flows of [s.government.mtd, ...s.reports.map((r) => r.gov)]) {
+      flows.soeDividend ??= 0;
+      flows.petroleumTax ??= 0;
+      flows.commodityDuty ??= 0;
+      flows.subsidy ??= 0;
+    }
+    return state;
+  },
   // v1 → v2 (master): projects track real work done (for construction-cost escalation).
   1: (s) => {
     const gov = s.government as { projects: { spent: number; work?: number }[] };
@@ -65,6 +90,20 @@ const MIGRATIONS: Record<number, Migration> = {
     }
     return state;
   },
+  3: (state) => {
+    const s = state as unknown as GameState;
+    // Tests may deliberately downgrade a current snapshot; retain explicit provenance if present.
+    s.baseline.profile ??= 'legacy-kl';
+    s.baseline.openingTreasury ??= LEGACY_BASELINE.treasury;
+    s.baseline.openingDebt ??= LEGACY_BASELINE.debt;
+    s.centralBank ??= initialCentralBank('legacy-kl', s.external.myrPerUsd);
+    s.trade ??= { trackingStartDay: s.scheduler.lastDay, policy: { tariff: 0, exportBudgetMonthly: 0 }, readiness: 0, mtdExports: 0, mtdImports: 0, history: [] };
+    for (const flows of [s.government.mtd, ...s.reports.map(r => r.gov)]) {
+      flows.importTariff ??= 0;
+      flows.exportSupport ??= 0;
+    }
+    return state;
+  },
 };
 
 export function deserialize(json: string): GameState {
@@ -87,12 +126,71 @@ export function deserialize(json: string): GameState {
     st.schemaVersion = v;
   }
   const s = st as unknown as GameState;
+  validateControls(s.controls);
   const bad = findNonFinite(s);
   if (bad) throw new Error(`Corrupt save: non-finite number at ${bad}`);
-  for (const key of ['clock', 'scheduler', 'rng', 'government', 'fund', 'market', 'sectors', 'households', 'bank', 'external'] as const) {
+  for (const key of ['clock', 'scheduler', 'rng', 'government', 'fund', 'market', 'sectors', 'households', 'bank', 'external', 'trade', 'centralBank', 'world', 'soe', 'fiscal'] as const) {
     if (!s[key]) throw new Error(`Corrupt save: missing ${key}`);
   }
-  if (!(s.clock.subHourMs >= 0 && s.clock.subHourMs < 3_600_000)) throw new Error('Corrupt save: clock out of range');
+  const positive = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value > 0;
+  const nonnegative = (value: unknown): value is number => value === 0 || positive(value);
+  if (!nonnegative(s.clock.subHourMs) || s.clock.subHourMs >= 3_600_000) throw new Error('Corrupt save: clock out of range');
+  if (![s.clock.hour, s.clock.startHour, s.clock.endHour].every(Number.isSafeInteger)
+    || s.clock.endHour <= s.clock.startHour || s.clock.hour < s.clock.startHour || s.clock.hour > s.clock.endHour
+    || ![1, 2, 3].includes(s.clock.speed) || typeof s.clock.paused !== 'boolean') throw new Error('Corrupt save: invalid clock');
+  if (typeof s.scheduler.campaignEnded !== 'boolean' || (s.scheduler.campaignEnded && s.clock.hour !== s.clock.endHour)
+    || ![s.scheduler.lastDay, s.scheduler.lastWeekDay, s.scheduler.lastMonthKey, s.scheduler.ticks].every(Number.isSafeInteger)) throw new Error('Corrupt save: invalid scheduler');
+  if (!['a', 'b', 'c', 'd'].every((k) => {
+    const word = s.rng[k as keyof typeof s.rng];
+    return Number.isInteger(word) && word >= -2147483648 && word <= 4294967295;
+  })) throw new Error('Corrupt save: invalid RNG');
+  if (![s.reports, s.daily, s.news, s.actions, s.policyLog, s.events?.active, s.events?.log].every(Array.isArray)) throw new Error('Corrupt save: missing history');
+  if (!positive(s.indicators?.cpi) || !positive(s.baseline?.realGdpAnnual) || !positive(s.baseline.nominalGdpAnnual)
+    || !positive(s.households.population) || !positive(s.households.laborForce) || !positive(s.households.wageIndex)) throw new Error('Corrupt save: invalid economy');
+  for (const j of SECTOR_IDS) {
+    const sector = s.sectors[j];
+    if (!sector || sector.id !== j || !positive(sector.price) || !positive(sector.capital) || !positive(sector.capacity)
+      || !positive(sector.productivity) || !nonnegative(sector.employment) || !Array.isArray(sector.pipeline)
+      || sector.pipeline.length !== 6 || sector.pipeline.some((v) => !nonnegative(v))) throw new Error('Corrupt save: invalid sector');
+  }
+  for (const company of COMPANIES) {
+    if (!s.companies?.[company.id] || !s.market.quotes?.[company.id] || !Array.isArray(s.companies[company.id].history)) throw new Error('Corrupt save: missing security');
+  }
+  validateWorld(s.world);
+  validateSoe(s.soe);
+  validateFiscal(s.fiscal);
+  if (![1, 2].includes(s.baseline.model) || !(s.households.equityIndex > 0)
+    || (s.baseline.profile !== 'malaysia' || s.baseline.model === 1) !== !s.world.enabled) throw new Error('Corrupt save: inconsistent model generation');
+  if (!['a', 'b', 'c', 'd'].every((k) => {
+    const word = s.world.rng[k as keyof typeof s.world.rng];
+    return Number.isInteger(word) && word >= -2147483648 && word <= 4294967295;
+  })) throw new Error('Corrupt save: invalid world RNG');
+  for (const p of s.government.pending) {
+    if (p.kind === 'commodity' && validateCommodityPolicy(p.patch as object)) throw new Error('Corrupt save: invalid pending commodity policy');
+    if (p.kind === 'development' && !((p.patch as { annual: number }).annual >= 0 && (p.patch as { annual: number }).annual <= 200e9)) throw new Error('Corrupt save: invalid pending development budget');
+    if (p.kind === 'partner') {
+      const q = p.patch as { partner: string; tariff: number };
+      if (!(q.partner in s.world.partners) || !(q.tariff >= 0 && q.tariff <= 0.5)) throw new Error('Corrupt save: invalid pending partner tariff');
+    }
+  }
+  if (!['malaysia', 'legacy-kl'].includes(s.baseline.profile)
+    || !nonnegative(s.baseline.openingTreasury) || !nonnegative(s.baseline.openingDebt)
+    || !nonnegative(s.trade.policy?.tariff) || s.trade.policy.tariff > 0.2
+    || !nonnegative(s.trade.policy.exportBudgetMonthly) || s.trade.policy.exportBudgetMonthly > 2e9
+    || !nonnegative(s.trade.readiness) || s.trade.readiness > 0.12
+    || !Number.isSafeInteger(s.trade.trackingStartDay) || !nonnegative(s.trade.mtdExports) || !nonnegative(s.trade.mtdImports) || !Array.isArray(s.trade.history)
+    || !nonnegative(s.centralBank.dailyUsdUsed) || s.centralBank.dailyUsdUsed > 1e9
+    || !Number.isSafeInteger(s.centralBank.lastInterventionDay) || Math.abs(s.centralBank.pressure) > 0.08
+    || !nonnegative(s.centralBank.openingEquityMYR) || !Array.isArray(s.centralBank.tx)) throw new Error('Corrupt save: invalid trade or central bank');
+  for (const n of [s.centralBank.usdReserves, s.centralBank.myrCash]) {
+    assertSafeMinor(n);
+    if (n < 0) throw new Error('Corrupt save: negative central-bank inventory');
+  }
+  for (const p of s.government.pending) if (p.kind === 'trade') {
+    const t = p.patch as { tariff?: number; exportBudgetMonthly?: number };
+    if ((t.tariff !== undefined && (!nonnegative(t.tariff) || t.tariff > 0.2))
+      || (t.exportBudgetMonthly !== undefined && (!nonnegative(t.exportBudgetMonthly) || t.exportBudgetMonthly > 2e9))) throw new Error('Corrupt save: invalid pending trade policy');
+  }
   if (s.fund.myrCash < 0 || s.fund.usdCash < 0) throw new Error('Corrupt save: negative fund cash');
   for (const n of [s.fund.myrCash, s.fund.usdCash, s.government.treasury, s.government.debt, ...Object.values(s.fund.realized), ...Object.values(s.fund.dividends), s.fund.realizedMYR]) assertSafeMinor(n);
   if (s.government.treasury < 0 || s.government.debt < 0) throw new Error('Corrupt save: negative treasury or debt');
@@ -100,13 +198,14 @@ export function deserialize(json: string): GameState {
     if (!s.companies[id as keyof typeof s.companies] || !Number.isSafeInteger(p.units) || p.units <= 0 || p.costMinor < 0 || p.costMYR < 0) throw new Error('Corrupt save: invalid position');
     for (const n of [p.costMinor, p.costMYR, p.realizedMinor, p.dividendsMinor]) assertSafeMinor(n);
   }
-  if (!(s.external.myrPerUsd > 0)) throw new Error('Corrupt save: invalid FX rate');
+  if (!positive(s.external.myrPerUsd)) throw new Error('Corrupt save: invalid FX rate');
   for (const [id, quote] of Object.entries(s.market.quotes)) {
-    if (!s.companies[id as keyof typeof s.companies] || !(quote.price > 0)) throw new Error('Corrupt save: invalid quote');
+    if (!s.companies[id as keyof typeof s.companies] || !positive(quote.price)) throw new Error('Corrupt save: invalid quote');
   }
   for (const o of s.fund.orders) {
     if (o.status === 'queued' && (!s.companies[o.ticker] || !Number.isSafeInteger(o.units) || o.units <= 0 || !['buy', 'sell'].includes(o.side))) throw new Error('Corrupt save: invalid pending order');
   }
+  if (s.scheduler.campaignEnded) s.clock.subHourMs = 0; // correct legacy end-screen overshoot, without accrual
   s.clock.paused = true; // always resume paused
   return s;
 }

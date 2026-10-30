@@ -1,8 +1,8 @@
+import { baselineFor } from '../data/economic-baseline';
 // Fictional price discovery: price mean-reverts toward a fundamental value (forward earnings ×
 // sector P/E × rate & risk multipliers × sentiment), plus seeded market, sector and idiosyncratic
 // shocks. Prices only move while that exchange's session is open.
 import { COMPANIES, COMPANY_BY_ID } from '../data/companies';
-import { BASELINE } from '../data/economic-baseline';
 import type { Bar, Exchange, GameState, IndexState, MarketState, QuoteState, TickerId } from '../types/game';
 import { baseEps, ttmNetIncome } from './companies';
 import { isOpen, localDayOf, localParts, previousTradingDays, sessionDateKey, sessionTickMinutes } from './market-calendar';
@@ -21,12 +21,13 @@ export const DAILY_BARS = 800;
 export const HOURLY_BARS = 120; // ≈ 20 sessions
 
 export function fundamentalValue(s: GameState, id: TickerId): number {
+  const BASELINE = baselineFor(s);
   const c = COMPANY_BY_ID[id];
   const st = s.companies[id];
   const klTax = s.government.policies.tax.corporate;
   const ttm = ttmNetIncome(st);
   const recent = st.history.slice(-3).reduce((a, h) => a + h.netIncome, 0) * 4;
-  const eps0 = baseEps(c, klTax);
+  const eps0 = baseEps(c, klTax, s.baseline.profile);
   const eps = Math.max((0.5 * ttm + 0.5 * recent) / st.shares, 0.15 * Math.abs(eps0));
   const r = c.exchange === 'MY' ? s.external.mgs10 : s.external.ust10;
   const r0 = c.exchange === 'MY' ? BASELINE.mgs10 : BASELINE.ust10;

@@ -1,6 +1,7 @@
-// FICTIONAL calibration of the alternate-history Kuala Lumpur economy. Internally plausible,
-// not a forecast or official statistic. Units: MYR, annual unless noted.
+// Seven fictional sector weights and behavioral assumptions. Legacy KL constants are preserved;
+// new campaigns use dated Malaysia opening observations below. Units: MYR, annual unless noted.
 import type { BudgetCategory, BudgetPolicy, SectorId, TaxPolicy } from '../types/game';
+import { FUEL_SUBSIDY0 } from './world';
 
 export const SECTOR_IDS: SectorId[] = ['fin', 'prop', 'util', 'tech', 'cons', 'health', 'ind'];
 
@@ -54,7 +55,7 @@ export const BUDGET_PURCHASES: Record<Exclude<BudgetCategory, 'transfers'>, Part
 
 export const BASE_TAX: TaxPolicy = { corporate: 0.18, property: 0.04, consumption: 0.04, household: 0.02 };
 
-export const BASE_BUDGET: BudgetPolicy = {
+export const LEGACY_BUDGET: BudgetPolicy = {
   health: 900e6,
   services: 700e6,
   safety: 350e6,
@@ -73,13 +74,13 @@ export const BUDGET_LABELS: Record<BudgetCategory, string> = {
 };
 
 export const TAX_LABELS: Record<keyof TaxPolicy, { label: string; min: number; max: number; hint: string }> = {
-  corporate: { label: 'Corporate tax on KL profits', min: 0, max: 0.35, hint: 'Applies only to KL-taxable profit. Raises receipts; dampens investment.' },
+  corporate: { label: 'Corporate tax on domestic profits', min: 0, max: 0.35, hint: 'Applies only to domestic taxable profit. Raises receipts; dampens investment.' },
   property: { label: 'Commercial property levy', min: 0, max: 0.1, hint: 'On commercial rental value. Partly passed through to rents.' },
   consumption: { label: 'Consumption & visitor levy', min: 0, max: 0.12, hint: 'Regressive; cuts real spending and tourism demand.' },
   household: { label: 'Household income surcharge', min: 0, max: 0.08, hint: 'Progressive; lower-income wages exempt. Hits disposable income.' },
 };
 
-export const BASELINE = {
+export const LEGACY_BASELINE = {
   population: 2.1e6, // residents
   laborForce: 1.75e6, // KL workforce incl. commuters
   unemployment: 0.036,
@@ -104,9 +105,46 @@ export const BASELINE = {
   trendProductivity: 0.015, // per year
   naturalUnemployment: 0.035,
   inflationTarget: 0.02,
+  approval: 62,
+  serviceQuality: 0.62,
   transferShareToHouseholdsOfProfit: 0.35,
 };
 
 export const CPI_WEIGHTS: Record<SectorId, number> = Object.fromEntries(
   SECTOR_IDS.map((s) => [s, SECTORS[s].consumption]),
 ) as Record<SectorId, number>;
+
+/** Official observations are dated in national-baseline.ts; all unspecified stocks remain model assumptions.
+ * Schema-5 national campaigns (model 1) keep this split unchanged. */
+export const BASE_BUDGET_V1: BudgetPolicy = {
+  health: 40_954_794_000 / 12,
+  services: (63_473_399_800 + 15_129_293_500) / 12,
+  safety: (14_523_000_000 + 18_019_701_600) / 12,
+  development: (1_146_184_500 + 1_673_604_200) / 12,
+  transfers: 44_000_000_000 / 12,
+  admin: (376_840_000_000 - 61_013_000_000 - 40_954_794_000 - 63_473_399_800 - 15_129_293_500 - 14_523_000_000 - 18_019_701_600 - 1_146_184_500 - 1_673_604_200 - 44_000_000_000) / 12,
+};
+/** Model 2: the RON95 subsidy is modelled explicitly, so its opening bill leaves the administration residual;
+ * total operating spending still equals the official 2027 estimate. */
+export const BASE_BUDGET: BudgetPolicy = { ...BASE_BUDGET_V1, admin: BASE_BUDGET_V1.admin - FUEL_SUBSIDY0 / 12 };
+export const NATIONAL_GDP = 2_025_379_140_000;
+const scale = NATIONAL_GDP / 303.6e9;
+export const BASELINE = {
+  ...LEGACY_BASELINE,
+  population: 34.2e6, laborForce: 17.49e6, unemployment: 0.03,
+  householdLoans: LEGACY_BASELINE.householdLoans * scale,
+  firmLoans: LEGACY_BASELINE.firmLoans * scale,
+  householdSavings: LEGACY_BASELINE.householdSavings * scale,
+  bankReserves: LEGACY_BASELINE.bankReserves * scale,
+  treasury: 8_865_574_579, debt: 1_378_895_000_000,
+  debtRate: 61_013_000_000 / 1_378_895_000_000,
+  federalGrantMonthly: (72_548_410_000 + 10_598_980_000) / 12,
+  opr: 0.0275,
+  // Reserve valuation ratio, NOT a spot FX quote.
+  myrPerUsd: 538_759_540_269 / 132.1e9,
+};
+export const baselineFor = (s: { baseline: { profile: 'malaysia' | 'legacy-kl' } }) => s.baseline.profile === 'legacy-kl' ? LEGACY_BASELINE : BASELINE;
+export const budgetFor = (s: { baseline: { profile: 'malaysia' | 'legacy-kl'; model?: 1 | 2 } }) =>
+  s.baseline.profile === 'legacy-kl' ? LEGACY_BUDGET : s.baseline.model === 1 ? BASE_BUDGET_V1 : BASE_BUDGET;
+/** Model-2 national campaigns carry the resource sector, development budget, SOEs, commodities and partners. */
+export const nationalV2 = (s: { baseline: { profile: 'malaysia' | 'legacy-kl'; model?: 1 | 2 } }) => s.baseline.profile === 'malaysia' && s.baseline.model !== 1;

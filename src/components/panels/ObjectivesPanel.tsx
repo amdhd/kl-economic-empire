@@ -1,15 +1,17 @@
-import { SCORE_WEIGHTS, VICTORY, outcomeLabel, publicNetWorth } from '../../engine/indicators';
-import { navMYR } from '../../engine/sovereign-fund';
-import { monthKeyLabel } from '../../engine/time';
+import { useState } from 'react';
+import { campaignReport } from '../../engine/campaign-report';
+import { annualRealOutput, computeScore, SCORE_WEIGHTS, VICTORY, outcomeLabel } from '../../engine/indicators';
+import { formatKL, monthKeyLabel } from '../../engine/time';
 import { useGame, useGameState } from '../../store/game-store';
 import { money, pct } from '../../utils/format';
 import { TimeChart } from '../charts/TimeChart';
 import { PanelShell } from './PanelShell';
-import { Bar, Section } from '../ui';
+import { Bar, Section, Stat, Tabs } from '../ui';
+import { EventCard } from '../EventCard';
 
 const COMPONENTS = [
-  { key: 'growth', label: 'Growth & productivity', why: 'Annualised REAL GDP growth vs a 3.5% benchmark, minus rising unemployment. Inflation does not count.' },
-  { key: 'wealth', label: 'Public net wealth', why: 'Change in treasury + SWF NAV + public assets − debt − arrears, as a share of starting GDP.' },
+  { key: 'growth', label: 'Growth & productivity', why: 'Calendar-adjusted real GDP growth versus the external-condition benchmark, minus rising unemployment. Inflation does not count.' },
+  { key: 'wealth', label: 'Public net wealth', why: 'Treasury + SWF NAV + modeled public assets − debt − arrears, plus the central-bank portfolio gain/loss. For Malaysia, assets are CPI-adjusted and nominal debt is retained to prevent inflation-only score gains. Extra credit depends on sustaining real income, output and services.' },
   { key: 'satisfaction', label: 'Citizen satisfaction', why: 'Average approval over the last 6 months.' },
   { key: 'stability', label: 'Financial stability', why: 'Inflation near 2.5%, interest burden below 10% of revenue, low bank defaults, no arrears.' },
 ] as const;
@@ -17,13 +19,32 @@ const COMPONENTS = [
 export function ObjectivesPanel() {
   const g = useGameState();
   const setShowNewGame = useGame.getState().setShowNewGame;
-  const sc = g.indicators.score;
+  const setPanel = useGame.getState().setPanel;
+  const [view, setView] = useState<'score' | 'output' | 'finances' | 'fund'>('score');
+  const sc = computeScore(g);
   const sat = g.indicators.satisfaction;
   const ended = g.scheduler.campaignEnded;
   const o = outcomeLabel(g);
-  const first = g.reports[0];
-  const last = g.reports.at(-1);
-  const trend = g.reports.map((r) => ({ t: r.monthKey, score: r.score.total, approval: r.approval }));
+  const report = campaignReport(g);
+  const { opening, closing, drivers } = report;
+  const trend = g.reports.map((r) => ({ t: r.monthKey, score: r.score.total, approval: r.approval,
+    output: annualRealOutput([r]) / 1e9, treasury: r.treasury / 1e9, debt: r.debt / 1e9, fund: r.fundNav / 1e9 }));
+  const charts = {
+    score: { unit: 'points (0–100) · month', series: [{ key: 'score', name: 'Score', color: '#34d399' }, { key: 'approval', name: 'Approval', color: '#60a5fa' }] },
+    output: { unit: 'real RM bn per year · month', series: [{ key: 'output', name: 'Real GDP run rate', color: '#34d399' }] },
+    finances: { unit: 'RM bn · month-end', series: [{ key: 'treasury', name: 'Treasury', color: '#34d399' }, { key: 'debt', name: 'Debt', color: '#f87171' }] },
+    fund: { unit: 'RM bn · month-end · includes treasury transfers', series: [{ key: 'fund', name: 'SWF NAV', color: '#a78bfa' }] },
+  };
+  const rows = [
+    ['Real GDP run rate / year', money(opening.realGdp), money(closing.realGdp)],
+    ['Unemployment', pct(opening.unemployment), pct(closing.unemployment)],
+    ['Inflation (YoY)', pct(opening.inflation), pct(closing.inflation)],
+    ['Treasury', money(opening.treasury), money(closing.treasury)],
+    ['Public debt', money(opening.debt), money(closing.debt)],
+    ['SWF NAV', money(opening.fundNav), money(closing.fundNav)],
+    ['Approval', `${opening.approval.toFixed(0)}%`, `${closing.approval.toFixed(0)}%`],
+    ['Public net worth', money(opening.netWorth), money(closing.netWorth)],
+  ];
   return (
     <PanelShell title={ended ? 'Economic Presidency Report' : 'Campaign objectives'} subtitle={ended ? 'Your 24-month term is complete.' : `Month ${g.reports.length} of 24 · victory: score ≥ ${VICTORY.score}, approval ≥ ${VICTORY.approval}, no insolvency`} width={700}>
       <div className={`rounded-2xl p-4 ${o.won ? 'bg-emerald-500/15 ring-1 ring-emerald-400/40' : 'bg-slate-900/50 ring-1 ring-slate-600/30'}`}>
@@ -48,6 +69,14 @@ export function ObjectivesPanel() {
           </div>
         ))}
       </Section>
+      <Section title="Why this score" >
+        <div className="space-y-1 text-[12px] text-slate-300" data-testid="score-explanation">
+          <p>Real GDP growth: {pct(drivers.realGrowth, 2, true)} annualised against a {pct(drivers.growthTarget, 2)} benchmark. Recorded external conditions adjust the 3.5% target by {(drivers.externalAdjustment * 100).toFixed(2)} percentage points, capped at ±1 point.</p>
+          <p>Real public wealth change: {money(drivers.realWealthChange)}. Sustainability preserves {pct(drivers.wealthCreditFactor, 0)} of extra wealth credit: the weakest of real income, real output and service quality versus their opening levels. Losses keep their full penalty.</p>
+          <p>Weighted points: {COMPONENTS.map((c) => `${c.label} ${(sc[c.key] * SCORE_WEIGHTS[c.key]).toFixed(1)}`).join(' + ')}{sc.caps.length ? ' (then failure caps apply)' : ''}.</p>
+          <p className="text-slate-500">External adjustment is an estimate from elapsed recorded shocks, not a counterfactual forecast. Current previews use the latest calibration; imported historical scores retain their earlier calibration.</p>
+        </div>
+      </Section>
       <Section title="What drives approval (monthly)">
         <div className="grid grid-cols-3 gap-x-4 gap-y-2">
           {Object.entries(sat).map(([k, v]) => (
@@ -60,32 +89,48 @@ export function ObjectivesPanel() {
         <div className="mt-2 text-[11px] text-slate-500">Weights: employment 25%, real income 25%, housing affordability 15%, services 15%, trust 10%, stability 10%. Tax rises, cuts to services/transfers, arrears and downgrades hit trust.</div>
       </Section>
       <Section title="Trend">
-        <TimeChart data={trend} xKey="t" xFormat={(v) => monthKeyLabel(Number(v))} series={[{ key: 'score', name: 'Score', color: '#34d399' }, { key: 'approval', name: 'Approval', color: '#60a5fa' }]} yFormat={(v) => v.toFixed(0)} unit="points (0–100) · month" height={120} domain={[0, 100]} />
+        <Tabs value={view} onChange={setView} options={[{ id: 'score', label: 'Score & approval' }, { id: 'output', label: 'Real output' }, { id: 'finances', label: 'Treasury & debt' }, { id: 'fund', label: 'Fund value' }]} />
+        <TimeChart data={trend} xKey="t" xFormat={(v) => monthKeyLabel(Number(v))} series={charts[view].series} yFormat={(v) => v.toFixed(1)} unit={charts[view].unit} height={140} domain={view === 'score' ? [0, 100] : undefined} />
       </Section>
-      {first && last && (
+      {g.reports.length > 0 && (
         <Section title={ended ? 'Opening vs closing' : 'Start vs latest month'}>
-          <table className="data num">
-            <thead><tr><th>Indicator</th><th className="text-right">{first.label}</th><th className="text-right">{last.label}</th></tr></thead>
+          <table className="data num" data-testid="campaign-comparison">
+            <thead><tr><th>Indicator</th><th className="text-right">Opening · {formatKL(g.clock.startHour * 60).date}</th><th className="text-right">{ended ? 'Closing' : 'Latest'}</th></tr></thead>
             <tbody>
-              <tr><td>Real GDP (month, annualised)</td><td className="text-right">{money(first.realGdp * 12)}</td><td className="text-right">{money(last.realGdp * 12)}</td></tr>
-              <tr><td>Unemployment</td><td className="text-right">{pct(first.unemployment)}</td><td className="text-right">{pct(last.unemployment)}</td></tr>
-              <tr><td>Inflation (YoY)</td><td className="text-right">{pct(first.inflationYoY)}</td><td className="text-right">{pct(last.inflationYoY)}</td></tr>
-              <tr><td>Treasury</td><td className="text-right">{money(first.treasury)}</td><td className="text-right">{money(last.treasury)}</td></tr>
-              <tr><td>Public debt</td><td className="text-right">{money(first.debt)}</td><td className="text-right">{money(last.debt)}</td></tr>
-              <tr><td>SWF NAV</td><td className="text-right">{money(first.fundNav)}</td><td className="text-right">{money(last.fundNav)}</td></tr>
-              <tr><td>Approval</td><td className="text-right">{first.approval.toFixed(0)}%</td><td className="text-right">{last.approval.toFixed(0)}%</td></tr>
-              <tr><td>Public net worth (now vs start)</td><td className="text-right">{money(g.baseline.publicNetWorth)}</td><td className="text-right">{money(publicNetWorth(g))}</td></tr>
+              {rows.map(([label, start, end]) => <tr key={label}><td>{label}</td><td className="text-right">{start}</td><td className="text-right">{end}</td></tr>)}
             </tbody>
           </table>
-          <div className="mt-2 text-[11.5px] text-slate-400">SWF: NAV {money(navMYR(g))} incl. net transfers of {money(g.fund.totalInjectedMYR - g.fund.totalWithdrawnMYR)}; costs paid {money(g.fund.feesPaidMYR)}.</div>
+          <div className="mt-2 text-[11.5px] text-slate-400">SWF gain excluding net treasury transfers: {money(report.fundGain)} ({pct(report.fundReturn, 2, true)} of opening NAV). Net transfers {money(report.fundNetTransfers)}; costs paid {money(g.fund.feesPaidMYR)}. This simple cumulative measure includes dividends and FX.</div>
+        </Section>
+      )}
+      {ended && (
+        <Section title="Term fiscal accounts">
+          <div className="grid grid-cols-3 gap-3" data-testid="term-fiscal">
+            <Stat label="Public receipts" value={money(report.revenue)} />
+            <Stat label="Operating outlays" value={money(report.fiscal.opex)} />
+            <Stat label="Capital outlays" value={money(report.fiscal.capex)} />
+            <Stat label="Debt interest" value={money(report.fiscal.interest)} />
+            <Stat label="Import tariffs" value={money(report.fiscal.importTariff)} />
+            <Stat label="Export support" value={money(report.fiscal.exportSupport)} />
+            <Stat label="Emergency outlays" value={money(report.fiscal.emergency)} />
+            <Stat label="Fiscal balance" value={money(report.fiscalBalance)} />
+            <Stat label="Bond proceeds" value={money(report.fiscal.borrowing)} />
+            <Stat label="Principal repaid" value={money(report.fiscal.principal)} />
+            <Stat label="Net SWF contributions" value={money(report.fiscal.swfContribution - report.fiscal.swfTransferIn)} />
+          </div>
+          <button className="btn mt-3" onClick={() => setPanel('reports')}>Inspect monthly accounts</button>
         </Section>
       )}
       {ended && (
         <Section title="Key decisions & events">
-          <div className="grid grid-cols-2 gap-3 text-[12px]">
-            <div>{g.policyLog.slice(-12).map((p, i) => <div key={i} className="text-slate-300">• {p.label}</div>)}{!g.policyLog.length && <div className="text-slate-400">You made no policy decisions.</div>}</div>
-            <div>{g.events.log.filter((e) => !e.ticker).slice(-12).map((e) => <div key={e.id} className="text-slate-300">• {e.title}</div>)}</div>
-          </div>
+          <details className="text-[12px]"><summary className="cursor-pointer text-slate-200">Policy history ({g.policyLog.length})</summary>
+            {g.policyLog.map((p, i) => <div key={i} className="mt-1 text-slate-300">{formatKL(p.atMin).date} · {p.label}</div>)}
+            {!g.policyLog.length && <div className="text-slate-400">You made no policy decisions.</div>}
+          </details>
+          <details className="mt-3 text-[12px]"><summary className="cursor-pointer text-slate-200">Event history ({g.events.log.length})</summary>
+            {g.events.log.map((event) => <EventCard key={event.id} event={event} today={g.scheduler.lastDay} />)}
+          </details>
+          <p className="mt-3 text-[11px] text-slate-500">Victory requires score ≥{VICTORY.score}, approval ≥{VICTORY.approval} and solvency. The bar has automated replay calibration; human playtesting is still pending.</p>
           <button className="btn btn-primary mt-3" onClick={() => setShowNewGame(true)}>Start a new campaign</button>
         </Section>
       )}

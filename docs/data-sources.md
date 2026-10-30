@@ -75,3 +75,90 @@ That makes 18 companies at 14 distinct buildings. Shared buildings become one gr
 - Gamuda: Menara Gamuda (way/842304312) is in Petaling Jaya, outside KL.
 - CelcomDigi: "Menara Celcom" returned only a bus stop and Menara TM Semarak. Not verified.
 - Press Metal, NVIDIA, Meta and the remaining US issuers: no verified KL premises found.
+
+## Malaysia starting observations — pinned 31 October 2026
+
+The user chose a national economic baseline with the existing KL map (D-018). These figures initialize **new** campaigns;
+subsequent results remain fictional. There is no live feed. Observation dates differ, so these do not represent a
+consolidated national balance sheet as of the fictional 1 Jan 2027 opening. Source labels/links also appear under
+**Baseline & sources** in the game (`src/data/national-baseline.ts`). Values below are MYR unless explicitly USD.
+
+| Observation used | Period and value | Primary source and conversion |
+|---|---|---|
+| Nominal GDP | 2025: RM2,025,379,140,000 | [OpenDOSM quarterly nominal GDP by sector](https://open.dosm.gov.my/data-catalogue/gdp_qtr_nominal_supply), dataset updated14 Aug2026. [CSV](https://storage.dosm.gov.my/gdp/gdp_qtr_nominal_supply.csv), `series=abs`, `sector=p0`, 2025 quarters485106.586,489742.018,517572.546,532957.990 **RM million**. Sum×1,000,000; no growth-rate rows or sector summation. |
+| Federal debt principal | End Q2 2026: RM1,378,895,000,000 | [BNM national summary](https://www.bnm.gov.my/national-summary-data-page-for-malaysia), updated28 Oct2026: central-government total current liabilities1,378,895 RMmillion, comprising short+medium/long-term debt. [MOF debt outlook](https://belanjawan.mof.gov.my/pdf/belanjawan2027/revenue/section4.pdf), pp162–163, corroborates roundedRM1,378.9bn. Do not substitute public-sector debt or debt+guarantees. |
+| Treasury opening **proxy** | 15 Oct 2026: RM8,865,574,579 | [BNM statement](https://www.bnm.gov.my/bnmstatement/-/asset_publisher/CnqTLIfj6izZ/content/bnm-statement-of-assets-liabilities-15-october-2026?_com_liferay_asset_publisher_web_portlet_AssetPublisherPortlet_INSTANCE_CnqTLIfj6izZ_assetEntryId=23431576), released22 Oct2026. “Deposits by: Federal Government.” Only deposits held at BNM, **not all consolidated government cash**, revenue, SWF assets or central-bank reserves. |
+| Usable FX reserve component | 15 Oct 2026: USD116.4bn | Same BNM statement: “Foreign Currency Reserves.” Gross international reservesUSD132.1bn include IMF1.3bn,SDRs6bn,gold6bn,other2.4bn; these noncurrency components are not made available for game intervention. |
+| Opening FX valuation anchor | ≈RM4.078422/USD | Same statement: RM538,759,540,269 gross reserve valuation divided by USD132.1bn. Derived accounting anchor, **not observed spot FX**; denominator is rounded in the source. |
+| Opening OPR | September2026:2.75% | [BNM national summary](https://www.bnm.gov.my/national-summary-data-page-for-malaysia). Thereafter the fictional automatic rate rule applies; not a forecast of BNM decisions. |
+| Population | 2025 estimate:34.2m, rounded | [DOSM current population estimates2025](https://www.dosm.gov.my/portal-main/release-content/current-population-estimates-2025). Pinned2025 reference for this calibration, not a claim of latest population. |
+| Workforce/unemployment | Q3 2025:17.49m,3.0% | [DOSM labour-force release](https://www.dosm.gov.my/portal-main/release-content/principal-statistics-of-labour-force-malaysia-third-quarter-2025). Pinned reference; no commuters-only city workforce. |
+
+### Federal operating allocations (2027 estimates, not actual spending)
+
+[MOF detailed expenditure summary](https://belanjawan.mof.gov.my/pdf/belanjawan2027/perbelanjaan/ringkasan_sebenar.pdf),
+printed pp23,29,31–33, **last column2027, unitsRM**, visually checked against the original table. Use the detailed book's
+RM376.840bn total rather than the speech's roundedRM376.8bn. “Mengurus” is operating; do not use a ministry's combined
+“JUMLAH” operating+development allocation for opex. For example, health's totalRM47.7042988bn includes development
+RM6.7495048bn; onlyRM40.954794bn enters health opex.
+
+| Game line / purpose | Annual estimate used | Source line / transformation |
+|---|---:|---|
+| Healthcare |40,954,794,000|B.42 operations|
+| Public services (education) |78,602,693,300|B.63 education63,473,399,800+B.64 higher education15,129,293,500|
+| Safety |32,542,701,600|B.60 defence14,523,000,000+B.62 home affairs18,019,701,600|
+| Economic development operations |2,819,788,700|B.27 works1,146,184,500+B.28 transport1,673,604,200; no development capex|
+| Transfers |44,000,000,000|T.14 pensions, retirement allowances and gratuities; a simplified household transfer mapping|
+| Administration / other operations |116,907,022,400|**Derived residual**, all federal operating estimates376,840,000,000 minus debt service61,013,000,000 and the five rows above; includes other ministries, subsidies and central services, not just administrative payroll|
+| Debt service reference |61,013,000,000|T.13; excluded from controlled opex and used to calibrate opening effective coupon|
+
+Monthly policy amounts = annual/12; daily settlement remains monthly×12/365. Sliders are fictional broad groupings,
+not ministry-level implementation of Malaysia's actual fiscal system. Development allocations are excluded from these
+operating controls; infrastructure capex stays player-commissioned under the existing game project model.
+
+[MOF revenue estimates](https://belanjawan.mof.gov.my/pdf/belanjawan2027/revenue/summary.pdf), printedp238:2027 total
+RM380,816,996,000. The fixed “other public receipts” amount is a **model-derived residual** of this total less the four
+modeled opening taxes, not an official observed category. The report also separately lists non-tax revenue
+RM72,548,410,000 and non-revenue receiptsRM10,598,980,000. Those alone do not fill the tax categories absent from the model.
+
+### Explicit remaining assumptions and limits
+
+Seven sector shares, IO coefficients, simulated company accounts, tax rates/exemptions, loans, savings, public capital,
+SWF opening assets, project costs, elasticity/lags, reserve intervention float and credit rules remain fictional.
+The public-net-worth score covers modeled accounts only; it is not Malaysia's consolidated net worth. Do not invent
+unreported public assets to make it positive. The RM5bn central-bank MYR float and matched opening equity offset are
+model assumptions, separate from the sourced treasury proxy and reserves. Legacy saves receive no new inventory.
+
+Trade UI shows **simulated** sector export deliveries and imported production inputs, excluding re-exports/final imports.
+It is deliberately not labelled or calibrated as official merchandise trade; use GDP's value-added identity rather than
+adding gross trade to GDP. There is no claim that future simulated 2027/2028 trade, FX, rates or budgets are actual data.
+
+## Historical chart references (31 Oct 2026 snapshot)
+
+`src/data/official-history.ts` contains display-only observations, never inserted into simulation reports or scoring.
+GDP: same [DOSM nominal sector CSV](https://storage.dosm.gov.my/gdp/gdp_qtr_nominal_supply.csv), `p0/abs`, Q1 2024–Q2 2026,
+RM million ×4/1000 gives RM billion/year. This is a seasonally varying quarterly annualisation, not rolling annual GDP.
+[CPI](https://open.dosm.gov.my/data-catalogue/cpi_headline): `cpi_2d.csv`, division `overall`, official index2010=100;
+YoY computed from the same month's preceding-year index. [Labour](https://open.dosm.gov.my/data-catalogue/lfs_month):
+`lfs_month.csv`, unemployment `u_rate` in percent. Combined monthly charts cover Jan2025–Aug2026, the common available
+window at retrieval. Preserve the labour-series census-reference caveat described by DOSM. Both datasets are CC BY4.0.
+No runtime downloads or historical spot-FX observations are implied. Chart references remain separate from campaign output.
+
+Five-year display expansion: retain the latest60 common monthly CPI/labour observations (Sep2021–Aug2026) and20
+published GDP quarters (Q3 2021–Q2 2026). Each window follows its own latest published endpoint; do not extrapolate.
+The official five-year reference appears before simulated campaign charts. Both GDP axes explicitly show RM trillions.
+
+## Schema 6: fiscal, resource and trade references (31 Oct 2026)
+
+Official, read from Budget 2027 documents (belanjawan.mof.gov.my):
+- Development expenditure estimate 2027: RM85,000,000,000 (expenditure summary, "Ringkasan Keseluruhan", p.33).
+- Operating expenditure 2027: RM376,840,000,000 (same table). Total revenue 2027: RM380,816,996,000.
+- Export duty 2027 estimate: RM1,914,000,000 (revenue code 62100). Returns on investment from non-financial
+  enterprises 2027: RM35,492,468,000 (code 75200), dominated by the PETRONAS dividend.
+- Fiscal rule targets follow the Public Finance and Fiscal Responsibility Act 2023 (deficit 3% of GDP, debt 60%).
+
+Approximate public-scale references (rounded, recalled for calibration; verify before citing): PETRONAS dividend ≈ RM32bn
+and capex ≈ RM50bn a year; PETRONAS stakes ≈ 64% PETRONAS Chemicals, 51% PETRONAS Gas; Khazanah stakes ≈ Axiata 36%,
+IHH 26%, Telekom Malaysia 20%, CIMB 23%; RON95 ceiling RM1.99/L, ≈17bn litres a year, ≈85% eligible; partner trade
+shares; reference prices (Brent US$75/bbl, CPO RM4,000/t, wheat US$230/t, HRC steel US$520/t). Everything after the
+opening day is simulated.

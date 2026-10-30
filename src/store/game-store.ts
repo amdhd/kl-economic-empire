@@ -9,7 +9,7 @@ import { deserialize, serialize } from '../persistence/save';
 import { readSlot, writeSlot, type SlotId } from '../persistence/storage';
 import type { GameSpeed, GameState, ScenarioId, TickerId } from '../types/game';
 
-export type PanelId = 'overview' | 'policies' | 'projects' | 'debt' | 'markets' | 'fund' | 'economy' | 'reports' | 'objectives';
+export type PanelId = 'population' | 'controls' | 'trade' | 'sources' | 'fiscal' | 'commodities' | 'partners' | 'soe' | 'overview' | 'policies' | 'projects' | 'debt' | 'markets' | 'fund' | 'economy' | 'reports' | 'objectives';
 export type Selection = { kind: 'company'; id: TickerId } | { kind: 'district'; id: string } | null;
 export interface Toast {
   id: number;
@@ -120,7 +120,8 @@ export const useGame = create<Store>((set, get) => ({
         return false;
       }
       const game = deserialize(json);
-      set({ game, rev: get().rev + 1, uiMinute: displayMinutes(game.clock), selection: null, showNewGame: false });
+      set({ game, rev: get().rev + 1, uiMinute: displayMinutes(game.clock), selection: null, showNewGame: false,
+        panel: game.scheduler.campaignEnded ? 'objectives' : get().panel });
       lastAutosaveDay = klDay(game.clock.hour * 60);
       get().toast('good', `Loaded ${slot} — paused.`);
       return true;
@@ -133,7 +134,11 @@ export const useGame = create<Store>((set, get) => ({
     if (showNewGame) get().pause();
     set({ showNewGame });
   },
-  setShowHelp: (showHelp) => set({ showHelp }),
+  setShowHelp: (showHelp) => {
+    if (showHelp === get().showHelp) return;
+    get().dialog(showHelp);
+    set({ showHelp });
+  },
   dialog: (open) => {
     const st = get();
     const n = st.confirmOpen + (open ? 1 : -1);
@@ -200,6 +205,10 @@ export function startGameLoop(): () => void {
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
     const st = useGame.getState();
     if (st.showNewGame) return;
+    if (st.showHelp || st.confirmOpen > 0) {
+      if (e.key === 'Escape' && st.showHelp) st.setShowHelp(false);
+      return;
+    }
     if (e.code === 'Space') {
       e.preventDefault();
       st.togglePause();

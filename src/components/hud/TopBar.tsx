@@ -4,8 +4,10 @@ import { formatKL } from '../../engine/time';
 import { useGame } from '../../store/game-store';
 import type { Exchange, GameSpeed } from '../../types/game';
 import { SaveMenu } from './SaveMenu';
+import { HudIcon } from './HudIcon';
+import { Districts } from './Districts';
 
-function Clock() {
+export function Clock() {
   const minute = useGame((s) => s.uiMinute || displayMinutes(s.game.clock));
   const paused = useGame((s) => s.game.clock.paused);
   useGame((s) => s.rev);
@@ -20,7 +22,7 @@ function Clock() {
   );
 }
 
-function SpeedControls() {
+export function SpeedControls() {
   const speed = useGame((s) => s.game.clock.speed);
   const paused = useGame((s) => s.game.clock.paused);
   const ended = useGame((s) => s.game.scheduler.campaignEnded);
@@ -56,31 +58,20 @@ function MarketChip({ ex }: { ex: Exchange }) {
   );
 }
 
-export function TopBar() {
+export function TopBar({ menuOpen, onToggleMenu }: { menuOpen: boolean; onToggleMenu: () => void }) {
   const { setShowNewGame, setShowHelp } = useGame.getState();
   return (
-    <header className="glass pointer-events-auto relative z-30 flex h-14 items-center gap-4 rounded-2xl px-4">
-      <div className="flex items-center gap-2.5 pr-2">
-        <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden>
-          <rect width="32" height="32" rx="8" fill="#0f172a" />
-          <path d="M8 26V12l4-3v17M14 26V6l4 2v18M20 26V14l4 2v10" stroke="#34d399" strokeWidth="2" fill="none" />
-        </svg>
-        <div className="leading-tight">
-          <div className="text-[13px] font-extrabold tracking-[0.14em] text-white">KL ECONOMIC EMPIRE</div>
-          <div className="text-[9.5px] font-semibold uppercase tracking-wider text-amber-300/80">Alternate-history simulation</div>
-        </div>
+    <header className="top-hud flex items-start justify-between gap-3">
+      <div className="flex items-center gap-2">
+        <button className={`info-toggle pointer-events-auto ${menuOpen ? 'is-active' : ''}`} aria-label="Info views" aria-expanded={menuOpen} aria-controls="info-categories" data-testid="info-views" onClick={onToggleMenu}><HudIcon name="info" size={28} /></button>
+        <div className="city-title"><b>KL ECONOMIC EMPIRE</b><span>Malaysia economy · KL map · fictional simulation</span></div>
       </div>
-      <div className="h-8 w-px bg-slate-600/40" />
-      <Clock />
-      <SpeedControls />
-      <div className="flex items-center gap-1.5">
-        <MarketChip ex="MY" />
-        <MarketChip ex="US" />
-      </div>
-      <div className="ml-auto flex items-center gap-1.5">
+      <div className="flex items-center gap-2 pointer-events-auto">
+        <Districts />
+        <div className="exchange-chips flex gap-1"><MarketChip ex="MY" /><MarketChip ex="US" /></div>
         <SaveMenu />
         <button className="btn" onClick={() => setShowNewGame(true)} data-testid="btn-new-game">New</button>
-        <button className="btn" onClick={() => setShowHelp(true)} title="Help & shortcuts (?)">?</button>
+        <button className="btn" onClick={() => setShowHelp(true)} aria-label="Help & shortcuts" title="Help & shortcuts (?)">?</button>
       </div>
     </header>
   );

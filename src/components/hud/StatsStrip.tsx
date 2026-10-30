@@ -1,4 +1,5 @@
 import { debtMYR, treasuryMYR } from '../../engine/government';
+import { computeScore } from '../../engine/indicators';
 import { navMYR } from '../../engine/sovereign-fund';
 import { useGameState, useGame } from '../../store/game-store';
 import { fx, money, pct } from '../../utils/format';
@@ -22,16 +23,16 @@ export function StatsStrip() {
   const navChg = last ? nav / last.fundNav - 1 : nav / g.scheduler.startNav - 1;
   const tone = (x: number, good = true) => (x === 0 ? undefined : (x > 0) === good ? 'up' : 'down');
   return (
-    <div className="glass pointer-events-auto flex items-stretch gap-0.5 rounded-2xl px-1.5 py-1" data-testid="stats">
-      <Cell label="GDP (annualised)" value={money(ind.nominalGdpAnnual)} sub={`real ${pct(ind.realGrowthYoY, 1, true)} ${g.reports.length >= 12 ? 'YoY' : 'vs start'}`} tone={tone(ind.realGrowthYoY)} hint="Nominal GDP = sector value added + consumption levy, last closed month × 12. Growth is real (deflated)." onClick={() => setPanel('economy')} />
+    <div className="stats-strip pointer-events-auto flex items-stretch gap-0.5" data-testid="stats">
+      <Cell label="GDP (annualised)" value={money(ind.nominalGdpAnnual)} sub={`real ${pct(ind.realGrowthYoY, 1, true)} ${g.reports.length >= 12 ? 'YoY' : 'vs start'}`} tone={tone(ind.realGrowthYoY)} hint="Nominal GDP = sector value added + net product taxes, last closed month × 365 / calendar days. Growth is real (deflated)." onClick={() => setPanel('economy')} />
       <Cell label="Treasury" value={money(treasuryMYR(g.government))} sub={g.government.unpaidObligations > 1e6 ? `arrears ${money(g.government.unpaidObligations)}` : `rating ${ratingOf(g.government.creditRating)}`} tone={g.government.unpaidObligations > 1e6 ? 'down' : undefined} hint="Government cash (separate from the SWF)" onClick={() => setPanel('debt')} testid="stat-treasury" />
       <Cell label="SWF NAV" value={money(nav)} sub={`${pct(navChg, 2, true)} this month`} tone={tone(navChg)} hint="Sovereign fund net asset value in MYR (cash + holdings at last simulated prices, FX-adjusted)" onClick={() => setPanel('fund')} testid="stat-nav" />
-      <Cell label="Public debt" value={money(debtMYR(g.government))} sub={`${pct(ind.debtToGdp)} of GDP`} hint="KL bonds outstanding" onClick={() => setPanel('debt')} />
-      <Cell label="Unemployment" value={pct(ind.unemployment)} sub={`${(g.households.employed / 1e6).toFixed(2)}m employed`} hint="Unemployed share of the KL workforce (incl. commuters)" onClick={() => setPanel('economy')} />
+      <Cell label="Public debt" value={money(debtMYR(g.government))} sub={`${pct(ind.debtToGdp)} of GDP`} hint="Government bonds outstanding" onClick={() => setPanel('debt')} />
+      <Cell label="Unemployment" value={pct(ind.unemployment)} sub={`${(g.households.employed / 1e6).toFixed(2)}m employed`} hint="Unemployed share of the domestic workforce" onClick={() => setPanel('economy')} />
       <Cell label="Inflation" value={pct(ind.inflationYoY)} sub={`CPI ${ind.cpi.toFixed(1)}`} tone={Math.abs(ind.inflationYoY - 0.025) > 0.015 ? 'down' : undefined} hint="CPI, year on year (annualised since start during year one)" onClick={() => setPanel('economy')} />
       <Cell label="Approval" value={`${ind.approval.toFixed(0)}%`} sub={ind.approval >= 60 ? 'above victory bar' : 'below 60 bar'} tone={ind.approval >= 60 ? 'up' : 'down'} hint="Citizen approval, updated monthly from satisfaction" onClick={() => setPanel('objectives')} />
       <Cell label="MYR / USD" value={fx(g.external.myrPerUsd)} sub={`OPR ${pct(g.external.opr, 2)}`} hint="Fictional ringgit per US dollar; OPR set by the (fictional) central bank, not you" onClick={() => setPanel('economy')} />
-      <Cell label="Score" value={`${ind.score.total.toFixed(0)}/100`} sub="preview" hint="Campaign score preview — see Objectives" onClick={() => setPanel('objectives')} testid="stat-score" />
+      <Cell label="Score" value={`${computeScore(g).total.toFixed(0)}/100`} sub="preview" hint="Campaign score preview — see Objectives" onClick={() => setPanel('objectives')} testid="stat-score" />
     </div>
   );
 }
