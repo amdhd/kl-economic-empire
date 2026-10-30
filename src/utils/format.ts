@@ -51,3 +51,12 @@ export function fx(rate: number): string {
 }
 
 export const FICTIONAL_LABEL = 'Simulated · fictional data';
+
+/** Share price at quote precision: Bursa sub-RM1 prices use 3 decimals (0.005 tick), else 2. */
+export function sharePrice(value: number, currency: Currency): string {
+  if (!Number.isFinite(value)) return '—';
+  const digits = currency === 'MYR' && value < 1 ? 3 : 2;
+  return `${SYMBOL[currency]} ${nf(digits).format(value)}`;
+}
+
+export const currencySymbol = (c: Currency) => SYMBOL[c];

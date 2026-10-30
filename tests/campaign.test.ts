@@ -85,17 +85,25 @@ describe('24-month campaign', () => {
     for (const s of Object.values(results)) expect(s.scheduler.campaignEnded).toBe(true);
   });
 
-  it('responsive (counter-cyclical) play beats passive play on tough seeds', () => {
+  it('responsive (counter-cyclical) play pays off in downturns', () => {
+    // Single seeds are bimodal and shift whenever the RNG stream changes (D-P2-05), so test
+    // across 12 seeds: the payoff should come where passive play struggles.
     const swf: Script = [5, 12, 19, 26].map((d) => ({ at: [2027, 1, d, 10] as [number, number, number, number], cmd: { type: 'rebalance', targetMY: 0.4, targetUS: 0.4 } as Command }));
-    for (const seed of [11, 42]) {
-      const passive = play(seed, []).indicators.score.total;
-      const active = play(seed, swf, 'balanced', true).indicators.score.total;
-      expect(active).toBeGreaterThan(passive + 2);
-    }
+    const seeds = Array.from({ length: 12 }, (_, i) => 301 + i);
+    const pairs = seeds.map((seed) => [play(seed, []).indicators.score.total, play(seed, swf, 'balanced', true).indicators.score.total]);
+    const weak = pairs.filter(([passive]) => passive < 55);
+    expect(weak.length).toBeGreaterThanOrEqual(2);
+    const gain = weak.reduce((a, [p, a2]) => a + a2 - p, 0) / weak.length;
+    expect(gain).toBeGreaterThan(3); // ≈ +6.5 at time of writing
+    const all = pairs.reduce((a, [p, a2]) => a + a2 - p, 0) / pairs.length;
+    expect(all).toBeGreaterThan(0);
   });
 
   it('adverse global recession scenario is harder than the balanced baseline', () => {
-    const scores = [101, 102, 103].map((seed) => [play(seed, [], 'balanced').indicators.score.total, play(seed, [], 'recession').indicators.score.total]);
+    // Single-seed outcomes are bimodal (~40 vs ~70), far wider than the scenario effect, so compare
+    // a 20-seed average (see docs/decisions.md D-P2-05).
+    const seeds = Array.from({ length: 20 }, (_, i) => 201 + i);
+    const scores = seeds.map((seed) => [play(seed, [], 'balanced').indicators.score.total, play(seed, [], 'recession').indicators.score.total]);
     const avg = (i: number) => scores.reduce((a, x) => a + x[i], 0) / scores.length;
     expect(avg(1)).toBeLessThan(avg(0));
   });
