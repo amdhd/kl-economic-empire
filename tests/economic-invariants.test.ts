@@ -165,3 +165,57 @@ describe('causal chains (events disabled, same seed)', () => {
     expect(more.government.treasury - more.government.debt).toBeLessThan(base.government.treasury - base.government.debt);
   });
 });
+
+describe('project economics (balance rules)', () => {
+  it('completed projects cost upkeep; capex is only partly capitalised', () => {
+    const s = withoutEvents(() => {
+      const g = createGame(41);
+      applyCommand(g, { type: 'startProject', templateId: 'clinics' }, g.clock.hour * 60);
+      runUntil(g, 2027, 7, 1, 1);
+      return g;
+    });
+    const p = s.government.projects[0];
+    expect(p.status).toBe('complete');
+    expect(s.government.publicAssets).toBeLessThan(45e9 + p.spent * 0.61);
+    const base = withoutEvents(() => {
+      const g = createGame(41);
+      runUntil(g, 2027, 7, 1, 1);
+      return g;
+    });
+    // June opex includes maintenance on top of the same budget
+    expect(s.reports.at(-1)!.gov.opex).toBeGreaterThan(base.reports.at(-1)!.gov.opex + 0.5e9 * 0.03 / 12 * 0.9);
+  });
+
+  it('construction-price inflation escalates the ringgit cost of the same project', () => {
+    const run = (pricier: boolean) =>
+      withoutEvents(() => {
+        const g = createGame(42);
+        applyCommand(g, { type: 'startProject', templateId: 'fibre' }, g.clock.hour * 60);
+        runHeadless(g, 24 * 10, (st) => { if (pricier) st.sectors.prop.price = 1.2; });
+        return g.government.projects[0];
+      });
+    const a = run(false), b = run(true);
+    expect(b.spent).toBeGreaterThan(a.spent * 1.15);
+    expect(b.work).toBeCloseTo(a.work, -5);
+  });
+
+  it('productivity gains in the same sector saturate', async () => {
+    const { completeProject } = await import('../src/engine/government');
+    const s = createGame(43);
+    for (const t of ['brt', 'lrt', 'heritage']) applyCommand(s, { type: 'startProject', templateId: t }, s.clock.hour * 60);
+    for (const p of s.government.projects) completeProject(s, p.id, 0);
+    expect(s.sectors.cons.infraBoost).toBeLessThan(0.008 + 0.02 + 0.006);
+    expect(s.sectors.cons.infraBoost).toBeGreaterThan(0.02);
+  });
+
+  it('commissioning everything is not a free lunch for public net worth', () => {
+    const pnw = (all: boolean) =>
+      withoutEvents(() => {
+        const g = createGame(2027);
+        if (all) for (const t of ['lrt', 'brt', 'fibre', 'housing', 'flood', 'clinics', 'heritage']) applyCommand(g, { type: 'startProject', templateId: t }, g.clock.hour * 60);
+        runHeadless(g, 30_000);
+        return g.indicators.publicNetWorth;
+      });
+    expect(pnw(true)).toBeLessThan(pnw(false));
+  });
+});

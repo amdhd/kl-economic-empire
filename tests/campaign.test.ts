@@ -7,11 +7,24 @@ import type { GameState, ScenarioId } from '../src/types/game';
 
 type Script = { at: [number, number, number, number]; cmd: Command }[];
 
-function play(seed: number, script: Script, scenario: ScenarioId = 'balanced'): GameState {
+/** Counter-cyclical rule applied at each month start: stimulate when jobless > 4.5%, withdraw below 3%. */
+function counterCyclical(st: GameState, lastMonth: { n: number }) {
+  if (st.reports.length === lastMonth.n) return;
+  lastMonth.n = st.reports.length;
+  const u = st.indicators.unemployment;
+  const stim = u > 0.045 ? 1 : u < 0.03 ? -1 : 0;
+  const b = st.government.policies.budget;
+  const target = { transfers: 500e6 + stim * 250e6, development: 250e6 + stim * 200e6 };
+  if (target.transfers !== b.transfers || target.development !== b.development) applyCommand(st, { type: 'queueBudget', patch: target }, st.clock.hour * 60);
+}
+
+function play(seed: number, script: Script, scenario: ScenarioId = 'balanced', adaptive = false): GameState {
   const s = createGame(seed, scenario);
   const queue = script.map((x) => ({ min: klToEpochMin(...x.at), cmd: x.cmd })).sort((a, b) => a.min - b.min);
+  const lastMonth = { n: 0 };
   runHeadless(s, 30_000, (st) => {
     while (queue.length && queue[0].min <= st.clock.hour * 60) applyCommand(st, queue.shift()!.cmd, st.clock.hour * 60);
+    if (adaptive) counterCyclical(st, lastMonth);
   });
   return s;
 }
@@ -70,6 +83,15 @@ describe('24-month campaign', () => {
     expect(results.austerity.government.serviceQuality).toBeLessThan(results.hands_off.government.serviceQuality);
     expect(results.investment_heavy.government.debt).toBeGreaterThan(results.hands_off.government.debt);
     for (const s of Object.values(results)) expect(s.scheduler.campaignEnded).toBe(true);
+  });
+
+  it('responsive (counter-cyclical) play beats passive play on tough seeds', () => {
+    const swf: Script = [5, 12, 19, 26].map((d) => ({ at: [2027, 1, d, 10] as [number, number, number, number], cmd: { type: 'rebalance', targetMY: 0.4, targetUS: 0.4 } as Command }));
+    for (const seed of [11, 42]) {
+      const passive = play(seed, []).indicators.score.total;
+      const active = play(seed, swf, 'balanced', true).indicators.score.total;
+      expect(active).toBeGreaterThan(passive + 2);
+    }
   });
 
   it('adverse global recession scenario is harder than the balanced baseline', () => {

@@ -7,6 +7,13 @@ import type { BudgetCategory, GameState, GovMonthFlows, GovernmentState, SectorI
 import { PROPERTY_LEVY_BASE, type Vec } from './calibration';
 import { clamp, news, nowMin, toMinor } from './util';
 
+/** Share of capital spending booked as a public asset (the rest is leakage, design, land, overruns). */
+export const ASSET_CAPITALISATION = 0.6;
+/** Annual upkeep of completed projects, as a share of their base cost. */
+export const MAINTENANCE_RATE = 0.03;
+/** Successive productivity gains in the same sector saturate: gain × exp(−existing boost / this). */
+export const BOOST_SATURATION = 0.04;
+
 export const emptyFlows = (): GovMonthFlows => ({
   taxCorporate: 0, taxProperty: 0, taxConsumption: 0, taxHousehold: 0, federalGrant: 0, opex: 0, capex: 0,
   interest: 0, borrowing: 0, principal: 0, swfContribution: 0, swfTransferIn: 0, emergency: 0,
@@ -75,15 +82,20 @@ export function dailyGovernment(s: GameState, today: number): GovDay {
   const cats = Object.keys(BUDGET_PURCHASES) as Exclude<BudgetCategory, 'transfers'>[];
   const opexDue = cats.reduce((a, c) => a + pol.budget[c] * PER_DAY, 0);
   const transfersDue = pol.budget.transfers * PER_DAY;
+  // Construction is priced at today's property & construction price index: if it rises, projects
+  // cost more in ringgit (escalation) for the same real work.
+  const pCons = s.sectors.prop.price;
   const capexDueBy: { id: number; amt: number }[] = [];
+  let maintenance = 0;
   for (const p of gov.projects) {
+    if (p.status === 'complete') maintenance += (p.cost * MAINTENANCE_RATE * pCons) / 365;
     if (p.status !== 'building') continue;
-    capexDueBy.push({ id: p.id, amt: Math.min(p.cost - p.spent, p.cost / p.durationDays) });
+    capexDueBy.push({ id: p.id, amt: Math.min(p.cost - p.work, p.cost / p.durationDays) * pCons });
   }
   const capexDue = capexDueBy.reduce((a, c) => a + c.amt, 0);
   const emergencyDue = gov.pendingEmergency > 0 ? Math.min(gov.pendingEmergency, gov.pendingEmergency * 0.3 + 5e6) : 0;
   const arrearsDue = gov.unpaidObligations;
-  const totalDue = opexDue + transfersDue + capexDue + emergencyDue + arrearsDue;
+  const totalDue = opexDue + maintenance + transfersDue + capexDue + emergencyDue + arrearsDue;
 
   if (treasuryMYR(gov) < totalDue) {
     issueDebt(s, totalDue - treasuryMYR(gov) + pol.borrowing.cashBufferMonths * 0.25 * totalDue * 30, 'Bridge financing to meet daily obligations');
@@ -98,17 +110,21 @@ export function dailyGovernment(s: GameState, today: number): GovDay {
     for (const [sec, sh] of Object.entries(BUDGET_PURCHASES[c])) purchases[sec as SectorId] += amt * (sh as number);
   }
   // arrears are opex/transfers that were not paid earlier; settle them as opex now
-  post(gov, 'opex', opexPaid + arrearsDue * paidFraction);
+  const maintPaid = maintenance * paidFraction;
+  purchases.prop += maintPaid * 0.6;
+  purchases.ind += maintPaid * 0.4;
+  post(gov, 'opex', opexPaid + maintPaid + arrearsDue * paidFraction);
   const transfersPaid = post(gov, 'opex', transfersDue * paidFraction);
   for (const { id, amt } of capexDueBy) {
     const p = gov.projects.find((x) => x.id === id)!;
     const paid = post(gov, 'capex', amt * paidFraction);
     p.spent += paid;
-    gov.publicAssets += paid;
+    p.work += paid / pCons;
+    gov.publicAssets += paid * ASSET_CAPITALISATION;
     purchases.prop += paid * 0.7;
     purchases.ind += paid * 0.2;
     purchases.tech += paid * 0.1;
-    if (p.spent >= p.cost - 1) completeProject(s, p.id, today);
+    if (p.work >= p.cost - 1) completeProject(s, p.id, today);
   }
   if (emergencyDue > 0) {
     const paid = post(gov, 'emergency', emergencyDue * paidFraction);
@@ -133,12 +149,18 @@ export function completeProject(s: GameState, id: number, today: number): void {
   const t = PROJECT_BY_ID[p.templateId];
   p.status = 'complete';
   p.completedDay = today;
-  for (const [sec, boost] of Object.entries(t.productivity)) s.sectors[sec as SectorId].infraBoost += boost as number;
+  const gains: string[] = [];
+  for (const [sec, boost] of Object.entries(t.productivity)) {
+    const st = s.sectors[sec as SectorId];
+    const eff = (boost as number) * Math.exp(-st.infraBoost / BOOST_SATURATION);
+    st.infraBoost += eff;
+    gains.push(`${sec} productivity +${(eff * 100).toFixed(1)}%`);
+  }
   gov.housingFactor *= 1 + t.rentEffect;
   gov.serviceBoost += t.serviceEffect;
   gov.resilience = 1 - (1 - gov.resilience) * (1 - t.resilience);
   gov.tourismBoost += t.tourism;
-  news(s, { kind: 'policy', tone: 'good', title: `Completed: ${p.name}`, body: `Benefits now active: ${Object.entries(t.productivity).map(([k, v]) => `${k} productivity +${((v as number) * 100).toFixed(1)}%`).join(', ')}${t.rentEffect ? `, housing costs ${(t.rentEffect * 100).toFixed(1)}%` : ''}${t.resilience ? `, flood damage −${t.resilience * 100}%` : ''}.` });
+  news(s, { kind: 'policy', tone: 'good', title: `Completed: ${p.name}`, body: `Benefits now active: ${gains.join(', ')}${t.rentEffect ? `, housing costs ${(t.rentEffect * 100).toFixed(1)}%` : ''}${t.resilience ? `, flood damage −${t.resilience * 100}%` : ''}.` });
 }
 
 export interface GovMonthClose {

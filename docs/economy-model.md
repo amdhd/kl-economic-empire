@@ -60,7 +60,8 @@ Hourly (open sessions only): `Δln P = 0.012·ln(FV/P) + market + sector + idios
 ## Causal chains (each covered by `tests/economic-invariants.test.ts`)
 - Corporate tax 18 % → 25 %: receipts ↑ from the effective month, after-tax profit and investment ↓ with a lag, KL-exposed
   company earnings ↓, US company earnings essentially unchanged.
-- Infrastructure: capex immediately, productivity only after completion.
+- Infrastructure: capex immediately (priced at the construction index), productivity only after completion,
+  saturating per sector; 3 %/yr upkeep afterwards; only 60 % of capex counts as public assets.
 - Oil shock: CPI ↑, real disposable income ↓.
 - AI boom: US semiconductor revenue ↑ ≫ Malaysian retail.
 - More public-service spending: service quality ↑ over months, at a fiscal cost.

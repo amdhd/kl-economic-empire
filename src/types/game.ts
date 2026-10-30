@@ -238,7 +238,8 @@ export interface ProjectState {
   name: string;
   kind: ProjectKind;
   cost: number; // MYR
-  spent: number; // MYR
+  spent: number; // MYR, nominal (includes cost escalation)
+  work: number; // MYR at base construction prices; complete when work >= cost
   startDay: number;
   durationDays: number;
   status: 'building' | 'complete' | 'cancelled';

@@ -116,3 +116,16 @@ describe('game clock', () => {
     expect(s.news.filter((n) => n.title.startsWith('Campaign complete'))).toHaveLength(1);
   });
 });
+
+describe('save migration', () => {
+  it('upgrades a schema-1 save (projects without `work`) to the current schema', () => {
+    const s = createGame(3);
+    s.government.projects.push({ id: 1, templateId: 'fibre', name: 'x', kind: 'connectivity', cost: 6e8, spent: 1e8, work: 0, startDay: 0, durationDays: 180, status: 'building' });
+    const file = JSON.parse(serialize(s));
+    file.state.schemaVersion = 1;
+    delete file.state.government.projects[0].work;
+    const loaded = deserialize(JSON.stringify(file));
+    expect(loaded.schemaVersion).toBe(2);
+    expect(loaded.government.projects[0].work).toBe(1e8);
+  });
+});

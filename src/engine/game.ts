@@ -20,7 +20,7 @@ import { seedRng } from './rng';
 import { klDay, klParts, klToEpochMin, monthKey } from './time';
 import { clamp, news, pushBounded, toMinor } from './util';
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 export const START = { year: 2027, month: 1, day: 1, hour: 8 };
 export const CAMPAIGN_MONTHS = 24;
 
@@ -219,7 +219,7 @@ function dispatch(s: GameState, cmd: Command, atMin: number): CommandResult {
       const t = PROJECT_BY_ID[cmd.templateId];
       if (!t) return { ok: false, message: 'Unknown project' };
       if (gov.projects.some((p) => p.templateId === t.id && p.status !== 'cancelled')) return { ok: false, message: `${t.name} has already been commissioned.` };
-      gov.projects.push({ id: gov.nextId++, templateId: t.id, name: t.name, kind: t.kind, cost: t.cost, spent: 0, startDay: klDay(atMin), durationDays: t.durationDays, status: 'building' });
+      gov.projects.push({ id: gov.nextId++, templateId: t.id, name: t.name, kind: t.kind, cost: t.cost, spent: 0, work: 0, startDay: klDay(atMin), durationDays: t.durationDays, status: 'building' });
       logPolicy(s, atMin, atMin, `Commissioned ${t.name} (RM ${(t.cost / 1e9).toFixed(1)}bn over ${Math.round(t.durationDays / 30)} months)`);
       news(s, { kind: 'policy', tone: 'neutral', title: `Commissioned: ${t.name}`, body: `RM ${(t.cost / 1e9).toFixed(1)}bn disbursed over ~${Math.round(t.durationDays / 30)} months. Benefits begin on completion.` });
       return { ok: true, message: `${t.name} commissioned.` };

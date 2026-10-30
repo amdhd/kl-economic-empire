@@ -36,7 +36,14 @@ export function findNonFinite(v: unknown, path = 'state'): string | null {
 
 type Migration = (s: Record<string, unknown>) => Record<string, unknown>;
 /** migrations[n] upgrades a state from schema n to n+1. */
-const MIGRATIONS: Record<number, Migration> = {};
+const MIGRATIONS: Record<number, Migration> = {
+  // v1 → v2: projects track real work done (for construction-cost escalation).
+  1: (s) => {
+    const gov = s.government as { projects: { spent: number; work?: number }[] };
+    for (const p of gov.projects) p.work = p.work ?? p.spent;
+    return s;
+  },
+};
 
 export function deserialize(json: string): GameState {
   let file: SaveFile;

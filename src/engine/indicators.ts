@@ -6,7 +6,7 @@ import { navMYR } from './sovereign-fund';
 import { clamp } from './util';
 
 export const SCORE_WEIGHTS = { growth: 0.3, wealth: 0.3, satisfaction: 0.25, stability: 0.15 };
-export const VICTORY = { score: 80, approval: 60 };
+export const VICTORY = { score: 75, approval: 60 }; // recalibrated from seeded replays (docs/game-balance.md)
 
 export function publicNetWorth(s: GameState): number {
   return treasuryMYR(s.government) + navMYR(s) + s.government.publicAssets - debtMYR(s.government) - s.government.unpaidObligations;
@@ -48,7 +48,7 @@ export function computeScore(s: GameState): ScoreBreakdown {
   const years = Math.max(months / 12, 0.25);
   const g = Math.pow(lastReal / base.realGdpAnnual, 1 / years) - 1;
   const u = unemploymentRate(s);
-  const growth = clamp(50 + (g - 0.035) * 1500 - (u - BASELINE.unemployment) * 400, 0, 100);
+  const growth = clamp(50 + (g - 0.035) * 1000 - (u - BASELINE.unemployment) * 400, 0, 100);
 
   // Public net wealth change, relative to baseline GDP.
   const dNw = (publicNetWorth(s) - base.publicNetWorth) / base.nominalGdpAnnual;
@@ -61,7 +61,7 @@ export function computeScore(s: GameState): ScoreBreakdown {
   // Stability: inflation deviation, debt service, banking stress.
   const infl = recent.length ? recent.reduce((a, r) => a + Math.abs(r.inflationYoY - 0.025), 0) / recent.length : 0;
   const interestToRevenue = recent.length ? recent.reduce((a, r) => a + r.gov.interest, 0) / Math.max(1, recent.reduce((a, r) => a + r.gov.taxCorporate + r.gov.taxProperty + r.gov.taxConsumption + r.gov.taxHousehold + r.gov.federalGrant, 0)) : 0.07;
-  const stability = clamp(95 - 1500 * Math.max(0, infl - 0.01) - 150 * Math.max(0, interestToRevenue - 0.1) - 4000 * Math.max(0, s.bank.nplRate - 0.002) - (s.government.daysInArrears > 0 ? 20 : 0), 0, 100);
+  const stability = clamp(95 - 1000 * Math.max(0, infl - 0.0125) - 150 * Math.max(0, interestToRevenue - 0.1) - 4000 * Math.max(0, s.bank.nplRate - 0.002) - (s.government.daysInArrears > 0 ? 20 : 0), 0, 100);
 
   let total = SCORE_WEIGHTS.growth * growth + SCORE_WEIGHTS.wealth * wealth + SCORE_WEIGHTS.satisfaction * satisfaction + SCORE_WEIGHTS.stability * stability;
   if (s.government.insolvent) {

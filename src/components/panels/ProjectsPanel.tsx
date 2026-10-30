@@ -24,7 +24,7 @@ export function ProjectsPanel() {
       {gov.projects.length > 0 && (
         <Section title="Your projects">
           {gov.projects.map((p) => {
-            const prog = p.spent / p.cost;
+            const prog = p.work / p.cost;
             return (
               <div key={p.id} className="mb-2 rounded-lg bg-slate-800/40 p-2">
                 <div className="mb-1 flex items-center justify-between text-[12.5px]">
@@ -35,7 +35,7 @@ export function ProjectsPanel() {
                 </div>
                 <Bar value={prog} color={p.status === 'complete' ? '#34d399' : '#fbbf24'} />
                 <div className="mt-1 flex justify-between text-[11.5px] text-slate-400">
-                  <span className="num">{money(p.spent)} of {money(p.cost)} spent ({pct(prog, 0)})</span>
+                  <span className="num">{pct(prog, 0)} built · {money(p.spent)} spent of {money(p.cost)} budget{p.spent > p.work * 1.005 ? ' (construction-cost escalation)' : ''}</span>
                   {p.status === 'building' && <button className="btn !px-2 !py-0.5 !text-[11px]" onClick={() => setCancel(p.id)}>Cancel</button>}
                 </div>
               </div>
@@ -67,7 +67,7 @@ export function ProjectsPanel() {
       </Section>
       {pick && (
         <ConfirmDialog title={`Commission ${pick.name}?`} confirmLabel="Commission" onCancel={() => setPick(null)} onConfirm={() => { command({ type: 'startProject', templateId: pick.id }); setPick(null); }}>
-          Commits {money(pick.cost)} over ~{Math.round(pick.durationDays / 30)} months (≈ {money((pick.cost / pick.durationDays) * 30.4)}/month). Spending flows to construction (≈70%), industry and tech now; productivity and service benefits arrive at completion. If the treasury runs short, bonds are issued within your borrowing cap.
+          Commits {money(pick.cost)} at today’s construction prices over ~{Math.round(pick.durationDays / 30)} months (≈ {money((pick.cost / pick.durationDays) * 30.4)}/month) — more if construction prices rise. Once complete it costs ≈ {money(pick.cost * 0.03)}/year to maintain, and only ~60% of the spend counts as a public asset. Repeated gains in the same sector have diminishing returns. Spending flows to construction (≈70%), industry and tech now; productivity and service benefits arrive at completion. If the treasury runs short, bonds are issued within your borrowing cap.
         </ConfirmDialog>
       )}
       {cancel !== null && (
