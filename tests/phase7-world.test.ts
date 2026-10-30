@@ -27,8 +27,9 @@ describe('national accounts with resources, development spending and SOEs', () =
     const taxes = SECTOR_IDS.reduce((a, j) => a + Math.max(0, CAL.profit0[j]) * 0.18, 0) + 0.04 * 0.5 * CAL.Y0.prop + CAL.levyBase + CAL.hh.tax;
     expect(taxes * 365 + modelledResourceRevenue0() + otherPublicReceiptsMonthly(s) * 12).toBeCloseTo(380_816_996_000, 0);
     expect(s.fiscal.developmentAnnual).toBe(DEVELOPMENT_ANNUAL0);
-    // (operating 376.84bn + development 85bn − revenue 380.82bn) / GDP ≈ 4.0%
-    expect(s.fiscal.openingDeficit).toBeCloseTo((376_840_000_000 + 85e9 - 380_816_996_000) / NATIONAL_GDP, 6);
+    // operating 376.84bn + net development 81.5bn − revenue 380.82bn = RM77.5bn, the official 2027 overall balance
+    expect(376_840_000_000 + DEVELOPMENT_ANNUAL0 - 380_816_996_000).toBeCloseTo(77_523_004_000, -6);
+    expect(s.fiscal.openingDeficit).toBeCloseTo((376_840_000_000 + DEVELOPMENT_ANNUAL0 - 380_816_996_000) / NATIONAL_GDP, 6);
     expect(fuelSubsidyDaily(s) * 365).toBeCloseTo(FUEL_SUBSIDY0, -3);
   });
 
@@ -147,7 +148,7 @@ describe('commodities, subsidies and duties', () => {
   it('a wheat subsidy costs nothing at reference prices and shields food costs when wheat spikes', () => withoutEvents(() => {
     const calm = createGame(923), calmSubsidised = clone(calm);
     act(calmSubsidised, { type: 'queueCommodity', patch: { wheatSubsidy: 1 } });
-    const cheap = (s: GameState) => { s.world.cycles.wheat = -0.1; };
+    const cheap = (s: GameState) => { s.world.cycles.wheat = -0.1; s.world.cycles.rice = -0.2; };
     runHeadless(calm, 24 * 70, cheap); runHeadless(calmSubsidised, 24 * 70, cheap);
     expect(sum(calmSubsidised, 'subsidy')).toBe(sum(calm, 'subsidy')); // below reference: nothing to pay
     const spike = createGame(923), shielded = clone(spike);
@@ -166,6 +167,34 @@ describe('commodities, subsidies and duties', () => {
     expect(sum(boom, 'commodityDuty')).toBeGreaterThan(sum(base, 'commodityDuty'));
     expect(boom.trade.history.at(-1)!.exports).toBeGreaterThan(base.trade.history.at(-1)!.exports);
     expect(boom.reports.at(-1)!.resourceGdp!).toBeGreaterThan(base.reports.at(-1)!.resourceGdp!);
+  }));
+});
+
+describe('ten commodities', () => {
+  it('tracks ten world prices with history and links each to the economy', () => withoutEvents(() => {
+    const s = createGame(925);
+    expect(Object.keys(s.world.prices).sort()).toEqual(['aluminium', 'coal', 'copper', 'gas', 'oil', 'palm', 'rice', 'rubber', 'steel', 'wheat']);
+    runHeadless(s, 24 * 5);
+    for (const h of s.world.history.slice(-3)) for (const k of Object.keys(s.world.prices)) expect(h[k as keyof typeof h]).toBeGreaterThan(0);
+  }));
+
+  it('aluminium prices move Press Metal revenue; LNG moves PETRONAS revenue; coal moves power costs', () => withoutEvents(() => {
+    const base = createGame(926), up = clone(base);
+    const shock = (s: GameState) => { s.world.cycles.aluminium = Math.log(1.3); s.world.cycles.gas = Math.log(1.3); s.world.cycles.coal = Math.log(1.3); };
+    runUntil(base, 2027, 3, 1, 1);
+    runHeadless(up, base.clock.hour - up.clock.hour, shock);
+    expect(up.companies['MY:8869'].history.at(-1)!.revenue).toBeGreaterThan(base.companies['MY:8869'].history.at(-1)!.revenue * 1.15);
+    expect(up.soe.petronas.history.at(-1)!.revenue).toBeGreaterThan(base.soe.petronas.history.at(-1)!.revenue);
+    expect(importCost(up, 'util').user).toBeGreaterThan(importCost(base, 'util').user);
+  }));
+
+  it('the food subsidy covers rice as well as wheat', () => withoutEvents(() => {
+    const spike = createGame(927), shielded = clone(spike);
+    act(shielded, { type: 'queueCommodity', patch: { wheatSubsidy: 1 } });
+    const shock = (s: GameState) => { s.world.cycles.rice = Math.log(1.4); s.world.cycles.wheat = -0.2; };
+    runHeadless(spike, 24 * 70, shock); runHeadless(shielded, 24 * 70, shock);
+    expect(sum(shielded, 'subsidy')).toBeGreaterThan(sum(spike, 'subsidy'));
+    expect(importCost(shielded, 'cons').user).toBeLessThan(importCost(spike, 'cons').user);
   }));
 });
 
@@ -274,6 +303,34 @@ describe('saves', () => {
     expect(t.indicators).toEqual(s.indicators);
     expect(t.soe).toEqual(s.soe);
   }));
+
+  it('upgrades schema-6 saves to ten commodities and 60 securities without jumping the indices', () => {
+    const s = createGame(963);
+    runHeadless(s, 24 * 10);
+    const file = JSON.parse(serialize(s));
+    file.state.schemaVersion = 6;
+    const added = ['MY:0166', 'MY:0097', 'MY:0128', 'MY:5005', 'MY:3867', 'MY:0208', 'US:TSM', 'US:ASML', 'US:QCOM', 'US:INTC', 'US:MU', 'US:TXN', 'US:AMAT', 'US:LRCX', 'US:ARM', 'US:ORCL', 'US:CRM', 'US:ADBE', 'US:CSCO', 'US:IBM'];
+    for (const id of added) { delete file.state.companies[id]; delete file.state.market.quotes[id]; }
+    for (const c of ['gas', 'coal', 'rubber', 'rice', 'aluminium', 'copper']) { delete file.state.world.prices[c]; delete file.state.world.cycles[c]; for (const h of file.state.world.history) delete h[c]; }
+    delete file.state.world.rubberVolume;
+    delete file.state.world.lastRiceImports;
+    // Old index divisors match the 40-stock universe.
+    for (const ex of ['MY', 'US'] as const) {
+      const keep = Object.keys(file.state.companies).filter((id) => id.startsWith(`${ex}:`));
+      const cap = keep.reduce((a, id) => a + file.state.market.quotes[id].price * file.state.companies[id].shares, 0);
+      file.state.market.indices[ex].divisor = cap / s.market.indices[ex].value;
+    }
+    const t = deserialize(JSON.stringify(file));
+    expect(t.schemaVersion).toBe(SCHEMA_VERSION);
+    for (const id of added) expect(t.companies[id as keyof typeof t.companies]).toBeDefined();
+    expect(t.world.prices.rice).toBe(1);
+    expect(t.world.history.every((h) => h.copper === 1 || h.copper > 0)).toBe(true);
+    for (const ex of ['MY', 'US'] as const) {
+      const cap = Object.keys(t.companies).filter((id) => id.startsWith(`${ex}:`)).reduce((a, id) => a + t.market.quotes[id as keyof typeof t.market.quotes].price * t.companies[id as keyof typeof t.companies].shares, 0);
+      expect(cap / t.market.indices[ex].divisor).toBeCloseTo(s.market.indices[ex].value, 6);
+    }
+    runHeadless(t, 24 * 5);
+  });
 
   it('upgrades schema-5 national saves with these systems off, keeping the old calibration', () => {
     const s = createGame(961);

@@ -19,3 +19,17 @@ export const OFFICIAL_BASELINES = [
   { label: 'Pensions, allowances & gratuities', value: 44_000_000_000, period: '2027 estimate · T.14', source: OFFICIAL_SOURCES.expenditure },
   { label: 'Debt service reference', value: 61_013_000_000, period: '2027 estimate · T.13 · opening effective coupon calibrated to this', source: OFFICIAL_SOURCES.expenditure },
 ];
+
+/** Federal overall balance (deficit) as a share of GDP. MOF Fiscal Outlook 2027: 2021 from the minister's foreword,
+ * 2022 from Figure 1.3 labels, 2023–2027 from the federal government finance table. 2026 is the revised estimate and
+ * 2027 the budget estimate (both forecasts, not outturns). Pinned 31 Oct 2026. */
+export const OFFICIAL_FISCAL_OUTLOOK = 'https://belanjawan.mof.gov.my/pdf/belanjawan2027/hasil/tinjauan_fiskal_2027.pdf';
+export const OFFICIAL_DEFICIT: { year: number; deficit: number; kind: 'actual' | 'revised' | 'estimate' }[] = [
+  { year: 2021, deficit: 0.064, kind: 'actual' },
+  { year: 2022, deficit: 0.055, kind: 'actual' },
+  { year: 2023, deficit: 0.05, kind: 'actual' },
+  { year: 2024, deficit: 0.041, kind: 'actual' },
+  { year: 2025, deficit: 0.037, kind: 'actual' },
+  { year: 2026, deficit: 0.036, kind: 'revised' },
+  { year: 2027, deficit: 0.033, kind: 'estimate' },
+];

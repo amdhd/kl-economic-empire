@@ -14,13 +14,13 @@ const VERIFIED_MARKERS = [
 ].sort();
 
 describe('equity universe', () => {
-  it('has exactly 40 distinct securities: 20 MY + 20 US', () => {
-    expect(COMPANIES).toHaveLength(40);
-    expect(MY_COMPANIES).toHaveLength(20);
-    expect(US_COMPANIES).toHaveLength(20);
-    expect(new Set(COMPANIES.map((c) => c.id)).size).toBe(40);
-    expect(new Set(COMPANIES.map((c) => c.legalName)).size).toBe(40);
-    expect(Object.keys(COMPANY_BY_ID)).toHaveLength(40);
+  it('has exactly 60 distinct securities: 26 MY + 34 US', () => {
+    expect(COMPANIES).toHaveLength(60);
+    expect(MY_COMPANIES).toHaveLength(26);
+    expect(US_COMPANIES).toHaveLength(34);
+    expect(new Set(COMPANIES.map((c) => c.id)).size).toBe(60);
+    expect(new Set(COMPANIES.map((c) => c.legalName)).size).toBe(60);
+    expect(Object.keys(COMPANY_BY_ID)).toHaveLength(60);
   });
 
   it('uses normalised exchange-prefixed IDs and the right listing currency', () => {
@@ -40,10 +40,12 @@ describe('equity universe', () => {
 
   it('matches the spec seed universe (verified 2026-10-31, see docs/data-sources.md)', () => {
     expect(MY_COMPANIES.map((c) => c.code).sort()).toEqual(
-      ['1155', '1023', '1295', '5347', '4863', '6012', '6888', '5225', '5211', '3182', '4715', '5296', '4677', '6742', '8869', '5183', '6033', '4197', '6947', '5398'].sort(),
+      ['1155', '1023', '1295', '5347', '4863', '6012', '6888', '5225', '5211', '3182', '4715', '5296', '4677', '6742', '8869', '5183', '6033', '4197', '6947', '5398',
+        '0166', '0097', '0128', '5005', '3867', '0208'].sort(),
     );
     expect(US_COMPANIES.map((c) => c.code).sort()).toEqual(
-      ['NVDA', 'META', 'MSFT', 'AAPL', 'AMZN', 'GOOGL', 'AVGO', 'TSLA', 'JPM', 'V', 'MA', 'BRK.B', 'XOM', 'COST', 'WMT', 'PG', 'AMD', 'NFLX', 'UNH', 'PLTR'].sort(),
+      ['NVDA', 'META', 'MSFT', 'AAPL', 'AMZN', 'GOOGL', 'AVGO', 'TSLA', 'JPM', 'V', 'MA', 'BRK.B', 'XOM', 'COST', 'WMT', 'PG', 'AMD', 'NFLX', 'UNH', 'PLTR',
+        'TSM', 'ASML', 'QCOM', 'INTC', 'MU', 'TXN', 'AMAT', 'LRCX', 'ARM', 'ORCL', 'CRM', 'ADBE', 'CSCO', 'IBM'].sort(),
     );
   });
 

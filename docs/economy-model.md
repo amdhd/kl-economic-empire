@@ -573,3 +573,12 @@ The engine's demand multiplier is large: removing the RON95 ceiling lowers real 
 controlled run, and oil +50% by ~4.5% (model 1 gave ~5.6% before this change). Real-world estimates are several times
 smaller. The cause is the existing feedback between unemployment, confidence and the propensity to consume, not the new
 systems; it needs a whole-model recalibration against published multipliers.
+
+## Schema 7: ten commodities and 60 securities
+Prices: `p_c = exp(cycle_c + link_c + episodes_c)` with links coal `0.3 ln oil + g`, palm `0.4 ln oil + 0.3 g`, rubber
+`0.3 ln oil + 2g`, rice `0.1 ln oil`, wheat `0.25 ln oil`, steel `3g`, aluminium `0.2 ln oil + 2g`, copper `3g` (g = global
+cycle); LNG `= gasIndex × e^{cycle}`, gasIndex `+= (oil − gasIndex)/180`. Imported inputs are priced commodity by commodity
+(`COMMODITY_IMPORT`); utilities' energy index `= 1 + 0.15(oil−1) + 0.25(LNG−1) + 0.25(coal−1)`. Food subsidy
+`= σ × Σ_{wheat,rice} imports × FX × max(0, p − 1)`. Rubber VA `= 2.5bn × 0.7 × volume × price × FX`, 90% of its change
+to households. Company revenue `× (1 + Σ s_c (p_c − 1))` for commodity-priced producers (Press Metal: aluminium 0.8).
+Covered by `tests/phase7-world.test.ts` ("ten commodities", schema-6 migration).

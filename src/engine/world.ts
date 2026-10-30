@@ -28,9 +28,10 @@ export function initialWorld(seed: number, enabled: boolean): WorldState {
     // A separate stream (golden-ratio offset) keeps the existing seeded outcomes unchanged.
     rng: seedRng((seed ^ 0x9e3779b9) >>> 0),
     cycles,
-    prices: { oil: 1, palm: 1, wheat: 1, steel: 1 },
+    prices: Object.fromEntries(COMMODITY_IDS.map((c) => [c, 1])) as Record<CommodityId, number>,
     gasIndex: 1,
     palmVolume: 1,
+    rubberVolume: 1,
     episodes: [],
     episodeLog: [],
     nextId: 1,
@@ -41,6 +42,7 @@ export function initialWorld(seed: number, enabled: boolean): WorldState {
     importDutyShare: 0,
     history: [],
     lastWheatImports: 0,
+    lastRiceImports: 0,
     mtdPalmProfit: 0,
     mtd: { fuelSubsidy: 0, wheatSubsidy: 0, palmDuty: 0, steelDuty: 0, bilateralDuty: 0, resourceVa: 0 },
   };
@@ -56,10 +58,11 @@ export const WORLD_SEED_DAYS = 180;
  */
 export function seedWorldHistory(w: WorldState, seed: number, startDay: number): void {
   const rng = seedRng((seed ^ 0x51ed270b) >>> 0);
-  const path: Record<CommodityId, number[]> = { oil: [], palm: [], wheat: [], steel: [] };
+  const path = {} as Record<CommodityId, number[]>;
   for (const c of COMMODITY_IDS) {
     let x = 0;
     const sd = c === 'oil' ? 0.012 : COMMODITIES[c].sd;
+    path[c] = [];
     for (let k = 0; k < WORLD_SEED_DAYS; k++) {
       path[c].push(Math.exp(x));
       x = 0.995 * x + sd * randnClipped(rng);
@@ -67,7 +70,8 @@ export function seedWorldHistory(w: WorldState, seed: number, startDay: number):
     path[c].reverse();
   }
   w.history = Array.from({ length: WORLD_SEED_DAYS }, (_, k) => ({
-    t: startDay - WORLD_SEED_DAYS + k, oil: path.oil[k], palm: path.palm[k], wheat: path.wheat[k], steel: path.steel[k],
+    t: startDay - WORLD_SEED_DAYS + k,
+    ...(Object.fromEntries(COMMODITY_IDS.map((c) => [c, path[c][k]])) as Record<CommodityId, number>),
   }));
 }
 
@@ -88,24 +92,28 @@ export function updateWorld(s: GameState, day: number): void {
   }
   for (const p of PARTNER_IDS) w.cycles[`p_${p}`] = 0.985 * w.cycles[`p_${p}`] + 0.0025 * randnClipped(w.rng);
 
-  let palmVol = 0;
-  const shock: Record<CommodityId, number> = { oil: 0, palm: 0, wheat: 0, steel: 0 };
+  const volume: Partial<Record<CommodityId, number>> = {};
+  const shock = Object.fromEntries(COMMODITY_IDS.map((c) => [c, 0])) as Record<CommodityId, number>;
   for (const ep of w.episodes) {
     const k = episodeStrength(ep.startDay, ep.endDay, day);
     shock[ep.commodity] += ep.shock * k;
-    palmVol += ep.volume * k;
+    volume[ep.commodity] = (volume[ep.commodity] ?? 0) + ep.volume * k;
   }
-  const globalGap = e.cycles.global ?? 0;
+  const gg = e.cycles.global ?? 0;
   const lnOil = Math.log(Math.max(e.oil, 0.05));
-  w.prices.oil = e.oil;
-  // Palm tracks crude through biodiesel; steel is a global-industry cyclical; wheat carries fuel and fertiliser costs.
-  w.prices.palm = Math.exp(w.cycles.palm + 0.4 * lnOil + 0.3 * globalGap + shock.palm);
-  w.prices.wheat = Math.exp(w.cycles.wheat + 0.25 * lnOil + shock.wheat);
-  w.prices.steel = Math.exp(w.cycles.steel + 3 * globalGap + shock.steel);
-  w.palmVolume = Math.exp(palmVol);
-  // Long-term LNG contracts reprice with a lag of roughly six months to oil.
+  // Cross-links: biofuels tie palm to crude; metals and rubber follow the global industrial cycle;
+  // food and coal carry fuel and freight costs. Long-term LNG contracts reprice with a ~6-month lag to oil.
+  const links: Record<Exclude<CommodityId, 'oil' | 'gas'>, number> = {
+    coal: 0.3 * lnOil + gg, palm: 0.4 * lnOil + 0.3 * gg, rubber: 0.3 * lnOil + 2 * gg, rice: 0.1 * lnOil,
+    wheat: 0.25 * lnOil, steel: 3 * gg, aluminium: 0.2 * lnOil + 2 * gg, copper: 3 * gg,
+  };
   w.gasIndex += (e.oil - w.gasIndex) / 180;
-  pushBounded(w.history, { t: day, oil: w.prices.oil, palm: w.prices.palm, wheat: w.prices.wheat, steel: w.prices.steel }, 800);
+  w.prices.oil = e.oil;
+  w.prices.gas = w.gasIndex * Math.exp(w.cycles.gas + shock.gas);
+  for (const [c, link] of Object.entries(links) as [Exclude<CommodityId, 'oil' | 'gas'>, number][]) w.prices[c] = Math.exp(w.cycles[c] + link + shock[c]);
+  w.palmVolume = Math.exp(volume.palm ?? 0);
+  w.rubberVolume = Math.exp(volume.rubber ?? 0);
+  pushBounded(w.history, { t: day, ...w.prices }, 800);
 
   updatePartners(s, day);
 }
@@ -233,16 +241,21 @@ export function fuelSubsidyDaily(s: GameState): number {
   return fuelSubsidyAnnual(fuelMarketPrice(s), s.world.policy.fuelCeiling, s.world.policy.fuelEligible) / 365;
 }
 
-/** Wheat price paid by importers after the subsidy (index). Subsidy covers part of any rise above reference. */
-export function wheatUserPrice(s: GameState): number {
-  const p = s.world.prices.wheat;
+/** Food import price paid by importers after the subsidy (index). It covers part of any rise above reference. */
+export function foodUserPrice(s: GameState, c: 'wheat' | 'rice'): number {
+  const p = s.world.prices[c];
   return p > 1 ? 1 + (1 - s.world.policy.wheatSubsidy) * (p - 1) : p;
 }
+/** Back-compatible name for the wheat leg. */
+export const wheatUserPrice = (s: GameState) => foodUserPrice(s, 'wheat');
 
+/** Food subsidy owed for yesterday's wheat and rice imports (MYR/day). */
 export function wheatSubsidyDaily(s: GameState): number {
   if (!nationalV2(s) || s.world.policy.wheatSubsidy <= 0) return 0;
+  const w = s.world;
   const fxf = s.external.myrPerUsd / baselineFor(s).myrPerUsd;
-  return s.world.lastWheatImports * fxf * Math.max(0, s.world.prices.wheat - 1) * s.world.policy.wheatSubsidy;
+  const owed = (qty: number, p: number) => qty * fxf * Math.max(0, p - 1);
+  return (owed(w.lastWheatImports, w.prices.wheat) + owed(w.lastRiceImports, w.prices.rice)) * w.policy.wheatSubsidy;
 }
 
 export function validateCommodityPolicy(p: Partial<CommodityPolicy>): string | null {

@@ -68,7 +68,9 @@ export interface CompanySeed {
   vol: number; // annualised idiosyncratic volatility
   rateSensitivity: number; // valuation duration multiplier
   /** Share of operating costs priced off world commodity indices (model 2; ASSUMPTION). */
-  commodityCost?: Partial<Record<'wheat' | 'steel' | 'palm', number>>;
+  commodityCost?: Partial<Record<CommodityId, number>>;
+  /** Share of revenue priced off a world commodity index (model 2; ASSUMPTION). */
+  commodityRevenue?: Partial<Record<CommodityId, number>>;
   geo?: GeoPoint;
 }
 
@@ -582,13 +584,13 @@ export interface BaselineSnapshot {
 export type ScenarioId = 'balanced' | 'recession';
 
 // ---------------------------------------------------------------- world: commodities & partners
-export type CommodityId = 'oil' | 'palm' | 'wheat' | 'steel';
+export type CommodityId = 'oil' | 'gas' | 'coal' | 'palm' | 'rubber' | 'rice' | 'wheat' | 'steel' | 'aluminium' | 'copper';
 export type PartnerId = 'SG' | 'CN' | 'US' | 'EU' | 'JP' | 'ASEAN' | 'IN' | 'ROW';
 
 export interface CommodityPolicy {
   fuelCeiling: number; // RM per litre for eligible buyers
   fuelEligible: number; // share of volume eligible for the ceiling price (0..1)
-  wheatSubsidy: number; // share of wheat import cost above the reference price paid by the treasury (0..1)
+  wheatSubsidy: number; // share of wheat and rice import cost above reference paid by the treasury (0..1)
   steelSafeguard: number; // safeguard duty on imported steel (0..0.5)
   palmExportDuty: number; // export duty on dutiable crude palm oil (0..0.2)
 }
@@ -621,6 +623,7 @@ export interface WorldState {
   prices: Record<CommodityId, number>; // index, 1 = reference
   gasIndex: number; // slow-moving gas/LNG price index (lags oil)
   palmVolume: number;
+  rubberVolume: number;
   episodes: CommodityEpisode[];
   episodeLog: CommodityEpisode[];
   nextId: number;
@@ -630,9 +633,10 @@ export interface WorldState {
   exportAccess: number;
   importPriceIndex: number; // CES user-price index of non-commodity imports across partners
   importDutyShare: number; // share of that import bill collected as bilateral duty
-  history: { t: number; oil: number; palm: number; wheat: number; steel: number }[];
+  history: ({ t: number } & Record<CommodityId, number>)[];
   /** Quantities from the last settled day, used to pay next day's subsidy obligations. */
   lastWheatImports: number; // MYR of wheat imports at reference prices per day
+  lastRiceImports: number;
   mtdPalmProfit: number; // plantation operating profit this month, taxed at close
   mtd: { fuelSubsidy: number; wheatSubsidy: number; palmDuty: number; steelDuty: number; bilateralDuty: number; resourceVa: number };
 }

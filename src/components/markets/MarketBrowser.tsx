@@ -1,3 +1,5 @@
+import { MY_COMPANIES } from '../../data/companies.my';
+import { US_COMPANIES } from '../../data/companies.us';
 import { useMemo, useState } from 'react';
 import { SECTOR_IDS, SECTORS } from '../../data/economic-baseline';
 import { filterRows, fxView, indexSeries, indexView, securityRows, type SortKey } from '../../engine/market-view';
@@ -9,8 +11,8 @@ import { PriceChart, Sparkline } from './PriceChart';
 export type MarketTab = 'MY' | 'US' | 'FX';
 
 const TABS: { id: MarketTab; label: string }[] = [
-  { id: 'MY', label: 'Malaysia 20' },
-  { id: 'US', label: 'US 20' },
+  { id: 'MY', label: `Malaysia ${MY_COMPANIES.length}` },
+  { id: 'US', label: `US ${US_COMPANIES.length}` },
   { id: 'FX', label: 'FX' },
 ];
 

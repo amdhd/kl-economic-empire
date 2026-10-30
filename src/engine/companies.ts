@@ -5,7 +5,7 @@ import { baselineFor, nationalV2 } from '../data/economic-baseline';
 // are a sample inside the economy, not an addition to it: government taxes are computed on sector
 // aggregates and company-level KL tax is informational. See docs/decisions.md D-006.
 import { COMPANIES, COMPANY_BY_ID } from '../data/companies';
-import type { CompanySeed, CompanyState, GameState, MonthlyFinancials, TickerId } from '../types/game';
+import type { CommodityId, CompanySeed, CompanyState, GameState, MonthlyFinancials, TickerId } from '../types/game';
 import { companyEventTargets } from './events';
 import { news } from './util';
 
@@ -72,7 +72,10 @@ export function dailyCompanies(s: GameState, day = s.scheduler.lastDay): void {
     const access = v2 && c.exchange === 'MY' ? s.world.exportAccess : 1;
     const mix = c.exchange === 'MY' ? e.kl * kl + e.my * my + e.global * gl * fxf * access : (e.kl * kl + e.my * my) / fxf + e.global * gl;
     const realVol = (e.kl * (s.sectors[c.sector].output / CAL.Y0[c.sector]) + e.my * (s.baseline.profile === 'malaysia' ? s.sectors[c.sector].output / CAL.Y0[c.sector] : s.external.myDemand) + e.global * s.external.drivers[c.driver]) * st.revenueShock;
-    const revenue = (c.revenue / 365) * mix * st.revenueShock;
+    // Producers' realised prices follow world commodity indices (e.g. aluminium for a smelter), model 2.
+    let priceMix = 1;
+    if (v2 && c.commodityRevenue) for (const [k, share] of Object.entries(c.commodityRevenue) as [CommodityId, number][]) priceMix += share * (s.world.prices[k] - 1);
+    const revenue = (c.revenue / 365) * mix * st.revenueShock * priceMix;
     const opex0 = (c.revenue * (1 - c.ebitdaMargin)) / 365;
     const scale = FIXED_COST_SHARE + (1 - FIXED_COST_SHARE) * realVol;
     const labIdx = c.exchange === 'MY' ? s.households.wageIndex : s.external.usPrice;
@@ -82,7 +85,7 @@ export function dailyCompanies(s: GameState, day = s.scheduler.lastDay): void {
     // Commodity inputs (model 2) are part of "other" costs but priced off world indices, in listing currency.
     let commodityShare = 0;
     let commodityCost = 0;
-    if (v2 && c.commodityCost) for (const [k, share] of Object.entries(c.commodityCost) as ['wheat' | 'steel' | 'palm', number][]) {
+    if (v2 && c.commodityCost) for (const [k, share] of Object.entries(c.commodityCost) as [CommodityId, number][]) {
       commodityShare += share;
       commodityCost += share * s.world.prices[k] * (c.exchange === 'MY' ? fxf : 1);
     }
