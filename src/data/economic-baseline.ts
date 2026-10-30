@@ -104,6 +104,8 @@ export const BASELINE = {
   trendProductivity: 0.015, // per year
   naturalUnemployment: 0.035,
   inflationTarget: 0.02,
+  approval: 62,
+  serviceQuality: 0.62,
   transferShareToHouseholdsOfProfit: 0.35,
 };
 

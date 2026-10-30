@@ -1,12 +1,60 @@
 // Satisfaction, approval and campaign score. All weights/thresholds are transparent constants.
 import { BASELINE } from '../data/economic-baseline';
-import type { GameState, ScoreBreakdown } from '../types/game';
+import { EVENT_BY_ID } from '../data/events';
+import type { GameState, MonthlyReport, ScoreBreakdown } from '../types/game';
 import { debtMYR, treasuryMYR } from './government';
 import { navMYR } from './sovereign-fund';
+import { daysInMonth, klDay } from './time';
 import { clamp } from './util';
 
 export const SCORE_WEIGHTS = { growth: 0.3, wealth: 0.3, satisfaction: 0.25, stability: 0.15 };
 export const VICTORY = { score: 75, approval: 60 }; // recalibrated from seeded replays (docs/game-balance.md)
+export const GROWTH_TARGET = 0.035;
+export const MAX_EXTERNAL_ADJUSTMENT = 0.01;
+
+/** A duration-weighted run rate, so February and a 31-day month measure the same steady output. */
+export function annualRealOutput(reports: MonthlyReport[]): number {
+  const days = reports.reduce((sum, r) => sum + daysInMonth(Math.floor(r.monthKey / 12), r.monthKey % 12 + 1), 0);
+  return days > 0 ? reports.reduce((sum, r) => sum + r.realGdp, 0) * 365 / days : 0;
+}
+
+/** Bounded scoring estimate from elapsed recorded shocks, not a counterfactual economic forecast. */
+export function externalGrowthAdjustment(s: GameState): number {
+  const start = klDay(s.clock.startHour * 60), end = s.scheduler.lastDay;
+  const days = end - start;
+  if (days <= 0) return 0;
+  let exposure = 0;
+  for (const event of s.events.log) {
+    const template = EVENT_BY_ID[event.templateId];
+    if (!template || template.company) continue;
+    const lo = Math.max(start, event.startDay), hi = Math.min(end, event.endDay);
+    if (hi <= lo) continue;
+    const m = template.mods;
+    const pressure = 0.35 * Math.log(m.myDemand ?? 1) + 0.25 * Math.log(m.globalDemand ?? 1)
+      + 0.15 * Math.log(m.tourism ?? 1) + 0.05 * Math.log(m.tech ?? 1)
+      + 0.1 * Math.log(m.creditWillingness ?? 1) - 0.1 * Math.log(m.oil ?? 1);
+    let strengthDays = Math.max(0, hi - Math.max(lo, event.startDay + 7));
+    for (let day = lo; day < Math.min(hi, event.startDay + 7); day++) strengthDays += (day - event.startDay + 1) / 7;
+    exposure += pressure * strengthDays * event.magnitude;
+  }
+  return clamp(0.25 * exposure / days, -MAX_EXTERNAL_ADJUSTMENT, MAX_EXTERNAL_ADJUSTMENT);
+}
+
+/** Explainable inputs shared by the score and its UI, all derived without RNG or state changes. */
+export function scoreDrivers(s: GameState) {
+  const reports = s.reports;
+  const realOutput = reports.length ? annualRealOutput(reports.slice(-3)) : s.baseline.realGdpAnnual;
+  const years = Math.max(reports.length / 12, 0.25);
+  const realGrowth = Math.pow(realOutput / s.baseline.realGdpAnnual, 1 / years) - 1;
+  const externalAdjustment = externalGrowthAdjustment(s);
+  const realWealthChange = publicNetWorth(s) / (s.indicators.cpi / 100) - s.baseline.publicNetWorth;
+  const income = reports.at(-1)?.realDisposablePerCapita ?? s.baseline.realDisposablePerCapita;
+  const wealthCreditFactor = clamp(Math.min(income / s.baseline.realDisposablePerCapita,
+    realOutput / s.baseline.realGdpAnnual, s.government.serviceQuality / BASELINE.serviceQuality), 0, 1);
+  const rawWealthScore = clamp(50 + 400 * realWealthChange / s.baseline.nominalGdpAnnual, 0, 100);
+  return { realGrowth, growthTarget: GROWTH_TARGET + externalAdjustment, externalAdjustment, realWealthChange,
+    wealthCreditFactor, rawWealthScore };
+}
 
 export function publicNetWorth(s: GameState): number {
   return treasuryMYR(s.government) + navMYR(s) + s.government.publicAssets - debtMYR(s.government) - s.government.unpaidObligations;
@@ -38,21 +86,17 @@ export function updateSatisfaction(s: GameState, realDispPerCap: number, rentBur
 /** Campaign score preview (0–100) from cumulative performance since the start. */
 export function computeScore(s: GameState): ScoreBreakdown {
   const ind = s.indicators;
-  const base = s.baseline;
   const reports = s.reports;
-  const months = Math.max(1, reports.length);
   const caps: string[] = [];
+  const drivers = scoreDrivers(s);
 
   // Growth: annualised real GDP growth vs baseline run-rate, plus employment vs baseline.
-  const lastReal = reports.length ? reports.slice(-3).reduce((a, r) => a + r.realGdp, 0) / Math.min(3, reports.length) * 12 : base.realGdpAnnual;
-  const years = Math.max(months / 12, 0.25);
-  const g = Math.pow(lastReal / base.realGdpAnnual, 1 / years) - 1;
   const u = unemploymentRate(s);
-  const growth = clamp(50 + (g - 0.035) * 1000 - (u - BASELINE.unemployment) * 400, 0, 100);
+  const growth = clamp(50 + (drivers.realGrowth - drivers.growthTarget) * 1000 - (u - BASELINE.unemployment) * 400, 0, 100);
 
   // Public net wealth change, relative to baseline GDP.
-  const dNw = (publicNetWorth(s) - base.publicNetWorth) / base.nominalGdpAnnual;
-  const wealth = clamp(50 + 400 * dNw, 0, 100);
+  const wealth = drivers.rawWealthScore <= 50 ? drivers.rawWealthScore
+    : 50 + (drivers.rawWealthScore - 50) * drivers.wealthCreditFactor;
 
   // Satisfaction: average approval over the last 6 months (current if fewer).
   const recent = reports.slice(-6);
@@ -80,7 +124,7 @@ export function computeScore(s: GameState): ScoreBreakdown {
 }
 
 export function outcomeLabel(s: GameState): { won: boolean; text: string } {
-  const sc = s.indicators.score;
+  const sc = computeScore(s);
   const won = sc.total >= VICTORY.score && s.indicators.approval >= VICTORY.approval && !s.government.insolvent;
   if (won) return { won, text: 'Economic Miracle — victory conditions met' };
   if (sc.total >= 65) return { won, text: 'Solid presidency — short of the victory threshold' };

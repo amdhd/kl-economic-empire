@@ -235,6 +235,8 @@ function endCampaign(s: GameState): void {
   if (s.scheduler.campaignEnded) return;
   s.scheduler.campaignEnded = true;
   s.clock.paused = true;
+  s.clock.subHourMs = 0;
+  s.indicators.publicNetWorth = publicNetWorth(s);
   s.indicators.score = computeScore(s);
   const o = outcomeLabel(s);
   news(s, { kind: 'system', tone: o.won ? 'good' : 'neutral', title: `Campaign complete — score ${s.indicators.score.total.toFixed(0)}/100`, body: o.text });

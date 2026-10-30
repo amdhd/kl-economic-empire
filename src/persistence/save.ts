@@ -1,6 +1,8 @@
 // Versioned save format. Saving never mutates game state or advances the clock.
 import { assertSafeMinor } from '../engine/util';
 import { SCHEMA_VERSION } from '../engine/game';
+import { COMPANIES } from '../data/companies';
+import { SECTOR_IDS } from '../data/economic-baseline';
 import type { GameState } from '../types/game';
 
 export interface SaveFile {
@@ -92,7 +94,30 @@ export function deserialize(json: string): GameState {
   for (const key of ['clock', 'scheduler', 'rng', 'government', 'fund', 'market', 'sectors', 'households', 'bank', 'external'] as const) {
     if (!s[key]) throw new Error(`Corrupt save: missing ${key}`);
   }
-  if (!(s.clock.subHourMs >= 0 && s.clock.subHourMs < 3_600_000)) throw new Error('Corrupt save: clock out of range');
+  const positive = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value > 0;
+  const nonnegative = (value: unknown): value is number => value === 0 || positive(value);
+  if (!nonnegative(s.clock.subHourMs) || s.clock.subHourMs >= 3_600_000) throw new Error('Corrupt save: clock out of range');
+  if (![s.clock.hour, s.clock.startHour, s.clock.endHour].every(Number.isSafeInteger)
+    || s.clock.endHour <= s.clock.startHour || s.clock.hour < s.clock.startHour || s.clock.hour > s.clock.endHour
+    || ![1, 2, 3].includes(s.clock.speed) || typeof s.clock.paused !== 'boolean') throw new Error('Corrupt save: invalid clock');
+  if (typeof s.scheduler.campaignEnded !== 'boolean' || (s.scheduler.campaignEnded && s.clock.hour !== s.clock.endHour)
+    || ![s.scheduler.lastDay, s.scheduler.lastWeekDay, s.scheduler.lastMonthKey, s.scheduler.ticks].every(Number.isSafeInteger)) throw new Error('Corrupt save: invalid scheduler');
+  if (!['a', 'b', 'c', 'd'].every((k) => {
+    const word = s.rng[k as keyof typeof s.rng];
+    return Number.isInteger(word) && word >= -2147483648 && word <= 4294967295;
+  })) throw new Error('Corrupt save: invalid RNG');
+  if (![s.reports, s.daily, s.news, s.actions, s.policyLog, s.events?.active, s.events?.log].every(Array.isArray)) throw new Error('Corrupt save: missing history');
+  if (!positive(s.indicators?.cpi) || !positive(s.baseline?.realGdpAnnual) || !positive(s.baseline.nominalGdpAnnual)
+    || !positive(s.households.population) || !positive(s.households.laborForce) || !positive(s.households.wageIndex)) throw new Error('Corrupt save: invalid economy');
+  for (const j of SECTOR_IDS) {
+    const sector = s.sectors[j];
+    if (!sector || sector.id !== j || !positive(sector.price) || !positive(sector.capital) || !positive(sector.capacity)
+      || !positive(sector.productivity) || !nonnegative(sector.employment) || !Array.isArray(sector.pipeline)
+      || sector.pipeline.length !== 6 || sector.pipeline.some((v) => !nonnegative(v))) throw new Error('Corrupt save: invalid sector');
+  }
+  for (const company of COMPANIES) {
+    if (!s.companies?.[company.id] || !s.market.quotes?.[company.id] || !Array.isArray(s.companies[company.id].history)) throw new Error('Corrupt save: missing security');
+  }
   if (s.fund.myrCash < 0 || s.fund.usdCash < 0) throw new Error('Corrupt save: negative fund cash');
   for (const n of [s.fund.myrCash, s.fund.usdCash, s.government.treasury, s.government.debt, ...Object.values(s.fund.realized), ...Object.values(s.fund.dividends), s.fund.realizedMYR]) assertSafeMinor(n);
   if (s.government.treasury < 0 || s.government.debt < 0) throw new Error('Corrupt save: negative treasury or debt');
@@ -100,13 +125,14 @@ export function deserialize(json: string): GameState {
     if (!s.companies[id as keyof typeof s.companies] || !Number.isSafeInteger(p.units) || p.units <= 0 || p.costMinor < 0 || p.costMYR < 0) throw new Error('Corrupt save: invalid position');
     for (const n of [p.costMinor, p.costMYR, p.realizedMinor, p.dividendsMinor]) assertSafeMinor(n);
   }
-  if (!(s.external.myrPerUsd > 0)) throw new Error('Corrupt save: invalid FX rate');
+  if (!positive(s.external.myrPerUsd)) throw new Error('Corrupt save: invalid FX rate');
   for (const [id, quote] of Object.entries(s.market.quotes)) {
-    if (!s.companies[id as keyof typeof s.companies] || !(quote.price > 0)) throw new Error('Corrupt save: invalid quote');
+    if (!s.companies[id as keyof typeof s.companies] || !positive(quote.price)) throw new Error('Corrupt save: invalid quote');
   }
   for (const o of s.fund.orders) {
     if (o.status === 'queued' && (!s.companies[o.ticker] || !Number.isSafeInteger(o.units) || o.units <= 0 || !['buy', 'sell'].includes(o.side))) throw new Error('Corrupt save: invalid pending order');
   }
+  if (s.scheduler.campaignEnded) s.clock.subHourMs = 0; // correct legacy end-screen overshoot, without accrual
   s.clock.paused = true; // always resume paused
   return s;
 }

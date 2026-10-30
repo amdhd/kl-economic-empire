@@ -24,6 +24,8 @@ npm run dev        # http://localhost:5173
 | `npm test` | Vitest: clock, calendars, orders, accounting invariants, causal chains, 24-month campaign suite |
 | `npm run e2e` | Playwright browser tests (first time: `npx playwright install chromium`). `E2E_PORT=5174 npm run e2e` runs a separate server so parallel worktrees don't test each other |
 | `npm run lint` / `npm run format` | ESLint / Prettier |
+| `npm run balance` | Dev-only multi-seed strategy comparison; JSON in `artifacts/balance.json`. Optional `-- --seeds 401,402 --output artifacts/check.json` |
+| `npm run profile` | Dev-only engine timings plus isolated 12-second real 3× Chromium sample across a month close; port 5176, results in `artifacts/` |
 
 No backend, accounts or paid APIs. The map uses free **OpenFreeMap** vector tiles (needs internet; the simulation
 keeps running offline and the map shows a fallback message).
@@ -51,3 +53,9 @@ tests/           Vitest suites        e2e/  Playwright specs        docs/  desig
 
 See `PROJECT_SPEC.md` (source of truth), `docs/decisions.md`, `docs/economy-model.md`, `docs/game-balance.md`
 and `docs/data-sources.md`.
+
+The campaign report explains calendar-adjusted growth, a small capped external-shock adjustment, sustainable real
+public wealth, cumulative fiscal flows and fund gain excluding transfers. Human validation of the 75-point victory
+bar is pending; see `docs/playtesting.md`. Browser profiling includes hosted-map/rendering costs, so results depend
+on the machine and network; measured results are in `docs/performance.md`. Neither developer script adds time-skip
+controls to the player UI.

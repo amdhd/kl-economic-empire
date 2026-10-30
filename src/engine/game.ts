@@ -77,7 +77,7 @@ export function createGame(seed = 20270101, scenario: ScenarioId = 'balanced'): 
       unpaidObligations: 0, daysInArrears: 0,
       policies: { tax: { ...BASE_TAX }, budget: { ...BASE_BUDGET }, borrowing: { cashBufferMonths: 1, maxDebtToGdp: 0.45 } },
       pending: [], projects: [], nextId: 1, mtd: emptyFlows(), accruedCorporateTax: 0, publicAssets: BASELINE.publicAssets,
-      bondYield: BASELINE.mgs10 + 0.004, creditRating: 9, marketAccess: true, serviceQuality: 0.62, insolvent: false,
+      bondYield: BASELINE.mgs10 + 0.004, creditRating: 9, marketAccess: true, serviceQuality: BASELINE.serviceQuality, insolvent: false,
       resilience: 0, tourismBoost: 0, housingFactor: 1, serviceBoost: 0, mtdArrearsDays: 0, pendingEmergency: 0,
     },
     sectors,
@@ -97,7 +97,7 @@ export function createGame(seed = 20270101, scenario: ScenarioId = 'balanced'): 
     events: { active: [], nextId: 1, log: [] },
     indicators: {
       nominalGdpAnnual: gdpAnnual, realGdpAnnual: gdpAnnual, realGrowthYoY: 0, cpi: 100, inflationYoY: 0.02, inflationMoM: 0,
-      unemployment: 1 - employed / BASELINE.laborForce, approval: 62,
+      unemployment: 1 - employed / BASELINE.laborForce, approval: BASELINE.approval,
       satisfaction: { employment: 80, income: 62, affordability: 66, services: 62, trust: 70, stability: 85 },
       debtToGdp: BASELINE.debt / gdpAnnual, deficitToGdp: 0, publicNetWorth: 0, gini: 0.4,
       score: { growth: 50, wealth: 50, satisfaction: 62, stability: 80, total: 0, caps: [] },

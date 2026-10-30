@@ -119,3 +119,25 @@ correct event-period settlement and fiscal arrears; expose event causes and life
   Add causal and accounting coverage for credit stress, geographical tax/earnings separation, FX, rates, market
   response and fiscal failure. Preserve the existing fictional calibrations and defer score/threshold tuning and
   optional map overlays to later work.
+
+## Phase 6 — campaign, calibration and polish
+
+Plan: correct calendar-based scoring and true opening/closing comparisons; add transparent sustainability and
+bounded external-condition adjustments; run shared strategies across multiple seeds; finish the term report,
+modal/keyboard and save checks; profile browser play at 3×; verify and commit.
+
+- **D-P6-01 Score calibration.** Annualise the last three months' real GDP using their actual total days. Adjust
+  the 3.5% growth benchmark by a symmetric, capped ±1 percentage point estimate from *elapsed* recorded macro
+  events, never future exposure or player actions. This only partly cushions external shocks; it is not a
+  counterfactual economy. Deflate public net wealth by CPI. Additional wealth credit above 50 is scaled by the
+  weakest of real disposable income, real output and service quality relative to their opening levels (0–100%).
+  Genuine losses keep their full penalty. Preserve component weights, hard failure caps and the 75/60 victory
+  gate pending human playtesting; do not claim automated replay as human validation. No saved fields change.
+- **D-P6-02 Term report.** Opening means campaign creation, not the first monthly close. Show actual calendar
+  run rates, transfer-adjusted fund gain, cumulative fiscal flows, score explanations and inspectable full retained
+  policy/event history. Reset visual fractional time at the exact campaign boundary. Existing save schema 3 stays
+  valid; imported historical scores retain their prior calibration while current previews use the new formula.
+- **D-P6-03 Validation/tooling.** Share scripted strategies between campaign tests and a Node/Vite command-line
+  balance runner. Both remain outside player controls. Profile real 3× browser play and tick/serialization costs
+  with explicit machine/sample caveats. Modal help uses the deliberation-pause preference; speed shortcuts cannot
+  resume a paused deliberation dialog. Validate corrupt saves before they can restore an unusable clock or economy.

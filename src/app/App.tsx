@@ -146,6 +146,9 @@ function HelpModal() {
         </ul>
         <div className="mb-1 mt-3 font-semibold text-white">Accounting rules</div>
         <p>Trades swap cash for shares (only costs reduce NAV). Bonds bring cash and debt. Treasury⇄fund transfers are not revenue. GDP is value added, so share trading never moves it. Taxes start the next month; projects pay off on completion.</p>
+        <div className="mb-1 mt-3 font-semibold text-white">Campaign score</div>
+        <p>Growth uses actual calendar days and a small external-shock adjustment. Wealth is CPI-adjusted; gains earn less credit when real income, output or services fall. Open Objectives for the calculation and final fiscal report. Victory needs 75 points, 60 approval and solvency; the threshold still needs human playtesting.</p>
+        <p className="mt-2 text-[11px] text-amber-200">{useGame.getState().pauseOnDialogs ? 'Clock paused while help is open.' : 'Clock continues: deliberation pause is disabled in Save / Load.'} Speed shortcuts are disabled in dialogs.</p>
         <button className="btn mt-4" onClick={() => setShowHelp(false)}>Close</button>
       </div>
     </div>

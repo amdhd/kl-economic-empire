@@ -191,6 +191,73 @@ Validation (2026-10-31): strict production build, ESLint, 108 unit/invariant/cam
 Playwright suite pass. The final Phase 5 UI additions also pass their two targeted browser tests. Event history
 and valuation details were visually inspected in an isolated no-save browser tab.
 
+## Phase 6 — campaign scoring and term report
+
+Scoring stays 30% growth, 30% public wealth, 25% satisfaction and 15% stability. The victory gate remains 75
+points, approval ≥60 and solvency. Insolvency caps the total at 30; unemployment >12% or approval <25 caps it at
+40. The same pure calculation drives the live HUD/objectives preview and the final result. Historical monthly
+scores in existing saves keep their prior calibration; newly calculated scores use these rules. No saved fields
+change, so schema 3 and the existing migrations remain supported.
+
+### Growth and external conditions
+
+For the last up to three closed months, `realRunRate = Σ realGDP × 365 / Σ calendarDays` (including leap years).
+Annualised growth since opening is `(realRunRate / openingRealRunRate)^(1 / max(closedMonths/12, 0.25)) − 1`.
+This fixes month-length bias from multiplying every month by 12. Growth points remain
+`clamp(50 + 1000 × (growth − benchmark) − 400 × (unemployment − openingUnemployment), 0, 100)`.
+
+The benchmark is 3.5% plus a bounded external-condition estimate. For each retained macro event, define:
+
+`pressure = .35 ln(MY-demand modifier) + .25 ln(global-demand modifier) + .15 ln(tourism modifier)
+          + .05 ln(technology modifier) + .10 ln(credit-willingness modifier) − .10 ln(oil modifier)`.
+
+Missing modifiers are 1. Sum `pressure × magnitude × rampStrength` over **elapsed** overlapping KL days, using
+the existing seven-day ramp, then divide by elapsed campaign days and multiply by .25. Clamp the resulting
+benchmark adjustment to ±0.01 (one annual percentage point). Future event duration has no effect until elapsed.
+Company-specific events, FX, stock returns and player commands do not enter the adjustment. Tailwinds raise
+the target and headwinds lower it. This can change at most 10 growth-component points (3 total points) relative
+to the unadjusted benchmark. It only partly cushions external shocks; it is not a replayed counterfactual economy.
+It uses the bounded 200-event retained history, and cannot recover events missing from legacy saves. Persistent
+second-order damage and shocks without a weighted modifier are not fully compensated.
+
+### Sustainable real public wealth
+
+`realWealthChange = (treasury + fundNAV + publicAssets − debt − arrears) / (CPI/100) − openingNetWealth`.
+`rawWealthPoints = clamp(50 + 400 × realWealthChange / openingNominalGDP, 0, 100)`.
+
+Compute `credit = clamp(min(latestRealDisposableIncome/openingIncome, realRunRate/openingRealRunRate,
+serviceQuality/openingServiceQuality), 0, 1)`. If raw points exceed 50, award `50 + (raw−50) × credit`; otherwise
+keep raw points. Before the first monthly report, income and output use their opening levels. This reduces extra
+wealth credit from taxes or austerity when living standards or services erode, without hiding actual collected
+cash or changing its ledger. A genuine wealth loss retains its full score penalty. Satisfaction and stability
+retain their existing rules; debt proceeds, fund transfers and inflation are not new real public wealth.
+
+### End report and saves
+
+The report compares campaign-creation balances with the latest/final state, not January's closing accounts.
+Monthly real GDP comparisons and charts use actual calendar days. Fiscal totals sum closed monthly flows plus
+current postings in integer minor units before display. Taxes/grants, operating/capital/emergency outlays,
+interest, bond proceeds, principal and fund contributions are shown separately. Fiscal balance excludes financing.
+Fund gain = final NAV − opening NAV − net treasury transfers; its percentage divides by opening NAV. This simple
+measure includes FX/dividends/costs and is not a time-weighted return.
+
+Score explanations, output/finance/fund charts, full retained policy/event disclosures and a link to monthly
+accounts remain inspectable after completion. The last tick pauses exactly at 1 Jan 2029 08:00 MYT and zeros
+fractional display time; further commands/ticks do nothing. The current net worth is refreshed at that boundary.
+The end autosave restores paused and opens the Presidency Report. Legacy completed saves have any fractional
+display overshoot clamped to zero, without economic accrual. Save validation rejects invalid speed/clock bounds,
+RNG words, missing histories/securities, nonpositive CPI/capacity/productivity and malformed investment pipelines.
+
+`tests/phase6-campaign.test.ts` covers calendar invariance, elapsed/capped shock adjustment, inflation/wealth,
+sustainability, failure caps, opening accounts, transfer exclusion, final-boundary idempotence, multi-seed save
+replay and corrupt saves. Shared scripts in `tools/campaigns.ts` drive both campaign regression tests and the
+`npm run balance` CLI. These tools never add player controls or consume randomness outside `s.rng`.
+
+Phase 6 validation: strict build, ESLint, 131 unit/invariant/campaign tests and 21 browser tests pass. The balance
+pass uses 12 calibration seeds plus 12 separate validation seeds. `docs/performance.md` records the real 3× and
+engine timings, including hosted-map stalls. `docs/playtesting.md` explicitly leaves human difficulty validation
+open. Production bundles contain neither `__klDev` nor `runHours`.
+
 ## Stock market (Phase 2)
 
 Implemented in `src/engine/stock-market.ts`, `src/engine/market-calendar.ts` and `src/engine/market-view.ts`.

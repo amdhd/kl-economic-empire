@@ -90,3 +90,43 @@ The full campaign suite still compares adaptive play over 12 seeds and recession
 External-shock score variance, the tax/wealth incentive and human calibration of the victory threshold remain
 Phase 6 work. Historical arrears in existing saves are preserved; no retroactive expenditure reconstruction is
 attempted.
+
+## Phase 6 calibration (2026-10-31)
+
+This pass changes scoring, not simulated policy flows, event probabilities or RNG draws. The same 12 seeds were
+run before and after: **2027, 11, 42, 201–209**. Strategies share `tools/campaigns.ts`; adaptive combines the
+balanced-growth script with monthly counter-cyclical transfers/development. Adverse recession is hands-off in
+the recession scenario. The before run uses the Phase 5 score. All table values are means of fictional replays.
+
+| Strategy | Score before | Score after | Wealth before | Wealth after | Approval (unchanged) | Wins after |
+|---|---:|---:|---:|---:|---:|---:|
+| Hands-off | 53.79 | 52.80 | 51.44 | 50.50 | 63.21 | 0/12 |
+| Balanced growth | 52.17 | 51.34 | 50.37 | 49.77 | 61.88 | 0/12 |
+| Tax maximiser | 47.66 | 44.04 | 87.37 | 74.06 | 34.00 | 0/12 |
+| All projects | 51.08 | 50.21 | 47.34 | 46.90 | 62.87 | 0/12 |
+| Austerity | 44.71 | 42.91 | 76.92 | 70.93 | 36.27 | 0/12 |
+| Adaptive | 57.12 | 56.10 | 49.18 | 48.61 | 70.53 | 0/12 |
+| Adverse recession | 48.83 | 50.07 | 42.08 | 41.86 | 60.90 | 0/12 |
+
+Changes: actual-day annualisation removes calendar luck; CPI deflation and income/output/service sustainability
+reduce tax/austerity wealth credit; a symmetric ±1 pp benchmark adjustment partly cushions recorded external
+shocks. Caps and 75/60 victory criteria are unchanged. Fiscal taxes still legitimately add public wealth; the
+score now also evaluates whether that wealth was sustained without degrading living standards.
+
+**Separate validation set: seeds 401–412**, with no further tuning after seeing its results:
+
+| Strategy | Mean score | Range | Mean approval | Wins |
+|---|---:|---:|---:|---:|
+| Hands-off | 56.79 | 42.86–71.17 | 68.94 | 0/12 |
+| Balanced growth | 57.26 | 43.82–75.06 | 70.02 | 1/12 |
+| Tax maximiser | 44.44 | 41.28–46.23 | 35.78 | 0/12 |
+| All projects | 56.17 | 41.92–72.67 | 71.15 | 0/12 |
+| Austerity | 42.75 | 39.76–46.47 | 38.67 | 0/12 |
+| Adaptive | 59.86 | 49.47–70.71 | 73.53 | 0/12 |
+| Adverse recession | 48.52 | 35.37–60.91 | 60.59 | 0/12 |
+
+Adaptive play still gives the best mean, but seed variance remains substantial and simple bots rarely win.
+The external adjustment is intentionally limited to 3 total points; it does not erase a recession or fully solve
+the early-cluster problem. Keep 75 provisional until human playtesting (see `docs/playtesting.md`), rather than
+lower it just to make scripted bots win. Re-run with `npm run balance` or pass `--seeds` and `--output`; generated
+JSON goes under ignored `artifacts/`, separate from Playwright's disposable output directory.
