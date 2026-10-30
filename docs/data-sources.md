@@ -143,3 +143,7 @@ YoY computed from the same month's preceding-year index. [Labour](https://open.d
 `lfs_month.csv`, unemployment `u_rate` in percent. Combined monthly charts cover Jan2025–Aug2026, the common available
 window at retrieval. Preserve the labour-series census-reference caveat described by DOSM. Both datasets are CC BY4.0.
 No runtime downloads or historical spot-FX observations are implied. Chart references remain separate from campaign output.
+
+Five-year display expansion: retain the latest60 common monthly CPI/labour observations (Sep2021–Aug2026) and20
+published GDP quarters (Q3 2021–Q2 2026). Each window follows its own latest published endpoint; do not extrapolate.
+The official five-year reference appears before simulated campaign charts. Both GDP axes explicitly show RM trillions.

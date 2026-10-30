@@ -26,9 +26,20 @@ export function EconomyPanel() {
   const e = g.external;
   return (
     <PanelShell title={g.baseline.profile === 'malaysia' ? 'Malaysia economy' : 'KL economy · legacy'} subtitle="Aggregate households, 7 input–output sectors, banks and the external economy. Dated official opening totals; modeled sector allocation and simulated outcomes." width={760}>
+      {g.baseline.profile === 'malaysia' && <Section title="Past five years · official historical reference">
+        <p className="mb-2 text-[12px] text-slate-400">Pinned observations available 31 Oct 2026. Campaign charts below begin at the fictional opening and then use your simulated results. Official CPI below uses 2010=100; campaign CPI uses opening=100. No interpolation across missing periods.</p>
+        <div className="grid grid-cols-2 gap-3">
+          <TimeChart data={OFFICIAL_GDP} xKey="date" xFormat={v => { const [year, month] = String(v).split('-'); return `Q${Math.ceil(Number(month) / 3)} ${year}`; }} series={[{ key: 'nom', name: 'Official nominal GDP ×4', color: '#60a5fa' }]} yFormat={v => `RM ${(v / 1000).toFixed(2)}tn`} unit="GDP in MYR trillions/year · quarter on horizontal axis · quarterly value ×4" dataLabel="DOSM observations" height={130} />
+          <TimeChart data={OFFICIAL_MONTHLY} xKey="date" series={[{ key: 'infl', name: 'Official CPI YoY %', color: '#fbbf24' }, { key: 'u', name: 'Official unemployment %', color: '#f87171' }]} yFormat={v => v.toFixed(1)} unit="Percent · monthly · Sep 2021–Aug 2026" dataLabel="DOSM observations" height={130} />
+          <TimeChart data={OFFICIAL_MONTHLY} xKey="date" series={[{ key: 'cpi', name: 'Official CPI', color: '#fbbf24' }]} yFormat={v => v.toFixed(1)} unit="CPI index · 2010=100" dataLabel="DOSM observations" height={110} />
+        </div>
+        <p className="mt-2 text-[12px] text-cyan-300"><a href="https://open.dosm.gov.my/data-catalogue/gdp_qtr_nominal_supply" target="_blank" rel="noreferrer">GDP source ↗</a> · <a href="https://open.dosm.gov.my/data-catalogue/cpi_headline" target="_blank" rel="noreferrer">CPI source ↗</a> · <a href="https://open.dosm.gov.my/data-catalogue/lfs_month" target="_blank" rel="noreferrer">Labour source ↗</a></p>
+        <p className="mt-2 text-[12px] text-slate-400">The opening FX point above is an implied BNM reserve valuation, not a historical spot quote. No observed FX history is claimed.</p>
+      </Section>}
+      <p className="text-[12px] text-slate-400">Your campaign · simulated from January 2027. History grows as game time runs.</p>
       <div className="grid grid-cols-2 gap-3">
         <Section title="GDP, annualised">
-          <TimeChart data={monthly} xKey="t" xFormat={(v) => monthKeyLabel(Number(v))} series={[{ key: 'gdp', name: 'Real GDP', color: '#34d399' }, { key: 'nom', name: 'Nominal GDP', color: '#60a5fa' }]} yFormat={(v) => v.toFixed(0)} unit="RM bn per year (month × 365/days) · month" height={130} />
+          <TimeChart data={monthly} xKey="t" xFormat={(v) => monthKeyLabel(Number(v))} series={[{ key: 'gdp', name: 'Real GDP', color: '#34d399' }, { key: 'nom', name: 'Nominal GDP', color: '#60a5fa' }]} yFormat={(v) => `RM ${(v / 1000).toFixed(2)}tn`} unit="MYR trillions/year · simulated month ×365/days" height={130} />
         </Section>
         <Section title="Inflation & unemployment">
           <TimeChart data={monthly} xKey="t" xFormat={(v) => monthKeyLabel(Number(v))} series={[{ key: 'infl', name: 'CPI YoY %', color: '#fbbf24' }, { key: 'u', name: 'Unemployment %', color: '#f87171' }]} yFormat={(v) => `${v.toFixed(1)}`} unit="% · month" height={130} />
@@ -44,16 +55,6 @@ export function EconomyPanel() {
         <Stat label="Month-to-date deficit (+) / surplus (−)" value={money(deficit(g.government.mtd))} sub="Paid operating + capital + interest + emergency + export support less public receipts. Bonds, principal and SWF transfers excluded." />
         <TimeChart data={deficits.length ? deficits : [{ t: monthly[0].t, deficit: 0 }]} xKey="t" xFormat={v => monthKeyLabel(Number(v))} series={[{ key: 'deficit', name: 'Deficit (+) / surplus (−)', color: '#f87171' }]} yFormat={v => v.toFixed(2)} unit="RM billion per settled month · opening zero means no cash flows yet" height={110} />
       </Section>
-      {g.baseline.profile === 'malaysia' && <Section title="Official historical reference · separate from your campaign">
-        <p className="mb-2 text-[12px] text-slate-400">Pinned observations available 31 Oct 2026. Campaign charts above begin at the fictional opening and then use your simulated results. Official CPI below uses 2010=100; campaign CPI uses opening=100. No interpolation across missing periods.</p>
-        <div className="grid grid-cols-2 gap-3">
-          <TimeChart data={OFFICIAL_GDP} xKey="date" series={[{ key: 'nom', name: 'Official nominal GDP ×4', color: '#60a5fa' }]} yFormat={v => v.toFixed(0)} unit="RM bn/year · quarterly GDP ×4, seasonal variation retained" dataLabel="DOSM observations" height={130} />
-          <TimeChart data={OFFICIAL_MONTHLY} xKey="date" series={[{ key: 'infl', name: 'Official CPI YoY %', color: '#fbbf24' }, { key: 'u', name: 'Official unemployment %', color: '#f87171' }]} yFormat={v => v.toFixed(1)} unit="Percent · monthly · Jan 2025–Aug 2026" dataLabel="DOSM observations" height={130} />
-          <TimeChart data={OFFICIAL_MONTHLY} xKey="date" series={[{ key: 'cpi', name: 'Official CPI', color: '#fbbf24' }]} yFormat={v => v.toFixed(1)} unit="CPI index · 2010=100" dataLabel="DOSM observations" height={110} />
-        </div>
-        <p className="mt-2 text-[12px] text-cyan-300"><a href="https://open.dosm.gov.my/data-catalogue/gdp_qtr_nominal_supply" target="_blank" rel="noreferrer">GDP source ↗</a> · <a href="https://open.dosm.gov.my/data-catalogue/cpi_headline" target="_blank" rel="noreferrer">CPI source ↗</a> · <a href="https://open.dosm.gov.my/data-catalogue/lfs_month" target="_blank" rel="noreferrer">Labour source ↗</a></p>
-        <p className="mt-2 text-[12px] text-slate-400">The opening FX point above is an implied BNM reserve valuation, not a historical spot quote. No observed FX history is claimed.</p>
-      </Section>}
       <Section title="Sectors">
         <table className="data num">
           <thead><tr><th>Sector</th><th className="text-right">Output vs base</th><th className="text-right">Utilisation</th><th className="text-right">Jobs</th><th className="text-right">Price idx</th><th className="text-right">Infra boost</th><th className="text-right">Investment/mo</th></tr></thead>

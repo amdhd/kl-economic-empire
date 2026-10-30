@@ -188,3 +188,7 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   opening=100. Campaign charts show a visible opening point before any daily/monthly settlements. No invented
   historical FX series: explicitly identify the opening FX anchor as an implied reserve valuation. Deficit display
   uses paid expenditure less public receipts, excluding financing, debt principal and SWF transfers; positive is deficit.
+
+- **D-025 GDP chart units.** Format historical GDP ticks/tooltips as explicit MYR trillions (e.g. RM2.18tn),
+  and dates as quarter/year. Bare billion values near2000 were easily mistaken for calendar years. This changes
+  presentation only; source values remain quarterly nominal GDP ×4 in RM billion, with seasonality retained.
