@@ -65,3 +65,13 @@ test('queue a tax change with an effective date and see the policy log', async (
   await page.getByTestId('confirm-btn').click();
   await expect(page.getByTestId('panel')).toContainText('from 01 Feb 2027');
 });
+
+test('campaign ends after 24 months with the Economic Presidency Report', async ({ page }) => {
+  await startCampaign(page);
+  await runHours(page, 24 * 731 - 1); // up to 1 Jan 2029 07:00
+  await page.getByTestId('btn-speed-3').click(); // resumes and crosses the final boundary
+  await expect(page.getByTestId('panel')).toContainText('Economic Presidency Report', { timeout: 15_000 });
+  await expect(page.getByTestId('score-total')).toBeVisible();
+  await expect(page.getByTestId('clock-date')).toHaveText('01 Jan 2029');
+  await expect(page.getByTestId('btn-speed-1')).toBeDisabled();
+});
