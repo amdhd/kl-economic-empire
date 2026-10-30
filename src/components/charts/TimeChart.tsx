@@ -15,10 +15,11 @@ interface Props {
   height?: number;
   area?: boolean;
   unit: string; // shown as axis caption, e.g. "RM bn" or "% YoY"
+  dataLabel?: string;
   domain?: [number | 'auto' | 'dataMin' | 'dataMax', number | 'auto' | 'dataMin' | 'dataMax'];
 }
 
-export function TimeChart({ data, xKey, series, yFormat, xFormat, height = 150, area, unit, domain }: Props) {
+export function TimeChart({ data, xKey, series, yFormat, xFormat, height = 150, area, unit, domain, dataLabel = 'Simulated' }: Props) {
   if (!data.length) return <div className="grid place-items-center text-xs text-slate-500" style={{ height }}>No data yet — history builds as the clock runs.</div>;
   const common = {
     data,
@@ -41,7 +42,7 @@ export function TimeChart({ data, xKey, series, yFormat, xFormat, height = 150, 
     <div>
       <div className="mb-0.5 flex justify-between text-[9.5px] uppercase tracking-wider text-slate-500">
         <span>{unit}</span>
-        <span>Simulated</span>
+        <span>{dataLabel}</span>
       </div>
       <ResponsiveContainer width="100%" height={height}>
         {area ? (
@@ -56,14 +57,14 @@ export function TimeChart({ data, xKey, series, yFormat, xFormat, height = 150, 
             </defs>
             {axes}
             {series.map((s) => (
-              <Area key={s.key} type="monotone" dataKey={s.key} name={s.name} stroke={s.color} fill={`url(#g-${s.key})`} strokeWidth={1.8} dot={false} isAnimationActive={false} />
+              <Area key={s.key} type="monotone" dataKey={s.key} name={s.name} stroke={s.color} fill={`url(#g-${s.key})`} strokeWidth={1.8} dot={data.length === 1 ? { r: 3 } : false} isAnimationActive={false} />
             ))}
           </AreaChart>
         ) : (
           <LineChart {...common}>
             {axes}
             {series.map((s) => (
-              <Line key={s.key} type="monotone" dataKey={s.key} name={s.name} stroke={s.color} strokeWidth={1.8} dot={false} isAnimationActive={false} />
+              <Line key={s.key} type="monotone" dataKey={s.key} name={s.name} stroke={s.color} strokeWidth={1.8} dot={data.length === 1 ? { r: 3 } : false} isAnimationActive={false} />
             ))}
           </LineChart>
         )}

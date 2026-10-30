@@ -132,3 +132,14 @@ model assumptions, separate from the sourced treasury proxy and reserves. Legacy
 Trade UI shows **simulated** sector export deliveries and imported production inputs, excluding re-exports/final imports.
 It is deliberately not labelled or calibrated as official merchandise trade; use GDP's value-added identity rather than
 adding gross trade to GDP. There is no claim that future simulated 2027/2028 trade, FX, rates or budgets are actual data.
+
+## Historical chart references (31 Oct 2026 snapshot)
+
+`src/data/official-history.ts` contains display-only observations, never inserted into simulation reports or scoring.
+GDP: same [DOSM nominal sector CSV](https://storage.dosm.gov.my/gdp/gdp_qtr_nominal_supply.csv), `p0/abs`, Q1 2024–Q2 2026,
+RM million ×4/1000 gives RM billion/year. This is a seasonally varying quarterly annualisation, not rolling annual GDP.
+[CPI](https://open.dosm.gov.my/data-catalogue/cpi_headline): `cpi_2d.csv`, division `overall`, official index2010=100;
+YoY computed from the same month's preceding-year index. [Labour](https://open.dosm.gov.my/data-catalogue/lfs_month):
+`lfs_month.csv`, unemployment `u_rate` in percent. Combined monthly charts cover Jan2025–Aug2026, the common available
+window at retrieval. Preserve the labour-series census-reference caveat described by DOSM. Both datasets are CC BY4.0.
+No runtime downloads or historical spot-FX observations are implied. Chart references remain separate from campaign output.

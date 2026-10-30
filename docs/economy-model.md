@@ -465,3 +465,11 @@ reserve inventory/turnover constraints, round-trip costs, directional FX effects
 sen formatting. Existing economic/campaign checks also exercise the national default. Browser checks cover sources,
 full cash balances, confirmation, policy timing and reserve settlement. Strategy budget amounts are proportions of
 the selected opening budget; the victory threshold still needs human playtesting at the new scale.
+
+### Reference charts and deficit display
+
+Historical charts are display-only DOSM observations (D-024), separate from all simulated reports, RNG and scoring.
+Before settlements, campaign charts display their opening state as one marked point. The cash-budget deficit is paid
+operating+capex+interest+emergency+export support minus taxes+other public receipts+tariffs. Exclude borrowing, principal
+repayment and both SWF transfers. Positive means deficit; negative means surplus. MTD uses current postings, monthly
+history uses closed reports. This is the existing cash accounting model, not an accrual deficit or GDP annualisation.

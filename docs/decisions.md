@@ -181,3 +181,10 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   accounts. Legacy saves receive zero new reserve inventory; do not reconstruct trade activity that was never
   recorded. Label their first upgraded trade month partial. Keep all prior clocks/RNG/cash/history. Display exact
   treasury sen and both SWF cash currencies beside “Month closes in”; distinguish spendable cash from fund NAV.
+
+- **D-024 Historical chart references.** On user request, display pinned DOSM GDP, CPI/inflation and unemployment
+  history separately from campaign charts. Historical quarterly nominal GDP is annualised by multiplying by four,
+  retaining seasonality; it is not a rolling annual series. Official CPI retains 2010=100, separately from campaign
+  opening=100. Campaign charts show a visible opening point before any daily/monthly settlements. No invented
+  historical FX series: explicitly identify the opening FX anchor as an implied reserve valuation. Deficit display
+  uses paid expenditure less public receipts, excluding financing, debt principal and SWF transfers; positive is deficit.
