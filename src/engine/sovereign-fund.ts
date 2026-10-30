@@ -1,0 +1,252 @@
+// Government sovereign wealth fund. Cash is integer minor units (sen / US cents).
+// Trades exchange cash for shares at the execution price; only fees, spread and impact reduce NAV.
+// Closed-market rule (D-008): orders placed while the exchange is closed are QUEUED as market
+// orders for the next open hourly tick and expire after 7 days if not filled; they can be cancelled.
+import { COMPANY_BY_ID, currencyOf } from '../data/companies';
+import type { Currency, Exchange, GameState, Order, Position, TickerId } from '../types/game';
+import type { Dividend } from './companies';
+import { post, treasuryMYR } from './government';
+import { isOpen } from './market-calendar';
+import { avgDailyValue } from './stock-market';
+import { news, pushBounded, toMinor } from './util';
+
+export const FEE_RATE: Record<Exchange, number> = { MY: 0.002, US: 0.0003 }; // brokerage + clearing + stamp, simplified
+export const HALF_SPREAD: Record<Exchange, number> = { MY: 0.001, US: 0.0002 };
+export const IMPACT_COEF = 0.1; // × sqrt(order value / avg daily value)
+export const FX_SPREAD = 0.0025;
+export const LOT: Record<Exchange, number> = { MY: 100, US: 1 };
+export const MAX_POSITION_PCT = 0.2;
+export const MAX_ADV_SHARE = 0.25;
+export const US_WITHHOLDING = 0.15;
+export const ORDER_TTL_MIN = 7 * 1440;
+const TX_LIMIT = 400;
+
+export interface FillQuote {
+  mid: number;
+  px: number;
+  gross: number;
+  fees: number;
+  total: number; // cash out (buy) or in (sell), listing currency, major units
+  impact: number;
+  currency: Currency;
+  totalMYR: number;
+}
+
+export function quoteFill(s: GameState, id: TickerId, side: 'buy' | 'sell', units: number): FillQuote {
+  const c = COMPANY_BY_ID[id];
+  const mid = s.market.quotes[id].price;
+  const adv = avgDailyValue(s, id);
+  const impact = IMPACT_COEF * Math.sqrt((mid * units) / Math.max(adv, 1));
+  const slip = HALF_SPREAD[c.exchange] + impact;
+  const px = mid * (side === 'buy' ? 1 + slip : 1 - slip);
+  const gross = px * units;
+  const fees = gross * FEE_RATE[c.exchange];
+  const total = side === 'buy' ? gross + fees : gross - fees;
+  const fx = c.exchange === 'US' ? s.external.myrPerUsd : 1;
+  return { mid, px, gross, fees, total, impact, currency: currencyOf(id), totalMYR: total * fx };
+}
+
+export function navMYR(s: GameState): number {
+  const f = s.fund;
+  const fx = s.external.myrPerUsd;
+  let nav = f.myrCash / 100 + (f.usdCash / 100) * fx;
+  for (const [id, p] of Object.entries(f.positions) as [TickerId, Position][]) {
+    nav += p.units * s.market.quotes[id].price * (id.startsWith('US:') ? fx : 1);
+  }
+  return nav;
+}
+
+export function positionValueMYR(s: GameState, id: TickerId): number {
+  const p = s.fund.positions[id];
+  if (!p) return 0;
+  return p.units * s.market.quotes[id].price * (id.startsWith('US:') ? s.external.myrPerUsd : 1);
+}
+
+const queuedSellUnits = (s: GameState, id: TickerId, except?: number) =>
+  s.fund.orders.filter((o) => o.ticker === id && o.side === 'sell' && o.status === 'queued' && o.id !== except).reduce((a, o) => a + o.units, 0);
+
+/** Returns a human-readable rejection reason, or null if the order can fill now. */
+export function validateOrder(s: GameState, id: TickerId, side: 'buy' | 'sell', units: number, orderId?: number): string | null {
+  const c = COMPANY_BY_ID[id];
+  if (!c) return 'Unknown security';
+  if (!Number.isInteger(units) || units <= 0) return 'Quantity must be a positive whole number';
+  if (units % LOT[c.exchange] !== 0) return `Bursa board lot is ${LOT[c.exchange]} shares`;
+  const q = quoteFill(s, id, side, units);
+  const adv = avgDailyValue(s, id);
+  if (q.mid * units > MAX_ADV_SHARE * adv) return `Order is ${((q.mid * units) / adv * 100).toFixed(0)}% of average daily liquidity (max ${MAX_ADV_SHARE * 100}%) — split it`;
+  const f = s.fund;
+  if (side === 'buy') {
+    const cash = c.exchange === 'US' ? f.usdCash : f.myrCash;
+    if (toMinor(q.total) > cash) return `Insufficient ${q.currency} cash (need ${q.currency} ${(q.total / 1e6).toFixed(2)}m)${c.exchange === 'US' ? ' — convert MYR to USD first' : ''}`;
+    const after = positionValueMYR(s, id) + q.gross * (c.exchange === 'US' ? s.external.myrPerUsd : 1);
+    const nav = navMYR(s) - (q.totalMYR - q.gross * (c.exchange === 'US' ? s.external.myrPerUsd : 1));
+    if (after > MAX_POSITION_PCT * nav) return `Concentration limit: position would be ${((after / nav) * 100).toFixed(1)}% of NAV (max ${MAX_POSITION_PCT * 100}%)`;
+  } else {
+    const held = f.positions[id]?.units ?? 0;
+    if (units > held - queuedSellUnits(s, id, orderId)) return `Cannot sell more than the fund holds (${held - queuedSellUnits(s, id, orderId)} available)`;
+  }
+  return null;
+}
+
+function addTx(s: GameState, type: 'buy' | 'sell' | 'dividend' | 'fx' | 'injection' | 'withdrawal', currency: Currency, amountMinor: number, note: string, extra: { ticker?: TickerId; units?: number; price?: number } = {}) {
+  pushBounded(s.fund.tx, { id: s.fund.nextId++, atMin: s.clock.hour * 60, type, currency, amountMinor, note, ...extra }, TX_LIMIT);
+}
+
+/** Place an order. Fills immediately if the exchange is open at the current game minute. */
+export function placeOrder(s: GameState, id: TickerId, side: 'buy' | 'sell', units: number, atMin: number): Order {
+  const c = COMPANY_BY_ID[id];
+  const order: Order = { id: s.fund.nextId++, ticker: id, side, units, status: 'queued', createdMin: atMin, expiresMin: atMin + ORDER_TTL_MIN };
+  s.fund.orders.push(order);
+  if (s.fund.orders.length > 200) s.fund.orders = s.fund.orders.filter((o, i, arr) => o.status === 'queued' || i >= arr.length - 150);
+  // Static checks that do not depend on market state reject immediately.
+  const reason = validateOrder(s, id, side, units, order.id);
+  if (reason && !(reason.startsWith('Insufficient') && !isOpen(c.exchange, atMin))) {
+    order.status = 'rejected';
+    order.reason = reason;
+    return order;
+  }
+  if (isOpen(c.exchange, atMin)) executeOrder(s, order, atMin);
+  return order;
+}
+
+export function executeOrder(s: GameState, order: Order, atMin: number): void {
+  const reason = validateOrder(s, order.ticker, order.side, order.units, order.id);
+  if (reason) {
+    order.status = 'rejected';
+    order.reason = reason;
+    news(s, { kind: 'fund', tone: 'bad', title: `Order rejected: ${order.side} ${order.units.toLocaleString()} ${COMPANY_BY_ID[order.ticker].displayName}`, body: reason });
+    return;
+  }
+  const c = COMPANY_BY_ID[order.ticker];
+  const q = quoteFill(s, order.ticker, order.side, order.units);
+  const f = s.fund;
+  const fx = c.exchange === 'US' ? s.external.myrPerUsd : 1;
+  const totalMinor = toMinor(q.total);
+  const pos: Position = f.positions[order.ticker] ?? { units: 0, costMinor: 0, costMYR: 0, realizedMinor: 0, dividendsMinor: 0 };
+  if (order.side === 'buy') {
+    if (c.exchange === 'US') f.usdCash -= totalMinor;
+    else f.myrCash -= totalMinor;
+    pos.units += order.units;
+    pos.costMinor += totalMinor;
+    pos.costMYR += toMinor(q.total * fx);
+    addTx(s, 'buy', q.currency, -totalMinor, `Bought ${order.units.toLocaleString()} @ ${q.px.toFixed(3)} (fees ${q.fees.toFixed(2)})`, { ticker: order.ticker, units: order.units, price: q.px });
+  } else {
+    const costPortion = Math.round((pos.costMinor * order.units) / pos.units);
+    const costMyrPortion = Math.round((pos.costMYR * order.units) / pos.units);
+    if (c.exchange === 'US') f.usdCash += totalMinor;
+    else f.myrCash += totalMinor;
+    pos.realizedMinor += totalMinor - costPortion;
+    pos.costMinor -= costPortion;
+    pos.costMYR -= costMyrPortion;
+    pos.units -= order.units;
+    addTx(s, 'sell', q.currency, totalMinor, `Sold ${order.units.toLocaleString()} @ ${q.px.toFixed(3)} (fees ${q.fees.toFixed(2)})`, { ticker: order.ticker, units: order.units, price: q.px });
+  }
+  if (pos.units > 0) f.positions[order.ticker] = pos;
+  else delete f.positions[order.ticker];
+  f.feesPaidMYR += q.fees * fx;
+  order.status = 'filled';
+  order.filledMin = atMin;
+  order.fillPrice = q.px;
+  order.feesMinor = toMinor(q.fees);
+}
+
+/** At an open tick, fill queued orders for that exchange in placement order; expire stale ones. */
+export function processQueuedOrders(s: GameState, ex: Exchange, atMin: number): void {
+  for (const o of s.fund.orders) {
+    if (o.status !== 'queued' || COMPANY_BY_ID[o.ticker].exchange !== ex) continue;
+    if (atMin >= o.expiresMin) {
+      o.status = 'expired';
+      o.reason = 'Not filled within 7 days';
+      continue;
+    }
+    executeOrder(s, o, atMin);
+  }
+}
+
+export function expireOrders(s: GameState, atMin: number): void {
+  for (const o of s.fund.orders) if (o.status === 'queued' && atMin >= o.expiresMin) {
+    o.status = 'expired';
+    o.reason = 'Not filled within 7 days';
+  }
+}
+
+export function cancelOrder(s: GameState, orderId: number): boolean {
+  const o = s.fund.orders.find((x) => x.id === orderId);
+  if (!o || o.status !== 'queued') return false;
+  o.status = 'cancelled';
+  return true;
+}
+
+/** Convert between the fund's MYR and USD cash at the current rate with an explicit spread. */
+export function convertFx(s: GameState, from: Currency, amountMinor: number): string | null {
+  const f = s.fund;
+  const fx = s.external.myrPerUsd;
+  if (!Number.isInteger(amountMinor) || amountMinor <= 0) return 'Amount must be positive';
+  if (from === 'MYR') {
+    if (amountMinor > f.myrCash) return 'Insufficient MYR cash';
+    const usd = Math.floor(amountMinor / (fx * (1 + FX_SPREAD)));
+    f.myrCash -= amountMinor;
+    f.usdCash += usd;
+    f.feesPaidMYR += (amountMinor / 100) * (FX_SPREAD / (1 + FX_SPREAD));
+    addTx(s, 'fx', 'MYR', -amountMinor, `Converted to US$ ${(usd / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })} @ ${(fx * (1 + FX_SPREAD)).toFixed(4)}`);
+  } else {
+    if (amountMinor > f.usdCash) return 'Insufficient USD cash';
+    const myr = Math.floor(amountMinor * fx * (1 - FX_SPREAD));
+    f.usdCash -= amountMinor;
+    f.myrCash += myr;
+    f.feesPaidMYR += (amountMinor / 100) * fx * FX_SPREAD;
+    addTx(s, 'fx', 'USD', -amountMinor, `Converted to RM ${(myr / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })} @ ${(fx * (1 - FX_SPREAD)).toFixed(4)}`);
+  }
+  return null;
+}
+
+export function receiveDividends(s: GameState, divs: Dividend[]): void {
+  const f = s.fund;
+  let totalMYR = 0;
+  for (const d of divs) {
+    const p = f.positions[d.id];
+    if (!p) continue;
+    const us = d.id.startsWith('US:');
+    const net = p.units * d.dps * (us ? 1 - US_WITHHOLDING : 1);
+    const minor = toMinor(net);
+    if (minor <= 0) continue;
+    if (us) f.usdCash += minor;
+    else f.myrCash += minor;
+    p.dividendsMinor += minor;
+    const myr = (minor / 100) * (us ? s.external.myrPerUsd : 1);
+    totalMYR += myr;
+    f.pendingDividendTransfer += toMinor(myr * f.dividendTransferPct);
+    addTx(s, 'dividend', us ? 'USD' : 'MYR', minor, `Dividend ${d.dps.toFixed(4)}/share${us ? ' (15% withholding)' : ''}`, { ticker: d.id, units: p.units });
+  }
+  if (totalMYR > 0) news(s, { kind: 'fund', tone: 'good', title: `SWF dividends received: RM ${(totalMYR / 1e6).toFixed(1)}m`, body: 'Quarterly dividends credited to fund cash.' });
+}
+
+/** Treasury → fund. A transfer between public accounts: public net worth unchanged. */
+export function injectFund(s: GameState, amountMYR: number): string | null {
+  if (!(amountMYR > 0)) return 'Amount must be positive';
+  if (amountMYR > treasuryMYR(s.government)) return 'Treasury cash is insufficient';
+  const posted = post(s.government, 'swfContribution', amountMYR);
+  s.fund.myrCash += toMinor(posted);
+  s.fund.totalInjectedMYR += posted;
+  addTx(s, 'injection', 'MYR', toMinor(posted), 'Capital injection from treasury');
+  return null;
+}
+
+/** Fund → treasury, from MYR cash only. */
+export function withdrawFund(s: GameState, amountMYR: number): string | null {
+  if (!(amountMYR > 0)) return 'Amount must be positive';
+  if (toMinor(amountMYR) > s.fund.myrCash) return 'Fund MYR cash is insufficient — sell holdings or convert USD first';
+  const posted = post(s.government, 'swfTransferIn', amountMYR);
+  s.fund.myrCash -= toMinor(posted);
+  s.fund.totalWithdrawnMYR += posted;
+  addTx(s, 'withdrawal', 'MYR', -toMinor(posted), 'Distribution to treasury');
+  return null;
+}
+
+/** Month close: transfer the policy share of dividends to the treasury. */
+export function monthCloseFund(s: GameState): void {
+  const f = s.fund;
+  const amt = Math.min(f.pendingDividendTransfer, f.myrCash);
+  f.pendingDividendTransfer = 0;
+  if (amt > 0) withdrawFund(s, amt / 100);
+}

@@ -1,0 +1,300 @@
+// Aggregate KL economy: households, 7 input–output sectors, labour, prices and investment.
+// See docs/economy-model.md for the equations; every rule here has a matching section there.
+import { BASE_TAX, BASELINE, CPI_WEIGHTS, INVESTMENT_GOODS, IO, SECTOR_IDS, SECTORS } from '../data/economic-baseline';
+import type { GameState, SectorId } from '../types/game';
+import {
+  BASE_LEND_RATE, BASE_MPC, CAL, CAPITAL_GROWTH0, CREDIT_SPEND, HOUSEHOLD_AMORT_MONTHLY, HOUSEHOLD_RATE_PREMIUM,
+  NORMAL_UTIL, PROPERTY_LEVY_BASE, SURCHARGE_BASE_SHARE, type Vec,
+} from './calibration';
+import type { AggregatedMods } from './external';
+import { post, type GovDay } from './government';
+import { clamp } from './util';
+
+/** Monthly amounts are 'per average month'; daily flow = monthly × 12/365. */
+export const PER_DAY = 12 / 365;
+const zero = (): Vec => Object.fromEntries(SECTOR_IDS.map((s) => [s, 0])) as Vec;
+const TOURISM_LEVY_ELASTICITY = 1.5;
+const PRICE_SPEED = 0.025; // daily convergence of sector prices to cost-based targets
+const RENT_SPEED = 0.01;
+const LABOR_STRETCH = 1.08;
+
+export interface DayEconomy {
+  gdpNominal: number;
+  gdpReal: number;
+  levy: number;
+  householdTax: number;
+}
+
+/** Import price index for a sector: FX × (foreign goods, energy). */
+function importPrice(s: GameState, j: SectorId): number {
+  const e = s.external;
+  const fxf = e.myrPerUsd / BASELINE.myrPerUsd;
+  const es = SECTORS[j].energyImportShare;
+  return fxf * ((1 - es) * e.usPrice + es * e.oil);
+}
+
+/**
+ * Export demand index (real) for a sector. External demand × price competitiveness: KL prices
+ * relative to foreign prices in MYR (FX × US price level). Visitors also respond to the levy.
+ */
+function exportIndex(s: GameState, j: SectorId): number {
+  const e = s.external;
+  const fxf = e.myrPerUsd / BASELINE.myrPerUsd;
+  const rel = s.sectors[j].price / (fxf * e.usPrice);
+  const levyHit = clamp(1 - TOURISM_LEVY_ELASTICITY * (s.government.policies.tax.consumption - BASE_TAX.consumption), 0.4, 1.3);
+  const mix = SECTORS[j].exportMix;
+  let idx = 0;
+  idx += (mix.my ?? 0) * e.myDemand * Math.pow(s.sectors[j].price / (s.indicators.cpi / 100), -0.3);
+  idx += (mix.global ?? 0) * e.globalDemand * Math.pow(rel, -0.6);
+  idx += (mix.tourism ?? 0) * e.tourism * (1 + s.government.tourismBoost) * levyHit * Math.pow(rel, -0.8);
+  idx += (mix.tech ?? 0) * Math.sqrt(e.techCycle * e.globalDemand) * Math.pow(rel, -0.5);
+  return idx;
+}
+
+export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEconomy {
+  const hh = s.households;
+  const bank = s.bank;
+  const tax = s.government.policies.tax;
+
+  // --- Household income (MYR/day) ------------------------------------------------------------
+  let wages = 0;
+  const wagesBy = zero();
+  for (const j of SECTOR_IDS) {
+    wagesBy[j] = s.sectors[j].employment * CAL.wage0[j] * hh.wageIndex;
+    wages += wagesBy[j];
+  }
+  const other = hh.otherIncomeMonthly * PER_DAY;
+  const householdTax = post(s.government, 'taxHousehold', tax.household * wages * SURCHARGE_BASE_SHARE);
+  const hhRate = bank.lendingRate + HOUSEHOLD_RATE_PREMIUM;
+  const interestH = (bank.loansH * hhRate) / 365;
+  const amortH = bank.loansH * HOUSEHOLD_AMORT_MONTHLY * PER_DAY;
+  bank.mtdInterestH += interestH;
+  bank.mtdAmortH += amortH;
+  const disposable = wages + gov.transfersPaid + other - householdTax - interestH - amortH;
+  // Permanent-income smoothing: households spend out of a blend of current and smoothed income,
+  // drawing down savings when income dips (spec: DrawdownFromSavings).
+  hh.permanentIncome += 0.012 * (disposable - hh.permanentIncome);
+  const consumption = Math.max(0, 0.5 * disposable + 0.5 * hh.permanentIncome) * hh.mpc;
+  const credit = hh.newCreditMonthly * PER_DAY;
+  hh.savings += disposable - consumption;
+
+  // --- Final demand (nominal MYR → real) -------------------------------------------------------
+  const finalReal: number[] = [];
+  let levy = 0;
+  let consPurchasesReal = 0;
+  const sectorTotal: Vec = zero();
+  for (const j of SECTOR_IDS) {
+    const sec = s.sectors[j];
+    let c = consumption * SECTORS[j].consumption + credit * (CREDIT_SPEND[j] ?? 0);
+    if (j === 'cons') {
+      const net = c / (1 + tax.consumption);
+      levy += c - net;
+      c = net;
+    }
+    if (j === 'prop') hh.mtd.rent += consumption * SECTORS[j].consumption;
+    let inv = 0;
+    for (const k of SECTOR_IDS) inv += s.sectors[k].investmentMonthly * PER_DAY * (INVESTMENT_GOODS[j] ?? 0);
+    const domesticNominal = c + gov.purchases[j] + inv;
+    const xReal = CAL.X0[j] * exportIndex(s, j) * (j === 'prop' ? mods.propDemand : 1);
+    if (j === 'cons') {
+      // Visitors (the tourism share of consumer exports) pay the levy on top of the sector price.
+      const visitors = xReal * (SECTORS.cons.exportMix.tourism ?? 0);
+      levy += visitors * sec.price * tax.consumption;
+      consPurchasesReal += c / sec.price + visitors;
+    }
+    const fr = (domesticNominal * (j === 'prop' ? mods.propDemand : 1)) / sec.price + xReal;
+    finalReal.push(fr);
+    sectorTotal[j] = fr;
+  }
+  post(s.government, 'taxConsumption', levy);
+
+  // --- Leontief production, capped by capacity --------------------------------------------------
+  const Y = CAL.leontief.map((row) => row.reduce((a, x, k) => a + x * finalReal[k], 0));
+  let gdpNominal = levy;
+  let gdpReal = BASE_TAX.consumption * consPurchasesReal;
+  const Ktot = SECTOR_IDS.reduce((a, j) => a + s.sectors[j].capital, 0);
+  const rateF = bank.lendingRate;
+  SECTOR_IDS.forEach((j, idx) => {
+    const sec = s.sectors[j];
+    const cap = sec.capacity * (1 + sec.infraBoost) * (mods.capacity[j] ?? 1);
+    // Labour also limits output: staff can stretch ~8% above their normal productivity.
+    const laborCap = sec.employment * CAL.laborProd0[j] * sec.productivity * (1 + sec.infraBoost) * LABOR_STRETCH;
+    const demand = Math.max(0, Y[idx]);
+    sec.demandCapped = Math.min(demand, cap);
+    sec.utilization = Math.max(demand / cap, (demand / laborCap) * LABOR_STRETCH * NORMAL_UTIL);
+    const out = Math.min(demand, cap, laborCap);
+    sec.output = out;
+    const gross = sec.price * out;
+    let inter = importPrice(s, j) * SECTORS[j].importShare * out;
+    for (const i of SECTOR_IDS) inter += IO[i][j] * s.sectors[i].price * out;
+    const va = gross - inter;
+    const realVa = CAL.v[j] * out;
+    const dep = (BASELINE.depreciation * sec.capital) / 365;
+    const interest = (bank.loansF * (sec.capital / Ktot) * rateF) / 365;
+    const propLevy = j === 'prop' ? tax.property * PROPERTY_LEVY_BASE * gross : 0;
+    const profit = va - wagesBy[j] - dep - interest - propLevy;
+    sec.mtd.output += out;
+    sec.mtd.nominalOutput += gross;
+    sec.mtd.va += va;
+    sec.mtd.realVa += realVa;
+    sec.mtd.wages += wagesBy[j];
+    sec.mtd.profit += profit;
+    sec.mtd.taxableProfit += profit;
+    sec.mtd.demand += demand;
+    sec.avgUtil += (sec.utilization - sec.avgUtil) * 0.03;
+    gdpNominal += va;
+    gdpReal += realVa;
+  });
+
+  // --- Prices: move toward cost-based targets with demand-pressure markups -----------------------
+  const cpiIdx = s.indicators.cpi / 100;
+  const nextP: Vec = zero();
+  for (const j of SECTOR_IDS) {
+    const sec = s.sectors[j];
+    let target = SECTORS[j].importShare * importPrice(s, j);
+    for (const i of SECTOR_IDS) target += IO[i][j] * s.sectors[i].price;
+    const ulc = hh.wageIndex / sec.productivity / (1 + sec.infraBoost);
+    const markup = clamp(1 + 0.8 * (sec.utilization - NORMAL_UTIL), 0.85, 1.3);
+    const ls = SECTORS[j].laborShare;
+    target += CAL.v[j] * (ls * ulc + (1 - ls) * markup * cpiIdx);
+    if (j === 'prop') target *= 1 + 0.5 * (tax.property - BASE_TAX.property);
+    nextP[j] = sec.price + PRICE_SPEED * (target - sec.price);
+  }
+  for (const j of SECTOR_IDS) s.sectors[j].price = clamp(nextP[j], 0.3, 5);
+  const prop = s.sectors.prop;
+  const rentTarget = prop.price * s.government.housingFactor * clamp(1 + 0.8 * (prop.avgUtil - NORMAL_UTIL), 0.8, 1.3) * (1 + 0.5 * (tax.property - BASE_TAX.property));
+  hh.rentIndex += RENT_SPEED * (rentTarget - hh.rentIndex);
+  s.indicators.cpi = computeCpi(s);
+
+  hh.mtd.wages += wages;
+  hh.mtd.transfers += gov.transfersPaid;
+  hh.mtd.other += other;
+  hh.mtd.tax += householdTax;
+  hh.mtd.debtService += interestH + amortH;
+  hh.mtd.disposable += disposable;
+  hh.mtd.consumption += consumption + credit;
+  return { gdpNominal, gdpReal, levy, householdTax };
+}
+
+export function computeCpi(s: GameState): number {
+  const levyF = (1 + s.government.policies.tax.consumption) / (1 + BASE_TAX.consumption);
+  let c = 0;
+  for (const j of SECTOR_IDS) {
+    const p = j === 'prop' ? s.households.rentIndex : j === 'cons' ? s.sectors[j].price * levyF : s.sectors[j].price;
+    c += CPI_WEIGHTS[j] * p;
+  }
+  return 100 * c;
+}
+
+/** Weekly: hiring/firing toward output-implied labour demand, bounded by the labour force. */
+export function weekly(s: GameState): void {
+  const hh = s.households;
+  let total = 0;
+  for (const j of SECTOR_IDS) {
+    const sec = s.sectors[j];
+    // Hire toward the labour needed for demand that capital capacity can serve.
+    const need = sec.demandCapped / (CAL.laborProd0[j] * sec.productivity * (1 + sec.infraBoost));
+    sec.employment += 0.12 * (need - sec.employment);
+    total += sec.employment;
+  }
+  const maxEmp = hh.laborForce * 0.985;
+  if (total > maxEmp) for (const j of SECTOR_IDS) s.sectors[j].employment *= maxEmp / total;
+  hh.employed = Math.min(total, maxEmp);
+}
+
+/**
+ * Month close for the private economy. Called after government settlement so that
+ * `taxRate` is the rate that applied during the month. Sets next month's investment plans,
+ * credit, wages, expectations and household behaviour.
+ */
+export function monthClose(s: GameState, inflationYoY: number, unemployment: number, realIncomeGrowth: number, days: number): void {
+  const hh = s.households;
+  const bank = s.bank;
+  const taxRate = s.government.policies.tax.corporate;
+
+  // Profits → distributions and internal funds
+  let distributed = 0;
+  const desired: Vec = zero();
+  const internal: Vec = zero();
+  for (const j of SECTOR_IDS) {
+    const sec = s.sectors[j];
+    const profit = sec.mtd.profit;
+    const afterTax = profit - Math.max(0, sec.mtd.taxableProfit) * taxRate;
+    sec.lastMonthProfit = profit;
+    distributed += Math.max(0, afterTax) * BASELINE.transferShareToHouseholdsOfProfit;
+    sec.retained = Math.max(0, afterTax) * (1 - BASELINE.transferShareToHouseholdsOfProfit);
+    // Investment: after-tax return vs baseline, cost of credit, utilisation and confidence
+    const rok = (afterTax * 365) / days / sec.capital;
+    const g = clamp(
+      CAPITAL_GROWTH0 + 0.12 * (rok - CAL.rok0[j]) - 0.6 * (bank.lendingRate - BASE_LEND_RATE) + 0.12 * (sec.avgUtil - NORMAL_UTIL) + 0.03 * (hh.confidence - 0.6),
+      -0.02,
+      0.09,
+    );
+    // Partial adjustment: plans move 30% of the way toward the target each month.
+    desired[j] = 0.7 * sec.investmentMonthly + 0.3 * ((sec.capital * (BASELINE.depreciation + g)) / 12);
+    internal[j] = sec.retained * 0.9;
+  }
+  hh.otherIncomeMonthly = distributed;
+
+  // Credit: firms' external financing need + households' borrowing demand vs bank supply
+  let firmNeed = 0;
+  for (const j of SECTOR_IDS) firmNeed += Math.max(0, desired[j] - internal[j]);
+  const hhDemand = bank.loansH * (HOUSEHOLD_AMORT_MONTHLY + 0.004 * clamp(hh.confidence / 0.6, 0.2, 1.6) * clamp(1 - 8 * (bank.lendingRate - BASE_LEND_RATE), 0.2, 1.6));
+  const firmRepay = bank.loansF * 0.01;
+  const supply = creditSupply(s);
+  const demandTotal = firmNeed + firmRepay + hhDemand;
+  const ratio = demandTotal > 0 ? clamp(supply / demandTotal, 0, 1) : 1;
+  bank.firmCreditRatio = ratio;
+  const newFirm = (firmNeed + firmRepay) * ratio;
+  const newHh = hhDemand * ratio;
+  hh.newCreditMonthly = newHh;
+
+  for (const j of SECTOR_IDS) {
+    const sec = s.sectors[j];
+    const need = Math.max(0, desired[j] - internal[j]);
+    sec.investmentMonthly = Math.max(0, Math.min(desired[j], internal[j]) + need * ratio);
+    // capital & capacity
+    const pInv = SECTOR_IDS.reduce((a, k) => a + (INVESTMENT_GOODS[k] ?? 0) * s.sectors[k].price, 0);
+    sec.capital += sec.investmentMonthly - (sec.capital * BASELINE.depreciation) / 12;
+    const matured = sec.pipeline.shift() ?? 0;
+    sec.pipeline.push(sec.investmentMonthly / pInv / CAL.capitalPerCap[j]);
+    sec.capacity += matured - (sec.capacity * BASELINE.depreciation) / 12;
+    sec.productivity *= 1 + BASELINE.trendProductivity / 12;
+  }
+  // Bank balance sheet: new loans create deposits; repayments destroy them.
+  bank.loansF += newFirm - firmRepay;
+  bank.deposits += newFirm - firmRepay;
+  const amortH = bank.mtdAmortH;
+  bank.mtdAmortH = 0;
+  bank.loansH += newHh - amortH;
+  bank.deposits += newHh - amortH;
+  bank.mtdNewLoans = newFirm + newHh;
+  hh.loans = bank.loansH;
+
+  // Wages: expectations + trend productivity + Phillips-curve tightness
+  const wg = clamp((hh.expectedInflation + BASELINE.trendProductivity + 0.6 * (BASELINE.naturalUnemployment - unemployment)) / 12, -0.003, 0.012);
+  hh.wageIndex *= 1 + wg;
+  hh.expectedInflation = clamp(0.82 * hh.expectedInflation + 0.1 * inflationYoY + 0.08 * BASELINE.inflationTarget, -0.02, 0.15);
+  // Workforce (incl. commuters/migrants) grows on trend and partially follows labour demand.
+  hh.laborForce *= 1 + 0.01 / 12;
+  hh.laborForce += 0.06 * (hh.employed / (1 - BASELINE.naturalUnemployment) - hh.laborForce);
+  hh.population *= 1 + 0.012 / 12;
+
+  // Confidence and MPC (spec §8 reduced form)
+  const confTarget = clamp(0.6 - 2 * (unemployment - BASELINE.naturalUnemployment) - 2 * Math.max(0, inflationYoY - 0.03) + 1.5 * realIncomeGrowth - 0.15 * (0.5 - s.external.riskAppetite), 0.1, 0.95);
+  hh.confidence += (confTarget - hh.confidence) * 0.35;
+  hh.mpc = clamp(BASE_MPC - 0.5 * (unemployment - BASELINE.naturalUnemployment) - 1.0 * Math.max(0, inflationYoY - 0.03) + 0.1 * (hh.confidence - 0.6), 0.7, 0.95);
+}
+
+/** New lending capacity this month: capital headroom × willingness. */
+export function creditSupply(s: GameState): number {
+  const b = s.bank;
+  const loans = b.loansH + b.loansF;
+  const headroom = Math.max(0, b.capital / 0.1 - loans);
+  return Math.min(headroom, loans * 0.03) * b.willingness;
+}
+
+export function resetMonthToDate(s: GameState): void {
+  for (const j of SECTOR_IDS) s.sectors[j].mtd = { output: 0, nominalOutput: 0, va: 0, realVa: 0, wages: 0, profit: 0, taxableProfit: 0, demand: 0 };
+  s.households.mtd = { wages: 0, transfers: 0, other: 0, tax: 0, debtService: 0, disposable: 0, consumption: 0, rent: 0 };
+}
