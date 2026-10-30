@@ -225,3 +225,5 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   title/subtitle/status header and inline index sparklines. The company list owns bounded vertical/horizontal
   scrolling; fixed header/filter/footer rows never compete with it through nested percentage-height scrollers.
   Ordinary inspectors retain their body scroll. No simulation behavior changes.
+
+- **D-031 Cloud saves (user-directed).** Optional Firebase email/password sign-in with console-provisioned account; no social login. Realtime Database stores versioned JSON snapshots because campaign saves may exceed Firestore document limits. Local saving is first and independent. Slots opt into session sync through upload/load; revision transactions reject concurrent or unseen overwrites. Missing configuration leaves the game local-only. No economic rules change.
