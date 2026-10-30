@@ -3,6 +3,7 @@
 import { BASELINE } from '../data/economic-baseline';
 import { EVENT_BY_ID, type EventMods } from '../data/events';
 import type { ExternalState, GameState, GlobalDriver } from '../types/game';
+import { eventIsActive } from './events';
 import { randnClipped } from './rng';
 import { clamp } from './util';
 
@@ -45,7 +46,7 @@ export function aggregateMods(s: GameState, today: number): AggregatedMods {
   const m: AggregatedMods = { oil: 1, fx: 1, tech: 1, tourism: 1, myDemand: 1, globalDemand: 1, usDemand: 1, risk: 0, creditWillingness: 1, creditSpread: 0, propDemand: 1, usRate: 0, capacity: {}, drivers: {} };
   for (const ev of s.events.active) {
     const t = EVENT_BY_ID[ev.templateId];
-    if (!t || t.company) continue;
+    if (!t || t.company || !eventIsActive(ev, today)) continue;
     const k = clamp((today - ev.startDay + 1) / 7, 0, 1) * ev.magnitude;
     const mods: EventMods = t.mods;
     const mul = (x: number | undefined) => (x === undefined ? 1 : Math.pow(x, k));

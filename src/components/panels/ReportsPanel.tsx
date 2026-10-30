@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { SECTOR_IDS, SECTORS } from '../../data/economic-baseline';
-import { formatKL, klDayLabel } from '../../engine/time';
+import { formatKL, klDay } from '../../engine/time';
 import { useGameState } from '../../store/game-store';
 import type { GovMonthFlows } from '../../types/game';
 import { money, pct } from '../../utils/format';
 import { PanelShell } from './PanelShell';
 import { Section, Stat, Tabs } from '../ui';
+import { EventCard } from '../EventCard';
 
 const FLOW_LABELS: [keyof GovMonthFlows, string, boolean][] = [
   ['taxCorporate', 'Corporate tax', true], ['taxProperty', 'Property levy', true], ['taxConsumption', 'Consumption levy', true], ['taxHousehold', 'Household surcharge', true], ['federalGrant', 'Federal grant', true],
@@ -79,9 +80,7 @@ export function ReportsPanel() {
       ))}
       {tab === 'events' && (
         <Section title="Economic events (fictional scenarios)">
-          {[...g.events.log].reverse().map((e) => (
-            <div key={e.id} className="flex justify-between border-b border-slate-700/30 py-1 text-[12px]"><span>{e.title}</span><span className="text-slate-400">{klDayLabel(e.startDay)} → {klDayLabel(e.endDay)}</span></div>
-          ))}
+          {[...g.events.log].reverse().map((event) => <EventCard key={event.id} event={event} today={klDay(g.clock.hour * 60)} />)}
           {!g.events.log.length && <div className="text-[12px] text-slate-400">No events yet.</div>}
         </Section>
       )}

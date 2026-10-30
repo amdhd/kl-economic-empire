@@ -51,9 +51,9 @@ export function demandIndices(s: GameState, c: CompanySeed) {
 }
 
 /** Daily revenue & cost accrual (listing currency). */
-export function dailyCompanies(s: GameState): void {
+export function dailyCompanies(s: GameState, day = s.scheduler.lastDay): void {
   const fxf = s.external.myrPerUsd / BASELINE.myrPerUsd;
-  const targets = companyEventTargets(s);
+  const targets = companyEventTargets(s, day);
   for (const c of COMPANIES) {
     const st = s.companies[c.id];
     const t = targets.get(c.id) ?? { revenue: 1, sentiment: 0 };

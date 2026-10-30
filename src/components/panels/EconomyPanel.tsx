@@ -1,10 +1,10 @@
 import { SECTOR_IDS, SECTORS } from '../../data/economic-baseline';
-import { EVENT_BY_ID } from '../../data/events';
 import { CAL } from '../../engine/calibration';
-import { daysInMonth, klDayLabel, monthKeyLabel } from '../../engine/time';
+import { daysInMonth, klDay, klDayLabel, monthKeyLabel } from '../../engine/time';
 import { useGameState } from '../../store/game-store';
 import { fx, money, pct } from '../../utils/format';
 import { TimeChart } from '../charts/TimeChart';
+import { EventCard } from '../EventCard';
 import { PanelShell } from './PanelShell';
 import { Section, Stat } from '../ui';
 
@@ -83,26 +83,20 @@ export function EconomyPanel() {
           <div className="grid grid-cols-2 gap-2">
             <Stat label="Malaysia demand" value={e.myDemand.toFixed(3)} />
             <Stat label="Global demand" value={e.globalDemand.toFixed(3)} />
+            <Stat label="US demand" value={e.usDemand.toFixed(3)} />
             <Stat label="Tech cycle" value={e.techCycle.toFixed(3)} />
             <Stat label="Oil (idx)" value={e.oil.toFixed(2)} sub={`≈ US$${(75 * e.oil).toFixed(0)}/bbl`} />
             <Stat label="Tourism" value={e.tourism.toFixed(3)} />
             <Stat label="Risk appetite" value={pct(e.riskAppetite, 0)} />
             <Stat label="Fed / UST10" value={`${pct(e.fedRate, 2)}`} sub={pct(e.ust10, 2)} />
+            <Stat label="OPR / MGS10" value={pct(e.opr, 2)} sub={pct(e.mgs10, 2)} />
             <Stat label="MYR/USD" value={fx(e.myrPerUsd)} />
           </div>
         </Section>
       </div>
       <Section title="Active economic events">
         {g.events.active.length === 0 && <div className="text-[12px] text-slate-400">Calm conditions.</div>}
-        {g.events.active.map((ev) => {
-          const t = EVENT_BY_ID[ev.templateId];
-          return (
-            <div key={ev.id} className="mb-2 rounded-lg bg-slate-800/40 p-2 text-[12px]">
-              <div className="flex justify-between"><b className={t?.tone === 'good' ? 'up' : t?.tone === 'bad' ? 'down' : ''}>{ev.title}</b><span className="text-slate-400">until {klDayLabel(ev.endDay)}</span></div>
-              {t && <div className="text-slate-400">{t.effects.join(' · ')}</div>}
-            </div>
-          );
-        })}
+        {g.events.active.map((event) => <EventCard key={event.id} event={event} today={klDay(g.clock.hour * 60)} />)}
       </Section>
     </PanelShell>
   );

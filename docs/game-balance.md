@@ -77,3 +77,16 @@ before productivity benefits, finite IO calibration and GDP separation from conf
 project forecast fixes change displayed estimates only. Historical replay tables above remain historical samples;
 they are not a new balance result. External-event seed variance, the tax/wealth incentive and the victory bar's
 dependence on scripted bots still require Phase 6 work and human playtesting.
+
+## Phase 5 correctness pass (2026-10-31)
+
+Shock timing and fiscal stress now have focused regression coverage. Company shocks include their final active
+day; monthly bank decisions use the final settled day's stress rather than the new calendar day's events.
+Unfunded capex and emergency work are no longer duplicated into operating arrears. These corrections can change
+campaign outcomes even though event hazards, random draws, macro coefficients, scoring and victory thresholds
+were not tuned. Earlier balance tables are historical and should not be treated as current calibration.
+
+The full campaign suite still compares adaptive play over 12 seeds and recession/balanced scenarios over 20 seeds.
+External-shock score variance, the tax/wealth incentive and human calibration of the victory threshold remain
+Phase 6 work. Historical arrears in existing saves are preserved; no retroactive expenditure reconstruction is
+attempted.

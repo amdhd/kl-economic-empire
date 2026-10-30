@@ -98,3 +98,24 @@ renumbered here as D-P3-xx (restatements of conventions already recorded above â
   may refer to different tax regimes, including a zero-rate month. Project quotes use the current construction
   index for cost, disbursement and upkeep; template costs remain base-price costs. These are forecast corrections,
   not changes to settlement, economic parameters or the save schema.
+
+## Phase 5 â€” external markets, credit and shock propagation
+
+Plan: retain the existing external/credit/valuation systems; test the three acceptance chains and stress paths;
+correct event-period settlement and fiscal arrears; expose event causes and lifecycle in the UI; verify and commit.
+
+- **D-P5-01 Event periods.** Events apply on KL days `startDay <= day < endDay`. Macro modifiers ramp in over seven
+  days; company shocks retain their existing revenue/sentiment smoothing. Finish every accrual for the last valid
+  day before expiring an event. Monthly bank decisions use modifiers from the final settled day, so newly spawned
+  Monday/month-start events cannot change the month just ended. Initial recession events enter the same bounded
+  history/news path as random events. Expiry removes direct modifiers; prices, credit plans, capital and company
+  sentiment can retain lagged consequences. No extra RNG draws are introduced.
+- **D-P5-02 Unpaid spending.** `unpaidObligations` carries unpaid operating/transfer obligations and unpaid interest.
+  Unbuilt project work and `pendingEmergency` already carry their own unpaid balances; never also book those
+  amounts as operating arrears. Daily operating arrears are due less actual posted operating payments. Commitments
+  remain subject to financing and the existing 30-day/no-market-access insolvency rule. No state fields change;
+  old recorded arrears remain payable, with no speculative historical adjustment on load.
+- **D-P5-03 Scope.** Keep seven domestic sectors plus the external Malaysia/US/global drivers as the Phase 5 model.
+  Add causal and accounting coverage for credit stress, geographical tax/earnings separation, FX, rates, market
+  response and fiscal failure. Preserve the existing fictional calibrations and defer score/threshold tuning and
+  optional map overlays to later work.

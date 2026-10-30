@@ -10,6 +10,7 @@ import { accumulate } from './clock';
 import { initialCompany } from './companies';
 import { computeCpi } from './economy';
 import { initialExternal } from './external';
+import { startEvent } from './events';
 import { BASE_NPL } from './banks';
 import { emptyFlows, issueDebt, repayDebt, treasuryMYR } from './government';
 import { computeScore, publicNetWorth } from './indicators';
@@ -120,7 +121,7 @@ export function createGame(seed = 20270101, scenario: ScenarioId = 'balanced'): 
 
   if (scenario === 'recession') {
     for (const id of ['global_slowdown', 'credit_crunch']) {
-      s.events.active.push({ id: s.events.nextId++, templateId: id, title: id === 'global_slowdown' ? 'Global recession' : 'Banking credit crunch', startDay, endDay: startDay + 180, magnitude: 1.3 });
+      startEvent(s, id, startDay, 180, 1.3);
     }
     s.external.cycles.global = -0.03;
     s.external.cycles.us = -0.03;

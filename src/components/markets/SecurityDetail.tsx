@@ -3,6 +3,7 @@ import { COMPANY_BY_ID } from '../../data/companies';
 import { SECTORS } from '../../data/economic-baseline';
 import { EXCHANGES } from '../../engine/market-calendar';
 import { exchangeStatus, priceSeries, securityRow, type Resolution } from '../../engine/market-view';
+import { fundamentalValue } from '../../engine/stock-market';
 import { LOCATION_TYPE_LABEL } from '../../map/company-markers';
 import type { GameState, TickerId } from '../../types/game';
 import { money, num, pct, sharePrice } from '../../utils/format';
@@ -101,6 +102,16 @@ export function SecurityDetail({ game, id, nowMin }: { game: GameState; id: Tick
           <Stat label="Debt" value={money(st.debt, cur)} />
           <Stat label="Net margin · 12m" value={pct(ttmRev ? ttmNi / ttmRev : 0, 1)} />
         </div>
+      </div>
+
+      <div>
+        <h3 className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Valuation drivers (fictional model)</h3>
+        <div className="grid grid-cols-3 gap-2" data-testid="valuation-drivers">
+          <Stat label="Model value" value={sharePrice(fundamentalValue(game, id), cur)} />
+          <Stat label={c.exchange === 'MY' ? 'MGS10 benchmark' : 'UST10 benchmark'} value={pct(c.exchange === 'MY' ? game.external.mgs10 : game.external.ust10, 2)} />
+          <Stat label="Rate sensitivity" value={num(c.rateSensitivity, 1)} />
+        </div>
+        <p className="mt-1 text-[11px] text-slate-500">Earnings, the external benchmark rate, risk appetite and company sentiment drive model value. Higher rates reduce value; higher sensitivity increases the effect. Traded prices adjust during open sessions.</p>
       </div>
 
       <div>

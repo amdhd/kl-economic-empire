@@ -121,7 +121,7 @@ export function dailyGovernment(s: GameState, today: number): GovDay {
   const maintPaid = maintenance * paidFraction;
   purchases.prop += maintPaid * 0.6;
   purchases.ind += maintPaid * 0.4;
-  post(gov, 'opex', opexPaid + maintPaid + arrearsDue * paidFraction);
+  const operatingPaid = post(gov, 'opex', opexPaid + maintPaid + arrearsDue * paidFraction);
   const transfersPaid = post(gov, 'opex', transfersDue * paidFraction);
   for (const { id, amt } of capexDueBy) {
     const p = gov.projects.find((x) => x.id === id)!;
@@ -141,7 +141,9 @@ export function dailyGovernment(s: GameState, today: number): GovDay {
     purchases.health += paid * 0.3;
     purchases.ind += paid * 0.2;
   }
-  gov.unpaidObligations = totalDue * (1 - paidFraction);
+  // Projects retain unbuilt work and emergencies retain pendingEmergency. Carrying those same
+  // shortfalls as opex arrears would pay them twice when cash becomes available.
+  gov.unpaidObligations = Math.max(0, opexDue + maintenance + transfersDue + arrearsDue - operatingPaid - transfersPaid);
   if (gov.unpaidObligations > 1e6) {
     gov.daysInArrears += 1;
     gov.mtdArrearsDays += 1;

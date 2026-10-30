@@ -35,14 +35,14 @@ CPI: 100 = start. FX: MYR per USD.
 ## Weekly
 Employment moves 12 % toward `demand / labour productivity`, bounded by 98.5 % of the workforce. Seeded events spawn.
 
-## Monthly close (`scheduler.ts` → government → companies → fund → bank → economy)
+## Monthly close (`scheduler.ts` → companies → fund → government → bank → economy)
 - **Government:** corporate tax `= rate × Σ max(0, sector profit)`; property levy `= rate × 0.5 × property gross output`;
   interest on debt; amortisation debt/120 refinanced to the cash-buffer target, within the debt/GDP cap.
-  Yield `= MGS10 + 0.4 % + 8·max(0, D/Y − 35 %) + 0.25·max(0, deficit − 3 %) + arrears`. Rating and market access follow.
+  Yield `= MGS10 + 0.004 + 0.08·max(0, D/Y − 0.35) + 0.25·max(0, deficit − 0.03) + 0.02·arrearsFlag`. Rating and market access follow.
   Service quality → target `0.62·(real health+services+safety spend / base)^0.6 + project boosts`, 25 %/month.
 - **Budget identity** (tested every month, exact to the sen):
   `ΔTreasury = taxes + grant + borrowing + SWF transfers in − opex − capex − interest − principal − emergency − SWF injections`.
-- **Bank** (identity `reserves + loans = deposits + capital`, tested): NPL `= 0.12 % + 1.5·(u − 3.5 %) + …`; lending rate
+- **Bank** (identity `reserves + loans = deposits + capital`, tested): NPL `= 0.0012 + 0.015·(u − 0.035) + …`; lending rate
   `= OPR + 2 % + event spread + 1.5·ΔNPL + capital stress`; supply `= min(capital/10 % − loans, 3 % of loans) × willingness`.
 - **Investment:** desired capital growth `g = 3.5 % + 0.12·(after-tax ROK − base) − 0.6·Δlending rate + 0.12·(util − 85 %) + confidence`,
   partial adjustment 30 %/month, external finance rationed by bank supply. New capacity matures after **6 months**.
@@ -109,6 +109,87 @@ overlays and the score calibration issues in `game-balance.md` remain outside th
 
 Validation (2026-10-31): strict production build, 93 unit/invariant/campaign tests, all 17 Playwright browser tests
 and ESLint pass. Browser tests run on isolated port 5174, with Phase 4 tabs disabling player saves.
+
+## Phase 5 — external economy, financial shocks and fiscal stress
+
+The seven resident sectors remain linked to separate Malaysia, US/global and industry drivers. All values and
+events below are fictional simulations. This phase retains the existing calibrated coefficients and adds the
+event/fiscal corrections described here. No new saved state fields are introduced; saves remain schema 3.
+
+### External demand, currency and company exposure
+
+`external.ts` draws only from `s.rng`. Daily log cycles follow `cycle = persistence × cycle + sd × clippedNormal`.
+Demand is `exp(annualTrend × days/365 + cycle) × activeEventModifier`. Annual real trends are 4.2% Malaysia,
+3% global, 2.2% US, 6% technology and 4.5% tourism; US prices trend at 2.5%. Industry drivers combine these
+states (e.g. semiconductors use `techCycle^1.4`, software uses technology plus trend, industrial uses global demand).
+OPR and Fed rules meet on alternate month boundaries; only OPR has the documented small KL feedback.
+
+FX, quoted MYR per USD, is clamped to 3.2–6.5:
+
+`FX = baseFX × exp(fxCycle − 1.5 × relativeRateChange − 0.05 × (oil−1) − 0.08 × (riskAppetite−0.5)) × eventFX`.
+
+Imports use FX times foreign goods/energy prices. Depreciation raises imported costs, propagates through input
+prices and CPI, and can lower real household income while improving export price competitiveness. FX revalues
+USD fund cash and shares in MYR; it never changes USD quote prices or share units by accounting alone.
+
+Featured-company revenue is weighted by KL/rest-of-Malaysia/global exposure. MY issuers translate global USD
+activity into MYR; US issuers translate their small local exposure into USD. KL activity uses sector output and
+prices; rest-of-Malaysia prices use KL CPI as a reduced-form proxy. Global earnings use the corresponding external
+industry driver and US price index. These are exposure-based earnings estimates, not separately consolidated
+geographical cash ledgers. KL tax applies only to the KL share of positive pretax profit; other profits retain
+exogenous MY/US tax rates. Exposure weights, earnings, benchmarks and sentiment feed the existing fundamental
+valuation and correlated price-discovery model documented below. Company detail now shows model value, the
+listing-market benchmark and rate sensitivity; the economy view includes US demand and both rate benchmarks.
+
+### Event lifecycle and propagation
+
+An event is effective on `startDay <= settledDay < endDay`. Macro strength is
+`k = clamp((settledDay − startDay + 1)/7, 0, 1) × magnitude`. Multiplicative modifiers use `modifier^k`;
+additive modifiers use `modifier × k`. Company beats/warnings retain 6%/day adjustment toward revenue targets
+and 5%/day sentiment adjustment, without an extra macro ramp. Future or expired events cannot affect accrual.
+
+All daily agents, including companies, settle the final valid day before expiry. Monthly banking uses that
+same settled day's modifiers. A shock spawned at a Monday/month-start boundary affects the new period; it
+cannot change the previous month's credit decision. Conversely, a crunch ending on 1 February still informs
+January's closing bank decision. Lending rates and new-credit plans update monthly, so those consequences may
+persist through the following month. Direct macro modifiers stop at expiry; price adjustment, company sentiment,
+investment pipelines and household income retain their own lags. There is no blanket multi-week shock fade.
+
+Opening recession events use the same registration, news and bounded 200-event history as weekly events,
+without drawing additional randomness. Live and historical cards show cause, modelled secondary effects,
+strength, active/ended status and the last active date (the exclusive end minus one day).
+
+### Credit constraints and fiscal failure
+
+The bank remains a reduced-form aggregate: new loans create matching deposits, repayments destroy both,
+defaults reduce loans and capital, and bank earnings/distributions move value between deposits and capital.
+Credit supply is capped by capital headroom at a 10% capital ratio and 3% of outstanding loans, scaled by
+willingness. Credit crunches reduce willingness and raise spreads; defaults and low capital amplify the effect.
+Investment and household credit compete for supply, so stronger credit cannot create unrecorded firm cash.
+The bank identity is checked under stress as well as ordinary campaigns.
+
+Daily treasury financing continues to respect market access and debt/GDP limits. Opex, transfers, capex and
+emergency work share available funds. **Operating arrears = operating/maintenance/transfer amounts due + old
+arrears − actual operating/transfer postings** (floored at zero). Unbuilt project work stays in the project's
+remaining real work; unpaid emergency work stays in `pendingEmergency`. Neither shortfall is also recorded as
+opex arrears. Otherwise funding recovery would pay the same obligation twice. Unpaid month-end interest still
+enters arrears. Historical saved arrears remain payable; the engine does not invent a retroactive breakdown.
+
+Debt interest accrues daily at the debt stock's average coupon. New issuance uses the current MGS benchmark plus
+the fiscal premium, changing the average coupon by issue size. Debt principal is a liability, not revenue.
+At monthly close, at least 30 consecutive arrears days plus no market access triggers insolvency, lowers trust
+and caps the score at 30. A funded recovery before that condition does not automatically fail the campaign.
+
+`tests/phase5-external.test.ts` covers AI versus unrelated sectors, all-issuer tax exposure, filled USD positions
+under FX revaluation, FX/import inflation, rate-sensitive model values and prices, KL/US separation, shock
+boundaries, save/load replay, constrained credit, bank identity, arrears recovery, coupons, fiscal risk and
+insolvency/approval. The existing 12-seed adaptive and 20-seed recession campaign comparisons remain required.
+`e2e/phase5.spec.ts` covers recession selection, readable live/retained shocks, expiry, banking reports and MY/US
+valuation benchmarks, in isolated tabs with player saves disabled.
+
+Validation (2026-10-31): strict production build, ESLint, 108 unit/invariant/campaign tests and the full 19-test
+Playwright suite pass. The final Phase 5 UI additions also pass their two targeted browser tests. Event history
+and valuation details were visually inspected in an isolated no-save browser tab.
 
 ## Stock market (Phase 2)
 

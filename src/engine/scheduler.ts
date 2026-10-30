@@ -13,7 +13,7 @@ import { monthCloseBank } from './banks';
 import { dailyCompanies, monthCloseCompanies } from './companies';
 import { daily, monthClose as economyMonthClose, resetMonthToDate, weekly } from './economy';
 import { expireEvents, weeklyEvents } from './events';
-import { aggregateMods, updateExternal } from './external';
+import { aggregateMods, updateExternal, type AggregatedMods } from './external';
 import { applyDuePolicies, dailyGovernment, debtMYR, monthCloseGovernment, treasuryMYR } from './government';
 import { computeScore, outcomeLabel, publicNetWorth, unemploymentRate, updateSatisfaction } from './indicators';
 import { isOpen } from './market-calendar';
@@ -32,7 +32,7 @@ export function runHourTick(s: GameState): void {
   const today = klDay(t);
 
   if (p.hour === 0 && today > s.scheduler.lastDay) {
-    settleDay(s, today - 1);
+    const settledMods = settleDay(s, today - 1);
     s.scheduler.lastDay = today;
     if (p.weekday === 1 && today > s.scheduler.lastWeekDay) {
       weekly(s);
@@ -41,7 +41,7 @@ export function runHourTick(s: GameState): void {
     }
     const mk = monthKey(p.year, p.month);
     if (p.day === 1 && mk > s.scheduler.lastMonthKey) {
-      closeMonth(s, mk - 1);
+      closeMonth(s, mk - 1, settledMods);
       s.scheduler.lastMonthKey = mk;
     }
   }
@@ -63,14 +63,15 @@ export function outputGap(s: GameState): number {
   return r.realGdp / days / potential - 1;
 }
 
-function settleDay(s: GameState, day: number): void {
+function settleDay(s: GameState, day: number): AggregatedMods {
   const p = klParts(klDayStartMin(day + 1));
   const mods = aggregateMods(s, day);
-  expireEvents(s, day + 1);
   updateExternal(s, mods, s.indicators.inflationYoY, p.day, p.month, outputGap(s));
   const gov = dailyGovernment(s, day);
   const e = daily(s, mods, gov);
-  dailyCompanies(s);
+  dailyCompanies(s, day);
+  // Every agent receives the last valid day's shock before expiry.
+  expireEvents(s, day + 1);
   s.scheduler.mtdGdpNominal += e.gdpNominal;
   s.scheduler.mtdGdpReal += e.gdpReal;
   s.scheduler.mtdDays += 1;
@@ -88,14 +89,14 @@ function settleDay(s: GameState, day: number): void {
     fx: s.external.myrPerUsd,
     gdpRunRate: e.gdpNominal * 365,
   }, 800);
+  return mods;
 }
 
-function closeMonth(s: GameState, key: number): void {
+function closeMonth(s: GameState, key: number, mods: AggregatedMods): void {
   const y = Math.floor(key / 12);
   const m = (key % 12) + 1;
   const dim = daysInMonth(y, m);
   const today = s.scheduler.lastDay;
-  const mods = aggregateMods(s, today);
   const prev = s.reports[s.reports.length - 1];
   const navBefore = prev ? prev.fundNav : s.scheduler.startNav;
   const flowsBefore = prev ? prev.fundNetFlows : 0;
