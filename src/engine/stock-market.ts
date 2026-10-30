@@ -59,7 +59,7 @@ export function initialMarket(s: GameState): MarketState {
     // Fictional starting price: fundamental ± up to 12%, rounded to a tick.
     const raw = fv * (0.88 + 0.24 * rand(s.rng));
     const price = roundTick(raw, c.exchange);
-    quotes[c.id] = { price, prevClose: price, open: price, dayHigh: price, dayLow: price, dayVolume: 0, fundamental: fv, daily: [], hourly: [] };
+    quotes[c.id] = { price, prevClose: price, open: price, dayHigh: price, dayLow: price, dayVolume: 0, fundDayValue: 0, fundamental: fv, daily: [], hourly: [] };
   }
   for (const ex of ['MY', 'US'] as Exchange[]) {
     let cap = 0;
@@ -152,6 +152,7 @@ function startSession(s: GameState, ex: Exchange, key: number): void {
     q.dayHigh = q.price;
     q.dayLow = q.price;
     q.dayVolume = 0;
+    q.fundDayValue = 0;
   }
   s.market.indices[ex].prevClose = s.market.indices[ex].value;
 }

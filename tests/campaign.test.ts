@@ -23,11 +23,9 @@ const STRATEGIES: Record<string, Script> = {
     { at: [2027, 1, 4, 10], cmd: { type: 'startProject', templateId: 'clinics' } },
     { at: [2027, 1, 4, 10], cmd: { type: 'startProject', templateId: 'brt' } },
     { at: [2027, 1, 4, 10], cmd: { type: 'queueTax', patch: { corporate: 0.17, property: 0.045 } } },
-    { at: [2027, 1, 4, 10], cmd: { type: 'placeOrder', ticker: 'MY:1155', side: 'buy', units: 20_000_000 } },
-    { at: [2027, 1, 4, 10], cmd: { type: 'placeOrder', ticker: 'MY:1295', side: 'buy', units: 30_000_000 } },
-    { at: [2027, 1, 5, 23], cmd: { type: 'fx', from: 'MYR', amountMinor: 2_000_000_000_00 } },
-    { at: [2027, 1, 6, 23], cmd: { type: 'placeOrder', ticker: 'US:MSFT', side: 'buy', units: 500_000 } },
-    { at: [2027, 1, 6, 23], cmd: { type: 'placeOrder', ticker: 'US:NVDA', side: 'buy', units: 2_000_000 } },
+    // Deploy the SWF gradually (liquidity limits): rebalance each Tuesday morning for 8 weeks.
+    ...[5, 12, 19, 26].flatMap((d) => [{ at: [2027, 1, d, 10] as [number, number, number, number], cmd: { type: 'rebalance', targetMY: 0.35, targetUS: 0.35 } as Command }]),
+    ...[2, 9, 16, 23].flatMap((d) => [{ at: [2027, 2, d, 10] as [number, number, number, number], cmd: { type: 'rebalance', targetMY: 0.35, targetUS: 0.35 } as Command }]),
     { at: [2027, 7, 1, 10], cmd: { type: 'startProject', templateId: 'housing' } },
   ],
   tax_maximiser: [

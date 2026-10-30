@@ -1,0 +1,21 @@
+# Architecture & design decisions
+
+Interpretations of ambiguous points in `PROJECT_SPEC.md`. Newest last.
+
+| ID | Decision | Why |
+|---|---|---|
+| D-001 | **Money representation:** ledger balances (treasury, debt, fund cash, positions' cost) are integer minor units (sen / US cents) in JS `number`, guarded by `assertSafeMinor` (safe to ±9×10¹⁵ = RM 90 trillion). Macro flows (GDP, wages, sector output) are MYR floats. Rounding: half away from zero at each posting (`toMinor`). | Spec allows any overflow-safe fixed-point; `bigint` would complicate JSON saves and arithmetic for no benefit at KL scale. |
+| D-002 | **Time:** state stores `clock.hour` (UTC epoch hours of the last processed boundary) + `clock.subHourMs` (visual only). Economic changes happen only in `runHourTick`. Frames are clamped to 250 ms; hidden tabs auto-pause. | Determinism independent of frame rate; no background catch-up. |
+| D-003 | **Map:** OpenFreeMap `liberty` style. Inspected style JSON: 3D layer `building-3d`, source-layer `building`, properties `render_height`/`render_min_height`. We recolour by height; missing heights fall back to the style's own default. MapLibre v6's worker is loaded via an explicit `setWorkerUrl` (bundling breaks its self-location). | Spec: inspect, don't assume. |
+| D-004 | **Tick ordering:** at a boundary tick we first settle the period that just *ended* (day → week → month), then apply player policies whose effective time has arrived, then markets. | A tax effective 1 Feb must not tax January. Spec §13 lists commands first; we document the deviation. |
+| D-005 | **Daily cadence for flows:** monthly policy amounts are "per average month"; daily flow = monthly × 12/365. Month-close distributions are normalised to an average month. | Avoids 31-day vs 28-day sawtooth in demand. |
+| D-006 | **Featured companies are a sample, not an addition.** Government corporate tax is computed on the 7 KL *sector aggregates*; company-level KL tax (exposure × rate) is informational. Company revenue indexes KL sector activity, Malaysia demand and a global driver by exposure. | Avoids double counting (spec §8). |
+| D-007 | **Taxes collected:** consumption levy and household surcharge are remitted daily (point of sale / withholding); corporate tax and property levy settle at month close on that month's base. | Simple, testable timing that makes the treasury dip within a month. |
+| D-008 | **Closed-market orders queue** as market orders for the next open hourly tick and expire after 7 days; cancellable. Orders on an open exchange fill immediately at the last tick's price + spread + impact. Settlement is T+0. | Spec asks to pick one rule. |
+| D-009 | **Bursa holidays:** fixed-date holidays exact; lunar/religious holidays for 2027–2029 are an approximation in `market-calendar.ts`. NYSE holidays (incl. Good Friday, observed rules) and New York DST are computed by rule. | Spec: weekends/time zones mandatory, holidays may be approximate. |
+| D-010 | **Liquidity & impact are cumulative per stock per session** (`fundDayValue`): impact = 0.1·√(today's fund value / ADV); hard cap 25 % of ADV per session. | Prevents splitting orders to dodge impact/limits. |
+| D-011 | **Workforce is elastic**: KL workforce (incl. commuters/migrants) grows 1 %/yr and moves 6 %/month toward labour demand. | Without it any demand shock pinned unemployment at the floor (see game-balance.md). |
+| D-012 | **Central bank:** OPR is exogenous (fictional rule on national inflation, Malaysia demand and a 0.2 weight on the KL output gap); the president cannot set it. | Spec §8. |
+| D-013 | **Dev tooling:** `window.__klDev.runHours()` exists only when `import.meta.env.DEV` (stripped from production). `sessionStorage.klDevNoSave` disables saving in automated test tabs. `runHeadless()` is test-only. | Spec allows bulk simulation only for tests/dev tooling. |
+| D-014 | **Deliberation pause:** confirmation dialogs (trades, policies, projects, transfers) pause the clock while open — a user preference in Save/Load, default on. | Spec §11 UX. |
+| D-015 | **Score preview** uses the same function as the final score; during year one real growth in the HUD is shown vs the starting level rather than annualised. | Annualising 2–3 months exaggerated noise ("−10 % YoY"). |

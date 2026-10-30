@@ -118,7 +118,8 @@ function closeMonth(s: GameState, key: number): void {
     ind.realGrowthYoY = ind.realGdpAnnual / ((yearAgo.realGdp * 365) / daysInMonth(Math.floor(yearAgo.monthKey / 12), (yearAgo.monthKey % 12) + 1)) - 1;
   } else {
     ind.inflationYoY = Math.pow(ind.cpi / 100, 12 / months) - 1;
-    ind.realGrowthYoY = Math.pow(ind.realGdpAnnual / s.baseline.realGdpAnnual, 12 / months) - 1;
+    // First year: growth vs the starting level (annualising a few months exaggerates noise).
+    ind.realGrowthYoY = ind.realGdpAnnual / s.baseline.realGdpAnnual - 1;
   }
   ind.inflationMoM = prev ? ind.cpi / prev.cpi - 1 : ind.cpi / 100 - 1;
   const u = unemploymentRate(s);

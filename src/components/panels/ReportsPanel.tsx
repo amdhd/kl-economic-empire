@@ -1,0 +1,99 @@
+import { useState } from 'react';
+import { SECTOR_IDS, SECTORS } from '../../data/economic-baseline';
+import { formatKL, klDayLabel } from '../../engine/time';
+import { useGameState } from '../../store/game-store';
+import type { GovMonthFlows } from '../../types/game';
+import { money, pct } from '../../utils/format';
+import { PanelShell } from './PanelShell';
+import { Section, Stat, Tabs } from '../ui';
+
+const FLOW_LABELS: [keyof GovMonthFlows, string, boolean][] = [
+  ['taxCorporate', 'Corporate tax', true], ['taxProperty', 'Property levy', true], ['taxConsumption', 'Consumption levy', true], ['taxHousehold', 'Household surcharge', true], ['federalGrant', 'Federal grant', true],
+  ['borrowing', 'Bond proceeds', true], ['swfTransferIn', 'SWF transfers in', true],
+  ['opex', 'Operating outlays', false], ['capex', 'Capital outlays', false], ['interest', 'Debt interest', false], ['principal', 'Principal repaid', false], ['emergency', 'Emergency', false], ['swfContribution', 'SWF injections', false],
+];
+
+export function ReportsPanel() {
+  const g = useGameState();
+  const [tab, setTab] = useState<'monthly' | 'events' | 'policy' | 'news'>('monthly');
+  const [sel, setSel] = useState<number | null>(null);
+  const r = sel !== null ? g.reports.find((x) => x.monthKey === sel) : g.reports.at(-1);
+  return (
+    <PanelShell title="Reports & logs" subtitle="Monthly accounts close automatically at 00:00 on the 1st." width={720}>
+      <Tabs value={tab} onChange={setTab} options={[{ id: 'monthly', label: 'Monthly reports' }, { id: 'events', label: 'Event log' }, { id: 'policy', label: 'Policy history' }, { id: 'news', label: 'All news' }]} />
+      {tab === 'monthly' && (!r ? (
+        <div className="text-[12.5px] text-slate-400">The first monthly report arrives at 00:00 on 1 Feb 2027. Keep the clock running.</div>
+      ) : (
+        <>
+          <div className="flex flex-wrap gap-1">
+            {g.reports.map((x) => (
+              <button key={x.monthKey} onClick={() => setSel(x.monthKey)} className={`rounded-md px-2 py-1 text-[11px] font-semibold ${x.monthKey === r.monthKey ? 'bg-emerald-500/20 text-emerald-200' : 'bg-slate-800/60 text-slate-400 hover:text-white'}`}>{x.label}</button>
+            ))}
+          </div>
+          <Section title={`${r.label} — Economic report`}>
+            <div className="mb-3 grid grid-cols-4 gap-3">
+              <Stat label="Nominal GDP (month)" value={money(r.nominalGdp)} />
+              <Stat label="Real GDP (month)" value={money(r.realGdp)} />
+              <Stat label="CPI YoY" value={pct(r.inflationYoY)} />
+              <Stat label="Unemployment" value={pct(r.unemployment)} />
+              <Stat label="Approval" value={`${r.approval.toFixed(0)}%`} />
+              <Stat label="SWF NAV" value={money(r.fundNav)} sub={`${pct(r.fundReturnMoM, 2, true)} return`} tone={r.fundReturnMoM >= 0 ? 'up' : 'down'} />
+              <Stat label="Treasury" value={money(r.treasury)} />
+              <Stat label="Debt" value={money(r.debt)} sub={`yield ${pct(r.bondYield, 2)}`} />
+            </div>
+            <div className="mb-3 space-y-1">
+              {r.notes.map((n, i) => <p key={i} className="text-[12.5px] text-slate-300">• {n}</p>)}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <div className="label mb-1">GDP by sector (value added)</div>
+                {SECTOR_IDS.map((j) => (
+                  <div key={j} className="num flex justify-between text-[12px]"><span className="text-slate-400">{SECTORS[j].short}</span><span>{money(r.gdpBySector[j])}</span></div>
+                ))}
+                <div className="num flex justify-between border-t border-slate-700/50 pt-1 text-[12px]"><span className="text-slate-400">+ consumption levy</span><span>{money(r.gov.taxConsumption)}</span></div>
+              </div>
+              <div>
+                <div className="label mb-1">Government cash flows</div>
+                {FLOW_LABELS.map(([k, label, inflow]) => r.gov[k] > 0 && (
+                  <div key={k} className="num flex justify-between text-[12px]"><span className="text-slate-400">{label}</span><span className={inflow ? 'up' : 'down'}>{inflow ? '+' : '−'}{money(r.gov[k])}</span></div>
+                ))}
+              </div>
+            </div>
+            {(r.events.length > 0 || r.policies.length > 0) && (
+              <div className="mt-3 grid grid-cols-2 gap-3 text-[12px]">
+                <div><div className="label mb-1">Events started</div>{r.events.map((e, i) => <div key={i} className="text-slate-300">{e}</div>)}</div>
+                <div><div className="label mb-1">Your decisions</div>{r.policies.map((e, i) => <div key={i} className="text-slate-300">{e}</div>)}</div>
+              </div>
+            )}
+          </Section>
+        </>
+      ))}
+      {tab === 'events' && (
+        <Section title="Economic events (fictional scenarios)">
+          {[...g.events.log].reverse().map((e) => (
+            <div key={e.id} className="flex justify-between border-b border-slate-700/30 py-1 text-[12px]"><span>{e.title}</span><span className="text-slate-400">{klDayLabel(e.startDay)} → {klDayLabel(e.endDay)}</span></div>
+          ))}
+          {!g.events.log.length && <div className="text-[12px] text-slate-400">No events yet.</div>}
+        </Section>
+      )}
+      {tab === 'policy' && (
+        <Section title="Your decisions">
+          {[...g.policyLog].reverse().map((p, i) => (
+            <div key={i} className="border-b border-slate-700/30 py-1 text-[12px]"><span className="text-slate-400">{formatKL(p.atMin).date}</span> · {p.label}{p.effectiveMin !== p.atMin ? <span className="text-slate-500"> (effective {formatKL(p.effectiveMin).date})</span> : null}</div>
+          ))}
+          {!g.policyLog.length && <div className="text-[12px] text-slate-400">No decisions yet.</div>}
+        </Section>
+      )}
+      {tab === 'news' && (
+        <Section title="News feed">
+          {[...g.news].reverse().map((n) => (
+            <div key={n.id} className="border-b border-slate-700/30 py-1.5 text-[12px]">
+              <div className="flex justify-between"><b className={n.tone === 'good' ? 'up' : n.tone === 'bad' ? 'down' : 'text-slate-200'}>{n.title}</b><span className="shrink-0 pl-2 text-slate-500">{formatKL(n.atMin).date.slice(0, 6)} {formatKL(n.atMin).time}</span></div>
+              {n.body && <div className="text-slate-400">{n.body}</div>}
+            </div>
+          ))}
+        </Section>
+      )}
+    </PanelShell>
+  );
+}

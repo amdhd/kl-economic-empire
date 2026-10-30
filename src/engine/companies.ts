@@ -120,7 +120,8 @@ export function monthCloseCompanies(s: GameState, monthKey: number): Dividend[] 
     if (st.history.length > 24) st.history.shift();
     st.mtd = { revenue: 0, laborCost: 0, energyCost: 0, otherCost: 0, depreciation: 0, interest: 0 };
     const base = baselineMonth(c, monthKey, klTax).netIncome;
-    if (base > 0 && netIncome < base * 0.6) news(s, { kind: 'market', tone: 'bad', title: `${c.displayName} profit slumps`, body: `Monthly net income ${(netIncome / base * 100).toFixed(0)}% of its normal level.` });
+    const prevNi = st.history.at(-2)?.netIncome ?? base;
+    if (base > 0 && netIncome < base * 0.6 && prevNi >= base * 0.6) news(s, { kind: 'market', tone: 'bad', title: `${c.displayName} profit slumps`, body: `Monthly net income ${(netIncome / base * 100).toFixed(0)}% of its normal level.` });
   }
   return out;
 }

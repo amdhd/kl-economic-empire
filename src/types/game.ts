@@ -122,6 +122,8 @@ export interface QuoteState {
   dayHigh: number;
   dayLow: number;
   dayVolume: number;
+  /** SWF traded value in this session (major units): impact and liquidity limits are cumulative. */
+  fundDayValue: number;
   fundamental: number;
   daily: Bar[]; // bounded
   hourly: Bar[]; // bounded

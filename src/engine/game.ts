@@ -14,7 +14,7 @@ import { BASE_NPL } from './banks';
 import { emptyFlows, issueDebt, repayDebt, treasuryMYR } from './government';
 import { computeScore, publicNetWorth } from './indicators';
 import { runHourTick } from './scheduler';
-import { cancelOrder, convertFx, injectFund, navMYR, placeOrder, withdrawFund } from './sovereign-fund';
+import { cancelOrder, convertFx, executeRebalance, injectFund, navMYR, placeOrder, withdrawFund } from './sovereign-fund';
 import { initialMarket, seedHistory } from './stock-market';
 import { seedRng } from './rng';
 import { klDay, klParts, klToEpochMin, monthKey } from './time';
@@ -145,7 +145,8 @@ export type Command =
   | { type: 'setDividendTransfer'; pct: number }
   | { type: 'placeOrder'; ticker: TickerId; side: 'buy' | 'sell'; units: number }
   | { type: 'cancelOrder'; id: number }
-  | { type: 'fx'; from: Currency; amountMinor: number };
+  | { type: 'fx'; from: Currency; amountMinor: number }
+  | { type: 'rebalance'; targetMY: number; targetUS: number };
 
 export interface CommandResult {
   ok: boolean;
@@ -271,6 +272,13 @@ function dispatch(s: GameState, cmd: Command, atMin: number): CommandResult {
     }
     case 'cancelOrder':
       return cancelOrder(s, cmd.id) ? { ok: true, message: 'Order cancelled.' } : { ok: false, message: 'Order is no longer pending.' };
+    case 'rebalance': {
+      if (!(cmd.targetMY >= 0 && cmd.targetUS >= 0 && cmd.targetMY + cmd.targetUS <= 1)) return { ok: false, message: 'Targets must be ≥ 0 and sum to ≤ 100%' };
+      const r = executeRebalance(s, cmd.targetMY, cmd.targetUS, atMin);
+      logPolicy(s, atMin, atMin, `SWF rebalance toward MY ${(cmd.targetMY * 100).toFixed(0)}% / US ${(cmd.targetUS * 100).toFixed(0)}% / cash ${((1 - cmd.targetMY - cmd.targetUS) * 100).toFixed(0)}%`);
+      if (r.placed === 0) return { ok: r.rejected === 0, message: r.rejected ? `All ${r.rejected} rebalance orders were rejected.` : 'Already at target — no orders needed.' };
+      return { ok: true, message: `Rebalance: ${r.placed} orders placed${r.rejected ? `, ${r.rejected} rejected` : ''} (closed markets queue for the next open).` };
+    }
     case 'fx': {
       const err = convertFx(s, cmd.from, cmd.amountMinor);
       return err ? { ok: false, message: err } : { ok: true, message: 'FX conversion complete.' };

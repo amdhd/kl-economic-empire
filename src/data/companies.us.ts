@@ -34,7 +34,7 @@ export const US_COMPANIES: CompanySeed[] = rows.map(({ kl, ...r }) => {
   return {
     laborShare: 0.35,
     energyShare: 0.05,
-    depreciationPct: 0.05,
+    depreciationPct: Math.min(0.05, 0.3 * r.ebitdaMargin),
     rateSensitivity: 1,
     sector: 'tech',
     ...r,

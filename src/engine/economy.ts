@@ -212,7 +212,8 @@ export function monthClose(s: GameState, inflationYoY: number, unemployment: num
   const bank = s.bank;
   const taxRate = s.government.policies.tax.corporate;
 
-  // Profits → distributions and internal funds
+  // Profits → distributions and internal funds (normalised to an average-length month)
+  const perAvgMonth = 365 / 12 / days;
   let distributed = 0;
   const desired: Vec = zero();
   const internal: Vec = zero();
@@ -221,8 +222,8 @@ export function monthClose(s: GameState, inflationYoY: number, unemployment: num
     const profit = sec.mtd.profit;
     const afterTax = profit - Math.max(0, sec.mtd.taxableProfit) * taxRate;
     sec.lastMonthProfit = profit;
-    distributed += Math.max(0, afterTax) * BASELINE.transferShareToHouseholdsOfProfit;
-    sec.retained = Math.max(0, afterTax) * (1 - BASELINE.transferShareToHouseholdsOfProfit);
+    distributed += Math.max(0, afterTax) * BASELINE.transferShareToHouseholdsOfProfit * perAvgMonth;
+    sec.retained = Math.max(0, afterTax) * (1 - BASELINE.transferShareToHouseholdsOfProfit) * perAvgMonth;
     // Investment: after-tax return vs baseline, cost of credit, utilisation and confidence
     const rok = (afterTax * 365) / days / sec.capital;
     const g = clamp(

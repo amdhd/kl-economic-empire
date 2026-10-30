@@ -31,7 +31,8 @@ const rows: Row[] = [
 export const MY_COMPANIES: CompanySeed[] = rows.map((r) => ({
   laborShare: 0.4,
   energyShare: 0.1,
-  depreciationPct: 0.06,
+  // D&A defaults to at most 30% of EBITDA so thin-margin businesses keep a sane profit base.
+  depreciationPct: Math.min(0.06, 0.3 * r.ebitdaMargin),
   rateSensitivity: 1,
   ...r,
   id: `MY:${r.code}`,

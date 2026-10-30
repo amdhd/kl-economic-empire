@@ -36,7 +36,9 @@ export function quoteFill(s: GameState, id: TickerId, side: 'buy' | 'sell', unit
   const c = COMPANY_BY_ID[id];
   const mid = s.market.quotes[id].price;
   const adv = avgDailyValue(s, id);
-  const impact = IMPACT_COEF * Math.sqrt((mid * units) / Math.max(adv, 1));
+  // Impact grows with the fund's cumulative trading in this name today, so splitting an order
+  // into pieces does not avoid it.
+  const impact = IMPACT_COEF * Math.sqrt((s.market.quotes[id].fundDayValue + mid * units) / Math.max(adv, 1));
   const slip = HALF_SPREAD[c.exchange] + impact;
   const px = mid * (side === 'buy' ? 1 + slip : 1 - slip);
   const gross = px * units;
@@ -73,7 +75,8 @@ export function validateOrder(s: GameState, id: TickerId, side: 'buy' | 'sell', 
   if (units % LOT[c.exchange] !== 0) return `Bursa board lot is ${LOT[c.exchange]} shares`;
   const q = quoteFill(s, id, side, units);
   const adv = avgDailyValue(s, id);
-  if (q.mid * units > MAX_ADV_SHARE * adv) return `Order is ${((q.mid * units) / adv * 100).toFixed(0)}% of average daily liquidity (max ${MAX_ADV_SHARE * 100}%) — split it`;
+  const today = s.market.quotes[id].fundDayValue;
+  if (today + q.mid * units > MAX_ADV_SHARE * adv) return `Exceeds today’s liquidity: the fund may trade at most ${MAX_ADV_SHARE * 100}% of average daily value per stock per session (${((today + q.mid * units) / adv * 100).toFixed(0)}% requested incl. earlier fills) — spread it over several sessions`;
   const f = s.fund;
   if (side === 'buy') {
     const cash = c.exchange === 'US' ? f.usdCash : f.myrCash;
@@ -144,6 +147,7 @@ export function executeOrder(s: GameState, order: Order, atMin: number): void {
   if (pos.units > 0) f.positions[order.ticker] = pos;
   else delete f.positions[order.ticker];
   f.feesPaidMYR += q.fees * fx;
+  s.market.quotes[order.ticker].fundDayValue += q.gross;
   order.status = 'filled';
   order.filledMin = atMin;
   order.fillPrice = q.px;
@@ -249,4 +253,86 @@ export function monthCloseFund(s: GameState): void {
   const amt = Math.min(f.pendingDividendTransfer, f.myrCash);
   f.pendingDividendTransfer = 0;
   if (amt > 0) withdrawFund(s, amt / 100);
+}
+
+// ------------------------------------------------------------------ target allocation
+export interface RebalanceLeg {
+  ticker: TickerId;
+  side: 'buy' | 'sell';
+  units: number;
+  valueMYR: number;
+}
+export interface RebalancePlan {
+  legs: RebalanceLeg[];
+  fxMinorMYR: number; // MYR sen to convert into USD before US buys
+  estCostsMYR: number;
+}
+
+/**
+ * Plan orders that move the fund toward target MY/US equity weights (rest stays cash).
+ * Buys are cap-weighted across that exchange's 20 names, sells are pro-rata across holdings;
+ * every leg respects lots, the 20% concentration limit and the per-order liquidity limit.
+ */
+export function planRebalance(s: GameState, targetMY: number, targetUS: number): RebalancePlan {
+  const nav = navMYR(s);
+  const fxr = s.external.myrPerUsd;
+  const legs: RebalanceLeg[] = [];
+  let usBuyUSD = 0;
+  let costs = 0;
+  for (const ex of ['MY', 'US'] as Exchange[]) {
+    const fxEx = ex === 'US' ? fxr : 1;
+    const names = Object.values(COMPANY_BY_ID).filter((c) => c.exchange === ex);
+    const cur = names.reduce((a, c) => a + positionValueMYR(s, c.id), 0);
+    const diff = (ex === 'MY' ? targetMY : targetUS) * nav - cur;
+    if (Math.abs(diff) < 0.005 * nav) continue;
+    if (diff > 0) {
+      const caps = names.map((c) => s.market.quotes[c.id].price * s.companies[c.id].shares);
+      const total = caps.reduce((a, b) => a + b, 0);
+      names.forEach((c, i) => {
+        const px = s.market.quotes[c.id].price;
+        const room = MAX_POSITION_PCT * 0.97 * nav - positionValueMYR(s, c.id);
+        const liq = (MAX_ADV_SHARE * 0.95 * avgDailyValue(s, c.id) - s.market.quotes[c.id].fundDayValue) * fxEx;
+        const alloc = Math.max(0, Math.min((diff * caps[i]) / total, room, liq));
+        const units = Math.floor(alloc / (px * fxEx) / LOT[ex]) * LOT[ex];
+        if (units <= 0) return;
+        const q = quoteFill(s, c.id, 'buy', units);
+        legs.push({ ticker: c.id, side: 'buy', units, valueMYR: q.totalMYR });
+        costs += (q.total - q.mid * units) * fxEx;
+        if (ex === 'US') usBuyUSD += q.total;
+      });
+    } else {
+      const frac = Math.min(1, -diff / cur);
+      for (const c of names) {
+        const p = s.fund.positions[c.id];
+        if (!p) continue;
+        const units = frac >= 0.999 ? p.units : Math.floor((p.units * frac) / LOT[ex]) * LOT[ex];
+        if (units <= 0) continue;
+        const q = quoteFill(s, c.id, 'sell', units);
+        legs.push({ ticker: c.id, side: 'sell', units, valueMYR: q.totalMYR });
+        costs += (q.mid * units - q.total) * fxEx;
+      }
+    }
+  }
+  const usdShort = Math.max(0, usBuyUSD - s.fund.usdCash / 100);
+  const fxMinorMYR = Math.min(s.fund.myrCash, Math.ceil(usdShort * fxr * (1 + FX_SPREAD) * 1.002 * 100));
+  costs += (fxMinorMYR / 100) * FX_SPREAD;
+  return { legs, fxMinorMYR, estCostsMYR: costs };
+}
+
+/** Execute a plan: sells first, then FX, then buys (queued if that exchange is closed). */
+export function executeRebalance(s: GameState, targetMY: number, targetUS: number, atMin: number): { placed: number; rejected: number } {
+  const plan = planRebalance(s, targetMY, targetUS);
+  let placed = 0;
+  let rejected = 0;
+  const run = (side: 'buy' | 'sell') => {
+    for (const l of plan.legs.filter((x) => x.side === side)) {
+      const o = placeOrder(s, l.ticker, l.side, l.units, atMin);
+      if (o.status === 'rejected') rejected++;
+      else placed++;
+    }
+  };
+  run('sell');
+  if (plan.fxMinorMYR > 0) convertFx(s, 'MYR', plan.fxMinorMYR);
+  run('buy');
+  return { placed, rejected };
 }
