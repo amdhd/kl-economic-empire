@@ -1,14 +1,14 @@
 import { sectorTax } from './policy-controls';
 import { calibrationFor } from './calibration';
 import { baselineFor, nationalV2 } from '../data/economic-baseline';
-import { COMMODITY_IMPORT, FUEL_CPI_WEIGHT, HOUSEHOLD_EQUITY0, PUBLIC_CAPITAL_ELASTICITY, WEALTH_MPC } from '../data/world';
+import { COMMODITY_IMPORT, UTILITY_FUEL_PASSTHROUGH, FUEL_CPI_WEIGHT, HOUSEHOLD_EQUITY0, PUBLIC_CAPITAL_ELASTICITY, WEALTH_MPC } from '../data/world';
 import { publicCapitalFactor } from './fiscal-rules';
 import { palmHouseholdDelta } from './soe';
-import { fuelPriceIndex, householdFuelBillDelta, wheatUserPrice } from './world';
+import { foodUserPrice, fuelPriceIndex, householdFuelBillDelta } from './world';
 // Aggregate KL economy: households, 7 input–output sectors, labour, prices and investment.
 // See docs/economy-model.md for the equations; every rule here has a matching section there.
 import { BASE_TAX, CPI_WEIGHTS, INVESTMENT_GOODS, IO, SECTOR_IDS, SECTORS } from '../data/economic-baseline';
-import type { GameState, SectorId } from '../types/game';
+import type { CommodityId, GameState, SectorId } from '../types/game';
 import {
   BASE_MPC, CAPITAL_GROWTH0, CREDIT_SPEND, HOUSEHOLD_AMORT_MONTHLY, HOUSEHOLD_RATE_PREMIUM,
   NORMAL_UTIL, PROPERTY_LEVY_BASE, SURCHARGE_BASE_SHARE, type Vec,
@@ -32,8 +32,6 @@ export interface DayEconomy {
   householdTax: number;
 }
 
-/** Share of crude-price moves reaching utilities' fuel costs in model 2 (ASSUMPTION; regulated gas, ICPT). */
-const UTILITY_OIL_PASSTHROUGH = 0.4;
 /** Share of steel imports replaced by domestic producers under a safeguard duty (ASSUMPTION). */
 const STEEL_SUBSTITUTION = 0.4;
 
@@ -50,31 +48,43 @@ export function importCost(s: GameState, j: SectorId) {
   const mfn = s.trade.policy.tariff;
   if (!nationalV2(s)) {
     const cif = fxf * ((1 - es) * e.usPrice + es * e.oil);
-    return { user: cif * (1 + mfn), cif, mfnDuty: cif * mfn, bilateralDuty: 0, steelDuty: 0, steelSubstituted: 0, wheatQty: 0 };
+    return { user: cif * (1 + mfn), cif, mfnDuty: cif * mfn, bilateralDuty: 0, steelDuty: 0, steelSubstituted: 0, wheatQty: 0, riceQty: 0 };
   }
   const w = s.world;
-  const cw = COMMODITY_IMPORT[j]?.wheat ?? 0;
-  const cs = COMMODITY_IMPORT[j]?.steel ?? 0;
-  const generic = (1 - es - cw - cs) * e.usPrice * w.importPriceIndex;
+  const shares = COMMODITY_IMPORT[j] ?? {};
+  const commodityShare = Object.values(shares).reduce((x, v) => x + (v ?? 0), 0);
+  const generic = (1 - es - commodityShare) * e.usPrice * w.importPriceIndex;
   const bilateralDuty = generic * w.importDutyShare;
   const sub = STEEL_SUBSTITUTION * w.policy.steelSafeguard;
-  const steelImported = cs * w.prices.steel * (1 - sub);
-  const steelDuty = steelImported * w.policy.steelSafeguard;
-  // Domestic steel sells at import parity, so users pay the duty-inclusive price on all steel.
-  const steelUser = cs * w.prices.steel * (1 + w.policy.steelSafeguard);
-  // Power generation runs on regulated domestic gas and coal, with fuel costs passed to tariffs only
-  // partly (ICPT): utilities feel 40% of crude moves; other sectors buy fuel at world prices.
-  const energy = 1 + (j === 'util' ? UTILITY_OIL_PASSTHROUGH : 1) * (e.oil - 1);
-  const preMfnUser = generic + es * energy + cw * wheatUserPrice(s) + steelUser;
-  const cif = generic - bilateralDuty + es * energy + cw * w.prices.wheat + steelImported;
+  let user = 0, cifCommodities = 0, steelDuty = 0;
+  for (const [c, share] of Object.entries(shares) as [CommodityId, number][]) {
+    const p = w.prices[c];
+    if (c === 'steel') {
+      // Domestic steel sells at import parity, so users pay the duty-inclusive price on all steel.
+      const imported = share * p * (1 - sub);
+      steelDuty = imported * w.policy.steelSafeguard;
+      cifCommodities += imported;
+      user += share * p * (1 + w.policy.steelSafeguard);
+    } else {
+      cifCommodities += share * p;
+      user += share * (c === 'wheat' || c === 'rice' ? foodUserPrice(s, c) : p);
+    }
+  }
+  // Power generation runs on regulated domestic gas and coal, with fuel costs passed to tariffs only partly
+  // (ICPT): utilities feel a damped oil/LNG/coal mix; other sectors buy fuel at world crude prices.
+  const pt = UTILITY_FUEL_PASSTHROUGH;
+  const energy = j === 'util' ? 1 + pt.oil * (e.oil - 1) + pt.gas * (w.prices.gas - 1) + pt.coal * (w.prices.coal - 1) : e.oil;
+  const preMfnUser = generic + es * energy + user;
+  const cif = generic - bilateralDuty + es * energy + cifCommodities;
   return {
     user: fxf * preMfnUser * (1 + mfn),
     cif: fxf * cif,
     mfnDuty: fxf * cif * mfn,
     bilateralDuty: fxf * bilateralDuty,
     steelDuty: fxf * steelDuty,
-    steelSubstituted: cs * sub, // real domestic steel demand per unit of import requirement
-    wheatQty: cw,
+    steelSubstituted: (shares.steel ?? 0) * sub, // real domestic steel demand per unit of import requirement
+    wheatQty: shares.wheat ?? 0,
+    riceQty: shares.rice ?? 0,
   };
 }
 
@@ -202,6 +212,7 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
   let steelDutyReceipts = 0;
   let bilateralReceipts = 0;
   let wheatImports = 0;
+  let riceImports = 0;
   SECTOR_IDS.forEach((j, idx) => {
     const sec = s.sectors[j];
     const boost = productivityBoost(s, j);
@@ -221,6 +232,7 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
     steelDutyReceipts += ic.steelDuty * req;
     bilateralReceipts += ic.bilateralDuty * req;
     wheatImports += ic.wheatQty * req;
+    riceImports += ic.riceQty * req;
     s.trade.mtdImports += imports;
     s.trade.mtdExports += exports[j] * (demand > 0 ? out / demand : 0) * sec.price;
     let inter = ic.user * req;
@@ -250,6 +262,7 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
     s.world.mtd.bilateralDuty += bilateralReceipts;
     s.world.mtd.steelDuty += steelDutyPaid;
     s.world.lastWheatImports = wheatImports;
+    s.world.lastRiceImports = riceImports;
   }
   // Tariffs are net product taxes. They offset the domestic input-tax deduction in VA;
   // they do not create real output or enter base-price real GDP (opening tariff = zero).

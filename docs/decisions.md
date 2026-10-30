@@ -282,3 +282,21 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   title/subtitle/status header and inline index sparklines. The company list owns bounded vertical/horizontal
   scrolling; fixed header/filter/footer rows never compete with it through nested percentage-height scrollers.
   Ordinary inspectors retain their body scroll. No simulation behavior changes.
+- **D-043 60 securities (user request, 31 Oct 2026).** Supersedes the spec's 40-security universe. Added 14 US-listed
+  semiconductor and software leaders (TSMC, ASML and Arm as ADRs, not S&P 500 members) and 6 Bursa semiconductor and
+  automation names (Inari, ViTrox, Frontken, Unisem, MPI, Greatech), because Penang's back-end chip cluster is central
+  to Malaysia's exports. Names and tickers are real; every financial value is fictional seed data at roughly realistic
+  scale. No map markers: none has a verified OSM location in KL. Schema-6 saves gain them from a fresh same-seed game,
+  with each index divisor rescaled so index values do not jump.
+- **D-044 Ten commodities (user request).** Oil, LNG, coal, palm oil, rubber, rice, wheat, steel, aluminium, copper.
+  LNG reprices with a ~6-month lag to oil plus its own cycle and sets 40% of PETRONAS's realised price; utilities'
+  fuel costs follow a damped oil/LNG/coal mix (15/25/25%); rubber is a smallholder plantation crop (≈RM2.5bn, 90% to
+  households) inside the resource sector; the food subsidy covers rice as well as wheat; aluminium sets 80% of Press
+  Metal's realised price; copper and aluminium are construction, industrial and chipmaker inputs. Reference prices
+  are APPROX. Adding cycles changes the world stream's draw order, so model-2 world paths differ from schema 6.
+- **D-045 Net development expenditure.** Use the Fiscal Outlook's net development expenditure (RM81.5bn = gross RM83.0bn
+  − RM1.5bn loan recoveries) instead of the expenditure book's RM85bn line, which adds a RM2bn contingency reserve. The
+  opening overall deficit is then RM77.5bn, matching the official 2027 overall balance (−RM77,523m).
+- **D-046 Official deficit history.** The fiscal chart shows MOF's federal overall deficit for 2021–2025 (outturns) and
+  2026 (revised), then the simulated 12-month deficit. Official ratios use same-year GDP; the simulation measures
+  against opening (2025) GDP, so the same ringgit deficit reads higher in the game, as the panel states.

@@ -162,3 +162,16 @@ and capex ≈ RM50bn a year; PETRONAS stakes ≈ 64% PETRONAS Chemicals, 51% PET
 IHH 26%, Telekom Malaysia 20%, CIMB 23%; RON95 ceiling RM1.99/L, ≈17bn litres a year, ≈85% eligible; partner trade
 shares; reference prices (Brent US$75/bbl, CPO RM4,000/t, wheat US$230/t, HRC steel US$520/t). Everything after the
 opening day is simulated.
+
+## Schema 7 additions (31 Oct 2026)
+
+Official: federal overall balance, % of GDP: 2021 −6.4 (foreword), 2022 −5.5 (Figure 1.3), 2023 −5.0, 2024 −4.1,
+2025 −3.7, 2026 −3.6 (revised), 2027 −3.3 (estimate), MOF Fiscal Outlook 2027 federal government finance table
+(`tinjauan_fiskal_2027.pdf`). Same table: net development expenditure 2027 RM81,500m; overall balance −RM77,523m.
+
+Securities added (names/tickers real, financials fictional): Bursa 0166 Inari Amertron, 0097 ViTrox, 0128 Frontken,
+5005 Unisem, 3867 Malaysian Pacific Industries, 0208 Greatech; US TSM, ASML, ARM (ADRs), QCOM, INTC, MU, TXN, AMAT,
+LRCX, ORCL, CRM, ADBE, CSCO, IBM. Reconfirm listings before citing.
+
+Commodity reference levels (APPROX, rounded): LNG Asia spot US$12/MMBtu, thermal coal US$120/t, natural rubber
+US$1,700/t, Thai 5% rice US$420/t, aluminium US$2,500/t, copper US$9,500/t; Malaysian natural rubber output ≈350kt.

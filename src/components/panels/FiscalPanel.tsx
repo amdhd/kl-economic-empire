@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { DEVELOPMENT_ANNUAL0 } from '../../data/world';
+import { OFFICIAL_DEFICIT, OFFICIAL_FISCAL_OUTLOOK } from '../../data/national-baseline';
 import type { Command } from '../../engine/game';
 import { credibilityPremium, deficitTarget, escapeJustified, ESCAPE_MAX_MONTHS } from '../../engine/fiscal-rules';
 import { outputGap } from '../../engine/scheduler';
@@ -33,7 +34,10 @@ export function FiscalPanel() {
   const target = deficitTarget(f, g.reports.length);
   const headroom = last ? (target - last.deficit) * g.indicators.nominalGdpAnnual : 0;
   const loosening = deficitCap / 100 > f.rule.deficitCap || debtCap / 100 > f.rule.debtCap || (f.rule.goldenRule && !golden);
-  const chart = f.history.map((h) => ({ t: monthKeyLabel(h.monthKey), deficit: h.deficit * 100, target: h.target * 100, structural: h.structuralDeficit * 100 }));
+  // Official annual deficits for 2021–2025 (outturns) and 2026 (revised), then simulated monthly 12-month windows.
+  const official = OFFICIAL_DEFICIT.filter((d) => d.kind !== 'estimate').map((d) => ({ t: `${d.year}${d.kind === 'revised' ? ' (rev.)' : ''}`, official: d.deficit * 100 } as Record<string, number | string>));
+  const chart = [...official, ...f.history.map((h) => ({ t: monthKeyLabel(h.monthKey), deficit: h.deficit * 100, target: h.target * 100, structural: h.structuralDeficit * 100 }))];
+  const budget2027 = OFFICIAL_DEFICIT.find((d) => d.year === 2027)!;
   return <PanelShell title="Fiscal rules & deficit" subtitle="Modelled on the Public Finance and Fiscal Responsibility Act 2023 · simulated outcomes" width={740}>
     <div className="grid grid-cols-4 gap-3 rounded-xl bg-slate-900/40 p-3" data-testid="fiscal-summary">
       <Stat label="Deficit · 12 months" value={last ? pct(last.deficit, 2) : '—'} sub={`target ${pct(target, 2)} of GDP`} tone={last && last.deficit <= target ? 'up' : 'down'} hint="Revenue minus all outlays, trailing 12 months, share of nominal GDP" />
@@ -54,11 +58,12 @@ export function FiscalPanel() {
         Credibility moves the sovereign risk premium by {pct(credibilityPremium(g), 2, true)} today (±50bp range) and the rating by up to ±1 notch. Rules are not self-enforcing: you decide whether to comply.
       </p>
     </Section>
-    <Section title="Deficit path · % of GDP">
-      <TimeChart data={chart} xKey="t" unit="% of GDP" yFormat={(v) => `${v.toFixed(1)}%`} series={[{ key: 'deficit', name: 'Deficit', color: '#f43f5e' }, { key: 'target', name: 'Glide-path target', color: '#94a3b8' }, { key: 'structural', name: 'Structural', color: '#60a5fa' }]} />
+    <Section title="Deficit path · % of GDP" right={<a className="text-[10.5px] text-cyan-300 underline" href={OFFICIAL_FISCAL_OUTLOOK} target="_blank" rel="noreferrer">MOF Fiscal Outlook 2027 ↗</a>}>
+      <TimeChart data={chart} xKey="t" unit="% of GDP" dataLabel="Official 2021–26 · then simulated" yFormat={(v) => `${v.toFixed(1)}%`} series={[{ key: 'official', name: 'Official (annual)', color: '#e2e8f0' }, { key: 'deficit', name: 'Simulated (12-month)', color: '#f43f5e' }, { key: 'target', name: 'Glide-path target', color: '#94a3b8' }, { key: 'structural', name: 'Structural', color: '#60a5fa' }]} />
+      <p className="mt-1 text-[11.5px] text-slate-400">Official: 2021–2025 outturns, 2026 revised estimate; Budget 2027 targets {pct(budget2027.deficit, 1)} of 2027 GDP. The simulation measures its deficit against opening (2025) GDP, so the same ringgit deficit reads higher here.</p>
     </Section>
     <Section title="Development expenditure · effective next month">
-      <label className="block text-[12px]">Federal development programme · RM{dev.toFixed(0)}bn a year <span className="text-slate-400">(in force RM{(f.developmentAnnual / 1e9).toFixed(1)}bn; Budget 2027 estimate RM{(DEVELOPMENT_ANNUAL0 / 1e9).toFixed(0)}bn)</span>
+      <label className="block text-[12px]">Federal development programme · RM{dev.toFixed(0)}bn a year <span className="text-slate-400">(in force RM{(f.developmentAnnual / 1e9).toFixed(1)}bn; Budget 2027 net estimate RM{(DEVELOPMENT_ANNUAL0 / 1e9).toFixed(1)}bn)</span>
         <input type="range" min={0} max={160} step={1} value={dev} onChange={(e) => setDev(Number(e.target.value))} aria-label="Development expenditure" data-testid="dev-budget" />
       </label>
       <p className="mt-1 text-[12px] text-slate-400">Development spending buys construction, equipment, ICT and social programmes now, and builds public capital that raises productivity in every sector slowly (output elasticity 0.05). Cutting it is the quickest way to shrink the deficit, and the most costly for future growth. Public capital index {(f.publicCapital / f.publicCapital0).toFixed(3)}.</p>

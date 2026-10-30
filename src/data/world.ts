@@ -5,7 +5,12 @@
 // paths after the opening day are fictional.
 import type { CommodityId, PartnerId, TickerId } from '../types/game';
 
-export const COMMODITY_IDS: CommodityId[] = ['oil', 'palm', 'wheat', 'steel'];
+export const COMMODITY_IDS: CommodityId[] = ['oil', 'gas', 'coal', 'palm', 'rubber', 'rice', 'wheat', 'steel', 'aluminium', 'copper'];
+export const COMMODITY_GROUPS: { id: 'energy' | 'agri' | 'metals'; label: string; items: CommodityId[] }[] = [
+  { id: 'energy', label: 'Energy', items: ['oil', 'gas', 'coal'] },
+  { id: 'agri', label: 'Agriculture', items: ['palm', 'rubber', 'rice', 'wheat'] },
+  { id: 'metals', label: 'Metals', items: ['steel', 'aluminium', 'copper'] },
+];
 
 export interface CommodityMeta {
   name: string;
@@ -21,9 +26,15 @@ export interface CommodityMeta {
 
 export const COMMODITIES: Record<CommodityId, CommodityMeta> = {
   oil: { name: 'Crude oil (Brent)', unit: 'bbl', reference: 75, currency: 'USD', sd: 0, persist: 0, color: '#f59e0b' },
+  gas: { name: 'LNG (Asia spot)', unit: 'MMBtu', reference: 12, currency: 'USD', sd: 0.01, persist: 0.99, color: '#38bdf8' },
+  coal: { name: 'Thermal coal', unit: 'tonne', reference: 120, currency: 'USD', sd: 0.011, persist: 0.995, color: '#a8a29e' },
   palm: { name: 'Crude palm oil', unit: 'tonne', reference: 4000, currency: 'MYR', sd: 0.011, persist: 0.995, color: '#84cc16' },
+  rubber: { name: 'Natural rubber (SMR 20)', unit: 'tonne', reference: 1700, currency: 'USD', sd: 0.01, persist: 0.995, color: '#4ade80' },
+  rice: { name: 'Rice (Thai 5%)', unit: 'tonne', reference: 420, currency: 'USD', sd: 0.008, persist: 0.996, color: '#fde68a' },
   wheat: { name: 'Wheat', unit: 'tonne', reference: 230, currency: 'USD', sd: 0.011, persist: 0.995, color: '#eab308' },
   steel: { name: 'Steel (hot-rolled coil)', unit: 'tonne', reference: 520, currency: 'USD', sd: 0.009, persist: 0.995, color: '#94a3b8' },
+  aluminium: { name: 'Aluminium', unit: 'tonne', reference: 2500, currency: 'USD', sd: 0.009, persist: 0.995, color: '#cbd5e1' },
+  copper: { name: 'Copper', unit: 'tonne', reference: 9500, currency: 'USD', sd: 0.01, persist: 0.995, color: '#fb923c' },
 };
 
 /** Seeded supply/demand episodes (ASSUMPTION): weekly hazard, log price shock, optional volume hit. */
@@ -34,6 +45,12 @@ export const COMMODITY_EPISODES: { id: string; commodity: Exclude<CommodityId, '
   { id: 'biodiesel_mandate', commodity: 'palm', title: 'Indonesia raises biodiesel mandate', hazard: 0.005, shock: 0.12, minDays: 60, maxDays: 160 },
   { id: 'steel_dumping', commodity: 'steel', title: 'Wave of low-priced steel exports floods Asia', hazard: 0.007, shock: -0.18, minDays: 60, maxDays: 160 },
   { id: 'steel_stimulus', commodity: 'steel', title: 'Infrastructure stimulus lifts steel demand', hazard: 0.005, shock: 0.15, minDays: 45, maxDays: 120 },
+  { id: 'rice_export_ban', commodity: 'rice', title: 'A major exporter restricts rice exports', hazard: 0.005, shock: 0.3, minDays: 60, maxDays: 150 },
+  { id: 'lng_squeeze', commodity: 'gas', title: 'Cold northern winter tightens LNG markets', hazard: 0.006, shock: 0.25, minDays: 45, maxDays: 110 },
+  { id: 'coal_demand', commodity: 'coal', title: 'Power shortages lift Asian coal imports', hazard: 0.005, shock: 0.2, minDays: 45, maxDays: 120 },
+  { id: 'copper_mine', commodity: 'copper', title: 'Major copper mine disrupted', hazard: 0.005, shock: 0.15, minDays: 60, maxDays: 160 },
+  { id: 'smelter_cuts', commodity: 'aluminium', title: 'Smelter power curbs cut aluminium supply', hazard: 0.005, shock: 0.12, minDays: 45, maxDays: 120 },
+  { id: 'rubber_disease', commodity: 'rubber', title: 'Leaf disease cuts rubber output', hazard: 0.004, shock: 0.15, volume: -0.06, minDays: 60, maxDays: 150 },
 ];
 
 // ------------------------------------------------------------------ trading partners
@@ -85,8 +102,12 @@ export const PALM_SMALLHOLDER_SHARE = 0.4; // of plantation profit accruing to h
  * duty rate chosen so opening receipts ≈ the OFFICIAL 2027 export duty estimate of RM1.914bn. */
 export const PALM_DUTIABLE_SHARE = 0.28;
 export const PALM_DUTY0 = 1_914_000_000 / (PALM_DUTIABLE_SHARE * PALM_VALUE0);
-export const RESOURCE_VA0 = UPSTREAM_VALUE0 * UPSTREAM_VA_SHARE + PALM_VALUE0 * PALM_VA_SHARE;
-export const RESOURCE_EXPORT_SHARE = { oil: 0.6, palm: 0.8 };
+/** Natural rubber: ~350kt a year, ~93% from smallholders (APPROX). */
+export const RUBBER_VALUE0 = 2.5e9;
+export const RUBBER_VA_SHARE = 0.7;
+export const RUBBER_SMALLHOLDER_SHARE = 0.9;
+export const RESOURCE_VA0 = UPSTREAM_VALUE0 * UPSTREAM_VA_SHARE + PALM_VALUE0 * PALM_VA_SHARE + RUBBER_VALUE0 * RUBBER_VA_SHARE;
+export const RESOURCE_EXPORT_SHARE = { oil: 0.6, palm: 0.8, rubber: 0.5 };
 
 // ------------------------------------------------------------------ fuel & food subsidies
 /** RON95 retail ceiling (RM/litre) and unsubsidised reference price at oil index 1 (APPROX). */
@@ -108,15 +129,21 @@ export const fuelSubsidyAnnual = (market: number, ceiling: number, eligible: num
 export const FUEL_SUBSIDY0 = fuelSubsidyAnnual(FUEL_MARKET0, FUEL_CEILING0, FUEL_ELIGIBLE0);
 
 /** Commodity shares of each sector's imported inputs (ASSUMPTION). Energy keeps its own share. */
-export const COMMODITY_IMPORT: Partial<Record<'fin' | 'prop' | 'util' | 'tech' | 'cons' | 'health' | 'ind', Partial<Record<'wheat' | 'steel', number>>>> = {
-  cons: { wheat: 0.12 },
-  prop: { steel: 0.3 },
-  ind: { steel: 0.2 },
+export const COMMODITY_IMPORT: Partial<Record<'fin' | 'prop' | 'util' | 'tech' | 'cons' | 'health' | 'ind', Partial<Record<CommodityId, number>>>> = {
+  cons: { wheat: 0.12, rice: 0.06 },
+  prop: { steel: 0.3, aluminium: 0.03, copper: 0.03 },
+  ind: { steel: 0.2, aluminium: 0.05, copper: 0.05 },
+  tech: { copper: 0.05 },
 };
+/** Commodities whose import-price rises the food subsidy covers. */
+export const FOOD_COMMODITIES = ['wheat', 'rice'] as const;
+/** Power generation fuel mix felt by utilities (ASSUMPTION; regulated gas and ICPT pass-through damp it). */
+export const UTILITY_FUEL_PASSTHROUGH = { oil: 0.15, gas: 0.25, coal: 0.25 };
 
 // ------------------------------------------------------------------ development expenditure
-/** OFFICIAL: Federal development expenditure estimate 2027, RM85.0bn (Budget 2027 expenditure summary). */
-export const DEVELOPMENT_ANNUAL0 = 85_000_000_000;
+/** OFFICIAL: net federal development expenditure 2027, RM81.5bn (Fiscal Outlook 2027 federal finance table:
+ * gross RM83.0bn less RM1.5bn loan recoveries). The expenditure book's RM85bn line adds a RM2bn contingency reserve. */
+export const DEVELOPMENT_ANNUAL0 = 81_500_000_000;
 /** Close to the private capital-goods mix (structures, equipment, ICT), plus social programmes (ASSUMPTION). */
 export const DEVELOPMENT_PURCHASES = { prop: 0.4, ind: 0.3, tech: 0.18, health: 0.12 };
 /** Public capital depreciation and output elasticity (ASSUMPTION; the literature centres near 0.05–0.08). */

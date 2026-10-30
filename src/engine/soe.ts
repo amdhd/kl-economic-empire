@@ -8,7 +8,7 @@ import { COMPANIES, COMPANY_BY_ID } from '../data/companies';
 import { BASE_TAX, baselineFor, nationalV2 } from '../data/economic-baseline';
 import {
   KHAZANAH, PALM_DUTIABLE_SHARE, PALM_DUTY0, PALM_FIXED_SHARE, PALM_SMALLHOLDER_SHARE, PALM_VA_SHARE, PALM_VALUE0, PALM_WAGE_SHARE,
-  PETRONAS, PITA_RATE, RESOURCE_EXPORT_SHARE, UPSTREAM_FIXED_SHARE, UPSTREAM_VA_SHARE, UPSTREAM_VALUE0,
+  PETRONAS, PITA_RATE, RESOURCE_EXPORT_SHARE, RUBBER_SMALLHOLDER_SHARE, RUBBER_VA_SHARE, RUBBER_VALUE0, UPSTREAM_FIXED_SHARE, UPSTREAM_VA_SHARE, UPSTREAM_VALUE0,
 } from '../data/world';
 import type { GameState, KhazanahState, PetronasState, SectorId, SoeState, TickerId } from '../types/game';
 import type { Dividend } from './companies';
@@ -71,8 +71,8 @@ export function soeEquity(s: GameState): number {
 }
 
 const fxFactor = (s: GameState) => s.external.myrPerUsd / baselineFor(s).myrPerUsd;
-/** PETRONAS realised price index in ringgit: 60% oil-linked, 40% gas on lagged LNG contracts. */
-export const upstreamPriceIndex = (s: GameState) => (0.6 * s.external.oil + 0.4 * s.world.gasIndex) * fxFactor(s);
+/** PETRONAS realised price index in ringgit: 60% oil-linked, 40% LNG (which reprices with a lag to oil). */
+export const upstreamPriceIndex = (s: GameState) => (0.6 * s.external.oil + 0.4 * s.world.prices.gas) * fxFactor(s);
 export const palmPriceMYR = (s: GameState) => s.world.prices.palm * fxFactor(s);
 
 /** Effective PETRONAS capex: the policy, cut by 30% while cash sits below its floor. */
@@ -88,7 +88,10 @@ export function palmHouseholdDelta(s: GameState): number {
   const afterTax = (x: number) => x - Math.max(0, x) * s.government.policies.tax.corporate;
   const dProfit = afterTax(profit) - afterTax(PALM_PROFIT0);
   const dWages = va * PALM_WAGE_SHARE - PALM_VA0 * PALM_WAGE_SHARE;
-  return (PALM_SMALLHOLDER_SHARE * dProfit + dWages) * PER_YEAR;
+  // Rubber is overwhelmingly a smallholder crop: most of its value-added change reaches households directly.
+  const rubberVa = RUBBER_VALUE0 * RUBBER_VA_SHARE * s.world.rubberVolume * s.world.prices.rubber * fxFactor(s);
+  const dRubber = RUBBER_SMALLHOLDER_SHARE * (rubberVa - RUBBER_VALUE0 * RUBBER_VA_SHARE);
+  return (PALM_SMALLHOLDER_SHARE * dProfit + dWages + dRubber) * PER_YEAR;
 }
 
 export interface ResourceDay { gdpNominal: number; gdpReal: number }
@@ -119,10 +122,12 @@ export function dailyResources(s: GameState, purchases: Record<SectorId, number>
   const duty = post(s.government, 'commodityDuty', s.world.policy.palmExportDuty * PALM_DUTIABLE_SHARE * palmValue);
   s.world.mtd.palmDuty += duty;
   s.world.mtdPalmProfit += palmVa * (1 - PALM_WAGE_SHARE) - duty - PALM_FIXED_SHARE * PALM_GROSS0 * PER_YEAR * cpiF;
-  s.trade.mtdExports += upRevenue * RESOURCE_EXPORT_SHARE.oil + palmValue * RESOURCE_EXPORT_SHARE.palm;
+  const rubberValue = RUBBER_VALUE0 * PER_YEAR * s.world.rubberVolume * s.world.prices.rubber * fxFactor(s);
+  s.trade.mtdExports += upRevenue * RESOURCE_EXPORT_SHARE.oil + palmValue * RESOURCE_EXPORT_SHARE.palm + rubberValue * RESOURCE_EXPORT_SHARE.rubber;
   const realUp = UPSTREAM_VA0 * PER_YEAR * p.production;
   const realPalm = PALM_VA0 * PER_YEAR * s.world.palmVolume;
-  return { gdpNominal: upVa + palmVa, gdpReal: realUp + realPalm };
+  const realRubber = RUBBER_VALUE0 * RUBBER_VA_SHARE * PER_YEAR * s.world.rubberVolume;
+  return { gdpNominal: upVa + palmVa + rubberValue * RUBBER_VA_SHARE, gdpReal: realUp + realPalm + realRubber };
 }
 
 /** Month close: petroleum tax, palm corporate tax, dividends in and out, PETRONAS cash and debt. */

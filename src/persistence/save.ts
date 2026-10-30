@@ -1,7 +1,8 @@
 import { initialControls, validateControls } from '../engine/policy-controls';
 // Versioned save format. Saving never mutates game state or advances the clock.
 import { assertSafeMinor } from '../engine/util';
-import { SCHEMA_VERSION } from '../engine/game';
+import { createGame, SCHEMA_VERSION } from '../engine/game';
+import { COMMODITY_IDS } from '../data/world';
 import { COMPANIES } from '../data/companies';
 import { LEGACY_BASELINE, SECTOR_IDS } from '../data/economic-baseline';
 import { initialCentralBank } from '../engine/trade-fx';
@@ -46,6 +47,32 @@ type Migration = (s: Record<string, unknown>) => Record<string, unknown>;
 /** migrations[n] upgrades a state from schema n to n+1. */
 const MIGRATIONS: Record<number, Migration> = {
   4: state => { (state as unknown as GameState).controls ??= initialControls(); return state; },
+  // v6 → v7: ten commodities and 60 securities. New commodity indices start at reference; new companies take their
+  // opening state from a fresh game with the same seed, and index divisors are rescaled so index values do not jump.
+  6: (state) => {
+    const s = state as unknown as GameState;
+    const fresh = createGame(s.seed, s.scenario, s.baseline.profile);
+    const w = s.world;
+    for (const c of COMMODITY_IDS) {
+      w.prices[c] ??= c === 'gas' ? w.gasIndex : 1;
+      w.cycles[c] ??= 0;
+      for (const h of w.history) h[c] ??= 1;
+    }
+    w.rubberVolume ??= 1;
+    w.lastRiceImports ??= 0;
+    const added = COMPANIES.filter((c) => !s.companies[c.id]);
+    for (const ex of ['MY', 'US'] as const) {
+      const cap = (ids: typeof COMPANIES) => ids.filter((c) => c.exchange === ex).reduce((a, c) => a + s.market.quotes[c.id].price * s.companies[c.id].shares, 0);
+      const before = cap(COMPANIES.filter((c) => s.companies[c.id]));
+      for (const c of added.filter((x) => x.exchange === ex)) {
+        s.companies[c.id] = fresh.companies[c.id];
+        s.market.quotes[c.id] = fresh.market.quotes[c.id];
+      }
+      const after = cap(COMPANIES);
+      if (before > 0) s.market.indices[ex].divisor *= after / before;
+    }
+    return state;
+  },
   // v5 → v6: resource sector, SOEs, commodities, trading partners and fiscal rules. Existing campaigns keep
   // their calibration (model 1) with these systems switched off, so balances and outcomes are unchanged.
   5: (state) => {
