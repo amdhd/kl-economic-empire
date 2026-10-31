@@ -469,3 +469,10 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   US$116.4bn FX reserve is shown beside it in the treasury card and the Economy summary, marked not spendable (D-022).
   Budget sliders show compact RM (RM3.41bn) instead of raw millions.
 
+
+- **D-073 Reload recovery and stable hosting.** User authorised reload protection and Firebase Hosting deployment.
+  Keep an independent tab-local sessionStorage checkpoint on beforeunload, pagehide and Vite full reload/dispose;
+  async IndexedDB cannot be relied on at unload. Offer explicit recovery using the existing validated loader,
+  always paused with no catch-up. Do not replace manual slots or auto-load over the player's choice. If the
+  session quota is unavailable, ordinary autosaves remain the fallback; recovery is best effort, not crash-proof.
+  Publish a tested production dist to the configured Firebase Hosting project, separate from development edits.
