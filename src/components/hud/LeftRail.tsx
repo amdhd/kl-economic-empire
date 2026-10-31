@@ -4,6 +4,7 @@ import { HudIcon } from './HudIcon';
 const GROUPS: { title: string; items: { id: PanelId; label: string; color: string }[] }[] = [
   { title: 'Presidency', items: [
     { id: 'overview', label: 'Briefing', color: '#76d7ef' },
+    { id: 'finance', label: 'Finances', color: '#8fe3a0' },
     { id: 'population', label: 'Population', color: '#78c9ec' },
     { id: 'objectives', label: 'Objectives', color: '#edce79' },
   ] },

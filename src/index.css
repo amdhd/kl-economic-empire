@@ -311,7 +311,7 @@ table.data tr.sel td {
 .input:focus { border-color: #70d9f0aa; box-shadow: 0 0 0 2px #70d9f022; }
 input[type='range'] { accent-color: #55c5e6; }
 button:focus-visible, summary:focus-visible, a:focus-visible { outline: 2px solid #8ce8ff; outline-offset: 3px; }
-.maplibregl-ctrl-bottom-right, .maplibregl-ctrl-bottom-left { bottom: 167px !important; }
+.maplibregl-ctrl-bottom-right, .maplibregl-ctrl-bottom-left { bottom: 62px !important; }
 .maplibregl-ctrl-top-right { top: 66px !important; }
 @media (max-width: 1350px) {
   .city-title span { max-width: 210px; }
@@ -385,3 +385,78 @@ button:focus-visible, summary:focus-visible, a:focus-visible { outline: 2px soli
   .market-index-chart { display: none; }
   .market-index > div:first-child > span:first-child { font-size: 9px; }
 }
+
+/* ---- City-builder bottom toolbar (single row) ---- */
+.cs-bar { display: flex; align-items: center; gap: 14px; height: 50px; padding: 0 14px; }
+.cs-time { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.cs-time [data-testid='clock'] { gap: 6px; }
+.cs-time [data-testid='clock'] > span:first-child { display: none; }
+.cs-time [data-testid='clock-time'] { font-size: 17px; color: #95ddf2; }
+.cs-time [data-testid='clock-date'] { font-size: 11px; }
+.cs-time [role='group'] { border-radius: 4px; padding: 2px; }
+.cs-time [role='group'] button { border-radius: 3px; min-width: 26px; height: 27px; padding: 0 5px; font-size: 11px; }
+.cs-month { display: flex; flex-direction: column; flex-shrink: 0; font-size: 10px; line-height: 1.25; color: #93adbe; padding: 0 12px; border-left: 1px solid #9bc9df26; border-right: 1px solid #9bc9df26; }
+.cs-month b { color: #e2ebf2; }
+.cs-ticker { flex: 1; min-width: 0; overflow: hidden; text-align: left; font-size: 11.5px; height: 34px; padding: 0 10px; border-radius: 4px; background: #0d1824aa; border: 1px solid #9bc9df1f; cursor: pointer; }
+.cs-ticker .ticker-track { height: 100%; align-items: center; }
+.cs-chip, .cs-money { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border-radius: 4px; background: #182b3cd9; border: 1px solid #9bc9df33; flex-shrink: 0; font-size: 13px; color: #e8f1f7; transition: background .15s, border-color .15s; }
+.cs-chip:hover, .cs-money:hover { background: #22405a; border-color: #7acfee88; }
+.cs-money { min-width: 330px; justify-content: space-between; }
+.cs-money b { font-size: 14px; color: #c9f5d4; }
+.cs-money.is-active { border-color: #55c5e6; box-shadow: 0 0 0 1px #55c5e655 inset; }
+.cs-coin { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; font-size: 9px; font-weight: 800; color: #0c2a1a; background: linear-gradient(#9cf0b4, #4fc77a); }
+.cs-trend { font-size: 11px; color: #93adbe; }
+.cs-trend.up { color: #6ee7a0; }
+.cs-trend.down { color: #fb8f8f; }
+@media (max-width: 1350px) { .cs-month { display: none; } .cs-money { min-width: 0; } }
+@media (max-width: 1000px) { .cs-ticker { display: none; } .cs-trend { display: none; } }
+
+/* ---- Economy window (tabbed, three columns) ---- */
+.econ-backdrop { position: absolute; inset: 64px 0 62px; display: grid; place-items: center; z-index: 30; padding: 0 16px; }
+.econ-window { display: flex; flex-direction: column; width: min(1180px, 100%); height: min(700px, 100%); background: rgba(22, 36, 52, .93); backdrop-filter: blur(16px); border: 1px solid #9bc9df40; border-radius: 6px; box-shadow: 0 18px 60px #050d1899; overflow: hidden; }
+.econ-title { position: relative; text-align: center; font-size: 13px; letter-spacing: .12em; color: #7fd6f0; padding: 12px 0 6px; }
+.econ-close { position: absolute; right: 14px; top: 8px; font-size: 18px; color: #e2ebf2; padding: 2px 8px; border-radius: 4px; }
+.econ-close:hover { background: #ffffff1a; }
+.econ-tabs { display: flex; justify-content: center; gap: 4px; padding: 0 16px; border-bottom: 2px solid #3fb5dd55; }
+.econ-tabs button { min-width: 150px; padding: 9px 18px; font-size: 13px; letter-spacing: .06em; color: #d3e2ec; background: #2a3e52cc; border-radius: 4px 4px 0 0; }
+.econ-tabs button:hover { background: #34506a; }
+.econ-tabs button.is-active { background: linear-gradient(#3cc0e4, #1f93b8); color: #fff; }
+.econ-body { flex: 1; min-height: 0; padding: 12px; }
+.econ-foot { font-size: 9.5px; letter-spacing: .05em; color: #7f97a8; text-align: right; padding: 4px 14px 8px; }
+.econ-columns { display: grid; grid-template-columns: minmax(300px, 1.05fr) minmax(320px, 1.2fr) minmax(280px, 1fr); gap: 10px; height: 100%; }
+.econ-list, .econ-detail, .econ-info { min-height: 0; background: #1b2d40d9; border: 1px solid #9bc9df1f; border-radius: 4px; overflow-y: auto; }
+.econ-list { display: flex; flex-direction: column; padding: 8px; gap: 4px; }
+.econ-row { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 3px; text-align: left; color: #e2ebf2; font-size: 12.5px; }
+.econ-row:hover { background: #ffffff0f; }
+.econ-row.is-active { background: linear-gradient(90deg, #2aa7cf, #1d7fa3); }
+.econ-row-icon { color: #9fd8ec; display: grid; place-items: center; width: 22px; }
+.econ-row.is-active .econ-row-icon { color: #fff; }
+.econ-row-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.econ-amount { display: inline-flex; align-items: center; gap: 10px; min-width: 132px; justify-content: space-between; padding: 4px 10px; border-radius: 3px; background: #0d1824; font-variant-numeric: tabular-nums; font-size: 12.5px; }
+.econ-amount.in { color: #7ee2a1; }
+.econ-amount.out { color: #ff8f8f; }
+.econ-amount.neutral { color: #d6e4ee; }
+.econ-balance { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 10px; border-top: 1px solid #9bc9df26; font-size: 13px; font-weight: 700; letter-spacing: .05em; color: #f1f6f9; }
+.econ-balance small { display: block; font-size: 9.5px; font-weight: 500; letter-spacing: .02em; color: #8fa7b8; }
+.econ-balance .econ-amount { font-size: 14px; min-width: 150px; }
+.econ-detail { display: flex; flex-direction: column; gap: 14px; padding: 14px 16px; }
+.econ-detail-head { display: flex; justify-content: space-between; align-items: center; }
+.econ-detail-head h3 { font-size: 15px; font-weight: 700; letter-spacing: .05em; color: #fff; text-transform: uppercase; }
+.econ-slider { display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; align-items: center; padding: 10px 12px; background: #24394ecc; border-radius: 3px; font-size: 13px; color: #e2ebf2; }
+.econ-slider input { grid-column: 1 / -1; width: 100%; }
+.econ-section h4 { font-size: 12px; font-weight: 700; letter-spacing: .06em; color: #e8f1f7; margin-bottom: 8px; }
+.econ-line { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 4px 0; font-size: 12.5px; color: #c8d8e3; }
+.econ-info { padding: 14px 16px; font-size: 12.5px; line-height: 1.55; color: #c8d8e3; }
+.econ-info p { margin-bottom: 10px; }
+.econ-info-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.econ-info-head h3 { font-size: 15px; font-weight: 700; letter-spacing: .05em; color: #7fd6f0; }
+.econ-info-icon { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 4px; background: #2c4258; color: #7fd6f0; }
+.econ-effects { border-top: 1px solid #9bc9df26; padding-top: 8px; }
+.econ-note { font-size: 11px; color: #8fa7b8; }
+.econ-summary { display: flex; flex-direction: column; gap: 10px; height: 100%; overflow-y: auto; }
+.econ-summary .stats-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 0; border: 0; }
+.econ-summary .stats-strip > button { background: #1b2d40d9; border: 1px solid #9bc9df1f; border-radius: 4px; padding: 10px 14px; }
+.econ-summary .stats-strip > button > div:nth-child(2) { font-size: 18px; }
+.econ-summary-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.econ-links { display: flex; flex-wrap: wrap; gap: 6px; }
+@media (max-width: 1100px) { .econ-columns { grid-template-columns: 1fr 1fr; } .econ-info { display: none; } .econ-summary-grid { grid-template-columns: 1fr; } }

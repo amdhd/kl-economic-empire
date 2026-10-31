@@ -7,13 +7,17 @@ test('shows full cash balances beside month close and exposes dated national sou
   await startCampaign(page);
   const cash = page.getByTestId('bottom-treasury');
   await expect(cash).toContainText('RM 8,865,574,579.00');
-  await expect(page.getByTestId('bottom-fund-cash')).toContainText('RM 15,000,000,000.00');
-  await expect(page.getByTestId('bottom-fund-cash')).toContainText('US$ 2,500,000,000.00');
   const footer = page.locator('footer');
-  await expect(footer).toContainText('Month closes in');
+  await expect(footer).toContainText('closes in');
   const box = await footer.boundingBox();
   expect(box!.x + box!.width).toBeLessThanOrEqual(1600);
+  expect(box!.height).toBeLessThanOrEqual(56); // one slim toolbar row
+  // The money readout opens the Economy window, whose summary carries the full cash positions.
   await cash.click();
+  await expect(page.getByTestId('economy-window')).toBeVisible();
+  await expect(page.getByTestId('bottom-fund-cash')).toContainText('RM 15,000,000,000.00');
+  await expect(page.getByTestId('bottom-fund-cash')).toContainText('US$ 2,500,000,000.00');
+  await page.getByTestId('economy-window').getByRole('button', { name: 'Treasury & debt' }).click();
   await expect(page.getByTestId('panel')).toContainText('Treasury & public debt');
   await page.getByTestId('nav-sources').click();
   await expect(page.getByTestId('baseline-profile')).toContainText('Malaysia baseline');

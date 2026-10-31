@@ -1,0 +1,37 @@
+import { expect, test } from '@playwright/test';
+import { runHours, startCampaign } from './helpers';
+import type { GameState } from '../src/types/game';
+type Dev = { __klDev: { state: () => GameState } };
+const state = (page: import('@playwright/test').Page) => page.evaluate(() => (window as unknown as Dev).__klDev.state());
+
+test('the money readout opens a tabbed Economy window whose budget, tax and loan controls act on the game', async ({ page }) => {
+  await startCampaign(page);
+  await runHours(page, 24 * 35);
+  await page.getByTestId('bottom-treasury').click();
+  const win = page.getByTestId('economy-window');
+  await expect(win).toBeVisible();
+  await expect(page.getByTestId('monthly-balance')).toBeVisible();
+
+  await page.getByTestId('econ-tab-budget').click();
+  await page.getByTestId('econ-budget-health').click();
+  await page.getByTestId('econ-budget-slider').fill('1.2');
+  await page.getByTestId('econ-budget-apply').click();
+
+  await page.getByTestId('econ-tab-taxation').click();
+  await page.getByTestId('econ-tax-consumption').click();
+  await page.getByTestId('econ-tax-slider').fill('0.05');
+  await page.getByTestId('econ-tax-apply').click();
+
+  await page.getByTestId('econ-tab-loans').click();
+  const debt = (await state(page)).government.debt;
+  await page.getByTestId('econ-issue').click();
+
+  await page.getByTestId('econ-tab-production').click();
+  await expect(page.getByTestId('econ-sector-tech')).toBeVisible();
+
+  const s = await state(page);
+  expect(s.government.pending.map((p) => p.kind).sort()).toEqual(['budget', 'tax']);
+  expect(s.government.debt).toBeGreaterThan(debt);
+  await page.keyboard.press('Escape');
+  await expect(win).not.toBeVisible();
+});

@@ -1,4 +1,5 @@
 import { PopulationPanel } from '../components/panels/PopulationPanel';
+import { EconomyWindow } from '../components/panels/EconomyWindow';
 import { ControlsPanel } from '../components/panels/ControlsPanel';
 import { CommoditiesPanel } from '../components/panels/CommoditiesPanel';
 import { FiscalPanel } from '../components/panels/FiscalPanel';
@@ -7,7 +8,6 @@ import { SoePanel } from '../components/panels/SoePanel';
 import { Component, useEffect, useState, type ReactNode } from 'react';
 import { BottomBar } from '../components/hud/BottomBar';
 import { LeftRail } from '../components/hud/LeftRail';
-import { StatsStrip } from '../components/hud/StatsStrip';
 import { Toasts } from '../components/hud/Toasts';
 import { TopBar } from '../components/hud/TopBar';
 import { CompanyPanel } from '../components/markets/CompanyPanel';
@@ -29,6 +29,8 @@ import type { ScenarioId } from '../types/game';
 
 const PANELS: Record<PanelId, () => ReactNode> = {
   population: () => <PopulationPanel />,
+  // Rendered as a centred window rather than in the inspector slot.
+  finance: () => null,
   controls: () => <ControlsPanel />,
   fiscal: () => <FiscalPanel />,
   commodities: () => <CommoditiesPanel />,
@@ -92,8 +94,8 @@ export function App() {
           </div>
           {selection?.kind === 'company' && <div className="company-slot min-h-0 ml-auto"><ErrorBoundary label="Company panel"><CompanyPanel key={selection.id} id={selection.id} /></ErrorBoundary></div>}
         </div>
+        {panel === 'finance' && <ErrorBoundary label="Economy window"><EconomyWindow /></ErrorBoundary>}
         <div className="bottom-dock pointer-events-auto">
-          <StatsStrip />
           <BottomBar />
         </div>
       </div>

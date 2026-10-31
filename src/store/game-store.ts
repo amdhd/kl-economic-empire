@@ -10,7 +10,7 @@ import { deserialize, serialize } from '../persistence/save';
 import { readSlot, writeSlot, type SlotId } from '../persistence/storage';
 import type { GameSpeed, GameState, ScenarioId, TickerId } from '../types/game';
 
-export type PanelId = 'population' | 'controls' | 'trade' | 'sources' | 'fiscal' | 'commodities' | 'partners' | 'soe' | 'overview' | 'policies' | 'projects' | 'debt' | 'markets' | 'fund' | 'economy' | 'reports' | 'objectives';
+export type PanelId = 'finance' | 'population' | 'controls' | 'trade' | 'sources' | 'fiscal' | 'commodities' | 'partners' | 'soe' | 'overview' | 'policies' | 'projects' | 'debt' | 'markets' | 'fund' | 'economy' | 'reports' | 'objectives';
 export type Selection = { kind: 'company'; id: TickerId } | { kind: 'district'; id: string } | null;
 export interface Toast {
   id: number;
