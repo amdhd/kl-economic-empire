@@ -7,7 +7,7 @@ import { EXPORT_PRODUCT_IDS, EXPORT_PRODUCTS, type ExportProductId } from '../da
 import { PARTNER_IDS } from '../data/world';
 import type { Deal } from '../types/deals';
 import type { GameState, PartnerId } from '../types/game';
-import { addDeal, dealLog, releaseDeal, reserveDeal, spendDeal } from './deals';
+import { addDeal, dealLog, releaseDeal, reserveDeal, spendDeal, DEAL_ROUNDS } from './deals';
 import { post } from './government';
 import { toMinor } from './util';
 
@@ -68,13 +68,13 @@ export function exportOffers(s: GameState): void {
   }
 }
 /** The buyer pays more only for shorter or more indexed contracts (it bears the risk of a fixed price). */
-export const buyerMaxPrice = (months: number, protection: number) => 1.04 - 0.002 * months * (1 - protection);
+export const buyerMaxPrice = (months: number, protection: number) => 1.15 - 0.0005 * months * (1 - protection); // looser buyer (D-086): was 1.04 − 0.002·months
 
 export function offerExport(s: GameState, d: Deal, terms: Partial<Deal['terms']>): string | null {
-  if (d.status !== 'negotiating' || d.rounds >= 3 || s.scheduler.lastDay >= d.deadline) return 'Negotiation is closed.';
+  if (d.status !== 'negotiating' || d.rounds >= DEAL_ROUNDS || s.scheduler.lastDay >= d.deadline) return 'Negotiation is closed.';
   const t = { ...d.terms, ...terms };
-  if (!(Number.isInteger(t.months) && t.months >= 12 && t.months <= 60 && t.priceFactor >= 0.9 && t.priceFactor <= 1.15 && t.protection >= 0 && t.protection <= 1))
-    return 'Use 12–60 months, a 0.90–1.15 price multiplier and 0–100% indexation.';
+  if (!(Number.isInteger(t.months) && t.months >= 12 && t.months <= 60 && t.priceFactor >= 0.9 && t.priceFactor <= 1.3 && t.protection >= 0 && t.protection <= 1))
+    return 'Use 12–60 months, a 0.90–1.30 price multiplier and 0–100% indexation.';
   const max = buyerMaxPrice(t.months, t.protection);
   d.terms = { ...t, priceFactor: Math.min(t.priceFactor, Math.floor(max * 1000) / 1000) };
   d.version++;

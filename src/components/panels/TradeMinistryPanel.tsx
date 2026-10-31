@@ -10,7 +10,7 @@ import { monthKeyLabel } from '../../engine/time';
 import { offerValue, policyGains, requiredDepth, tradeRunRate } from '../../engine/trade-book';
 import { useGame, useGameState } from '../../store/game-store';
 import type { PartnerId, TradeMonth } from '../../types/game';
-import { money, pct } from '../../utils/format';
+import { bnTick, money, pct } from '../../utils/format';
 import { StackedBars } from '../charts/StackedBars';
 import { TimeChart } from '../charts/TimeChart';
 import { Bar, Section, Stat } from '../ui';
@@ -74,10 +74,10 @@ function Overview() {
     </div>
     <p className="text-[11.5px] text-slate-400">{last ? `Run rate from ${monthKeyLabel(last.monthKey)}, annualised.` : 'Run rate from the last settled day until the first month closes on 1 February.'} Official 2025 reference: goods exports {money(GOODS_EXPORTS_2025, 'MYR', 3)}, goods imports {money(GOODS_IMPORTS_2025, 'MYR', 3)}, services exports {money(SERVICES_EXPORTS_2025)} (MITI, DOSM). The campaign opens at these levels scaled to 2027 GDP; later values are simulations.</p>
     <Section title="Monthly exports and imports">
-      <TimeChart data={lines} xKey="t" series={[{ key: 'exports', name: 'Exports', color: '#3987e5' }, { key: 'imports', name: 'Imports', color: '#d95926' }]} yFormat={(v) => `RM${v.toFixed(0)}bn`} unit="RM bn per month" height={160} />
+      <TimeChart data={lines} xKey="t" series={[{ key: 'exports', name: 'Exports', color: '#3987e5' }, { key: 'imports', name: 'Imports', color: '#d95926' }]} yFormat={bnTick} unit="RM bn per month" height={160} />
     </Section>
     <Section title="What Malaysia sells">
-      <StackedBars data={bars} xKey="t" series={GROUPS.map((gr) => ({ key: gr.key, name: gr.name, color: gr.color }))} yFormat={(v) => `RM${v.toFixed(0)}bn`} unit="Exports, RM bn per month" />
+      <StackedBars data={bars} xKey="t" series={GROUPS.map((gr) => ({ key: gr.key, name: gr.name, color: gr.color }))} yFormat={bnTick} unit="Exports, RM bn per month" />
     </Section>
     <Section title={`Goods exports by market${last ? ` · ${monthKeyLabel(last.monthKey)}` : ''}`}>
       <table className="w-full text-[12px]" data-testid="ministry-partners">

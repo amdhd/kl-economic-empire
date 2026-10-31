@@ -1,6 +1,6 @@
 import type { GameState } from '../types/game';
 import type { Deal } from '../types/deals';
-import { addDeal, dealLog, releaseDeal, reserveDeal, spendDeal } from './deals';
+import { addDeal, dealLog, releaseDeal, reserveDeal, spendDeal, DEAL_ROUNDS } from './deals';
 import { toMinor } from './util';
 const active = (s: GameState, d: Deal, day = s.scheduler.lastDay) =>
   d.kind === 'supply' &&
@@ -32,21 +32,21 @@ export function supplyOffers(s: GameState): void {
   }
 }
 export function offerSupply(s: GameState, d: Deal, terms: Partial<Deal['terms']>): string | null {
-  if (d.status !== 'negotiating' || d.rounds >= 3 || s.scheduler.lastDay >= d.deadline)
+  if (d.status !== 'negotiating' || d.rounds >= DEAL_ROUNDS || s.scheduler.lastDay >= d.deadline)
     return 'Negotiation is closed.';
   const t = { ...d.terms, ...terms };
   if (!(
     Number.isInteger(t.months) &&
     t.months >= 3 &&
     t.months <= 24 &&
-    t.priceFactor >= 0.95 &&
+    t.priceFactor >= 0.85 &&
     t.priceFactor <= 1.2 &&
     t.protection >= 0 &&
     t.protection <= 1
   ))
-    return 'Use 3–24 months, a 0.95–1.20 price multiplier and 0–100% indexation.';
+    return 'Use 3–24 months, a 0.85–1.20 price multiplier and 0–100% indexation.';
   // A long fully fixed contract requires a larger commercial premium; the supplier counters visibly.
-  const minimum = 1 + 0.002 * t.months * (1 - t.protection);
+  const minimum = 1 + 0.0005 * t.months * (1 - t.protection); // looser supplier (D-086): was 0.002
   d.terms = { ...t, priceFactor: Math.max(t.priceFactor, Math.ceil(minimum * 1000) / 1000) };
   d.version++;
   d.rounds++;

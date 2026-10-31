@@ -3,7 +3,7 @@ import { debtMYR, isInflow, newIssueCoupon, ratingLabel, treasuryMYR } from '../
 import type { GovMonthFlows } from '../../types/game';
 import { klDayLabel } from '../../engine/time';
 import { useGame, useGameState } from '../../store/game-store';
-import { money, pct } from '../../utils/format';
+import { bnTick, money, pct } from '../../utils/format';
 import { TimeChart } from '../charts/TimeChart';
 import { OFFICIAL_FEDERAL_DEBT } from '../../data/official-history';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -42,11 +42,11 @@ export function DebtPanel() {
         <Stat label="MGS 10y (exogenous)" value={pct(g.external.mgs10, 2)} sub={`OPR ${pct(g.external.opr, 2)}`} />
       </div>
       {g.baseline.profile === 'malaysia' && <Section title="Federal debt · past 10 years · official reference">
-        <TimeChart data={OFFICIAL_FEDERAL_DEBT} xKey="date" series={[{ key: 'debt', name: 'Federal Government debt', color: '#f87171' }]} yFormat={(v) => `RM${v.toFixed(0)}bn`} unit="RM billion · year-end" dataLabel="MOF / Auditor General" height={130} />
+        <TimeChart data={OFFICIAL_FEDERAL_DEBT} xKey="date" series={[{ key: 'debt', name: 'Federal Government debt', color: '#f87171' }]} yFormat={bnTick} unit="RM billion · year-end" dataLabel="MOF / Auditor General" height={130} />
         <p className="mt-1 text-[11.5px] text-slate-400">Reported direct debt of the federal government, not public-sector debt or guarantees. Treasury cash is not published as a comparable annual series, so only debt is shown. Your campaign starts from the June 2026 point.</p>
       </Section>}
       <Section title="Treasury and debt">
-        <TimeChart data={data} xKey="t" xFormat={(v) => klDayLabel(Number(v))} series={[{ key: 'treasury', name: 'Treasury', color: '#34d399' }, { key: 'debt', name: 'Debt', color: '#f87171' }]} yFormat={(v) => v.toFixed(1)} unit="RM billion · daily" height={130} />
+        <TimeChart data={data} xKey="t" xFormat={(v) => klDayLabel(Number(v))} series={[{ key: 'treasury', name: 'Treasury', color: '#34d399' }, { key: 'debt', name: 'Debt', color: '#f87171' }]} yFormat={bnTick} unit="RM · daily" height={130} />
       </Section>
       <div className="grid grid-cols-2 gap-3">
         <Section title="Month-to-date cash flows · MYR">

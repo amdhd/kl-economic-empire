@@ -76,3 +76,13 @@ export function fullMoneyMinor(minor: number, currency: Currency = 'MYR'): strin
   // Whole ringgit/dollars: the sen/cents still exist in the ledger but are not shown (user preference).
   return `${minor < 0 ? '−' : ''}${prefix(currency)}${fmt0.format(Math.floor(a / 100))}`;
 }
+
+/** Axis label for an amount in billions: "RM850bn" below 1,000bn, then "RM1.4tn" (never "RM1400bn"). */
+export function bnTick(valueBn: number, prefix = 'RM'): string {
+  if (!Number.isFinite(valueBn)) return '—';
+  const sign = valueBn < 0 ? '−' : '';
+  const a = Math.abs(valueBn);
+  if (a >= 1000) return `${sign}${prefix}${nf(a >= 10000 ? 0 : 2).format(a / 1000).replace(/\.?0+$/, '')}tn`;
+  if (a >= 1) return `${sign}${prefix}${a >= 100 ? fmt0.format(a) : nf(1).format(a).replace(/\.0$/, '')}bn`;
+  return `${sign}${prefix}${fmt0.format(a * 1000)}m`;
+}

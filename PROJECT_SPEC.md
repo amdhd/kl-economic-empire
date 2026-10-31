@@ -1115,3 +1115,11 @@ size. The standing data now also lists the 49 economies ranked 11th to 60th by I
 Malaysia opens near the middle of a 60-economy ladder with rivals a few percent away. A small board in the top right, always
 visible in Malaysia campaigns, shows five rows (two economies above Malaysia, Malaysia, two below) with rank, economy, GDP
 and the gap to Malaysia. The campaign score still compares Malaysia with the top ten only. See D-085.
+
+## 29. User amendment — Deal Room clarity, looser deals and monthly GDP reasons (1 November 2026)
+
+The user found the Deal Room hard to read and hard to profit from. Offers now show their type and a countdown to the deadline
+at the top right, an outlook (expected profit where a deal pays one, what you get, what you pay, what can go wrong) and a
+plain-language signing summary. Negotiation is looser: six rounds instead of three, and sellers, buyers and investors
+settle for less (D-086). Chart axes read in trillions, never "1000 billions". The GDP explanation gains a monthly US$ chart,
+and a new Monthly GDP history window gives three plain reasons for each month's rise or fall, including the ringgit effect.

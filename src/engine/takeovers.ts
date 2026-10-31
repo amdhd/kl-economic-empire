@@ -1,6 +1,6 @@
 import type { GameState } from '../types/game';
 import type { Deal } from '../types/deals';
-import { addDeal, dealLog } from './deals';
+import { addDeal, dealLog, DEAL_ROUNDS } from './deals';
 import { signEnterprise, markValue } from './private-enterprises';
 import { rand } from './rng';
 import { toMinor } from './util';
@@ -21,7 +21,7 @@ export function takeoverOffers(s: GameState): void {
   d.terms.stake = 0.7;
   d.terms.priceFactor = 1.15;
   d.terms.months = 6;
-  d.rivalPriceFactor = 1.08 + rand(s.deals.rng) * 0.17;
+  d.rivalPriceFactor = 1.0 + rand(s.deals.rng) * 0.06; // looser sellers (D-086): was 1.08–1.25
   d.rivalBidMinor = Math.round((d.assetCostMinor ?? 0) * d.terms.stake * d.rivalPriceFactor);
   d.enterprise = {
     cashMinor: toMinor(20e6),
@@ -46,28 +46,28 @@ export function takeoverOffers(s: GameState): void {
     'A competing private bidder is interested. Buying shares transfers ownership, not cash into the company. Control premiums and integration can destroy value.';
 }
 export function offerTakeover(s: GameState, d: Deal, terms: Partial<Deal['terms']>): string | null {
-  if (d.status !== 'negotiating' || d.rounds >= 3 || s.scheduler.lastDay >= d.deadline)
+  if (d.status !== 'negotiating' || d.rounds >= DEAL_ROUNDS || s.scheduler.lastDay >= d.deadline)
     return 'Bidding is closed.';
   const t = { ...d.terms, ...terms };
   if (!(
     t.stake >= 0.51 &&
     t.stake <= 1 &&
-    t.priceFactor >= 1.05 &&
+    t.priceFactor >= 0.9 &&
     t.priceFactor <= 1.5 &&
     Number.isInteger(t.months) &&
     t.months >= 3 &&
     t.months <= 12
   ))
-    return 'Control needs 51–100%, a 1.05–1.50 valuation multiplier and 3–12 integration months.';
+    return 'Control needs 51–100% ownership, a price of 0.90–1.50× market value and 3–12 integration months.';
   d.terms = t;
   d.rounds++;
   d.version++;
   if (t.priceFactor < (d.rivalPriceFactor ?? 1.1)) {
-    d.terms.priceFactor = Math.ceil(((d.rivalPriceFactor ?? 1.1) + 0.01) * 1000) / 1000;
+    d.terms.priceFactor = Math.ceil(((d.rivalPriceFactor ?? 1.1) + 0.005) * 1000) / 1000;
     dealLog(
       s,
       d,
-      'Shareholders prefer the rival bid. Counteroffer matches the rival valuation plus a small certainty premium; review the revised cash cost.',
+      'Shareholders would rather take the rival bid. We matched it with a small extra for certainty; check the new cash cost.',
     );
   } else
     dealLog(

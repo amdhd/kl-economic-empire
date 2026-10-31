@@ -5,7 +5,7 @@ import { baselineFor, SECTOR_IDS, SECTORS } from '../../data/economic-baseline';
 import { calibrationFor } from '../../engine/calibration';
 import { daysInMonth, klDay, klDayLabel, monthKeyLabel } from '../../engine/time';
 import { useGame, useGameState } from '../../store/game-store';
-import { fx, money, pct } from '../../utils/format';
+import { bnTick, fx, money, pct } from '../../utils/format';
 import { TimeChart } from '../charts/TimeChart';
 import { EventCard } from '../EventCard';
 import { PanelShell } from './PanelShell';
@@ -42,7 +42,7 @@ export function EconomyPanel() {
       <p className="text-[12px] text-slate-400">Your campaign · simulated from January 2027. History grows as game time runs.</p>
       <div className="grid grid-cols-2 gap-3">
         <Section title="GDP, annualised">
-          <TimeChart data={monthly} xKey="t" xFormat={(v) => monthKeyLabel(Number(v))} series={[{ key: 'gdp', name: 'Real GDP', color: '#34d399' }, { key: 'nom', name: 'Nominal GDP', color: '#60a5fa' }]} yFormat={(v) => `US$${v.toFixed(0)}bn`} unit="US$ billions/year · nominal at each month’s MYR/USD, real at the opening rate · simulated month ×365/days" height={130} />
+          <TimeChart data={monthly} xKey="t" xFormat={(v) => monthKeyLabel(Number(v))} series={[{ key: 'gdp', name: 'Real GDP', color: '#34d399' }, { key: 'nom', name: 'Nominal GDP', color: '#60a5fa' }]} yFormat={(v) => bnTick(v, 'US$')} unit="US$ billions/year · nominal at each month’s MYR/USD, real at the opening rate · simulated month ×365/days" height={130} />
         </Section>
         <Section title="Inflation & unemployment">
           <TimeChart data={monthly} xKey="t" xFormat={(v) => monthKeyLabel(Number(v))} series={[{ key: 'infl', name: 'CPI YoY %', color: '#fbbf24' }, { key: 'u', name: 'Unemployment %', color: '#f87171' }]} yFormat={(v) => `${v.toFixed(1)}`} unit="% · month" height={130} />

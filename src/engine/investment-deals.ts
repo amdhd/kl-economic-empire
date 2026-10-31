@@ -1,7 +1,8 @@
 import type { GameState, FdiPledge, SectorId } from '../types/game';
 import type { Deal } from '../types/deals';
 import { FDI_KINDS, investorName } from './fdi';
-import { addDeal, dealLog, releaseDeal, reserveDeal, spendDeal } from './deals';
+import { addDeal, dealLog, releaseDeal, reserveDeal, spendDeal, DEAL_ROUNDS } from './deals';
+import { boomOn } from '../data/boom';
 import { assertSafeMinor, clamp, toMinor } from './util';
 
 export function syncInvestmentDeals(s: GameState): void {
@@ -34,11 +35,13 @@ export function syncInvestmentDeals(s: GameState): void {
 }
 export function investorAsk(s: GameState, d: Deal): number {
   const p = s.fdi.pledges.find((p) => p.id === d.pledgeId)!;
+  // Looser investors (D-086): in the Deal Room they settle for 15% less grant than they first ask.
   return clamp(
-    p.ask +
-      0.2 * (d.terms.localShare - FDI_KINDS[p.kind].domesticShare) +
-      0.03 * (d.terms.jobsShare - 1) +
-      0.02 * (p.buildMonths / d.terms.months - 1),
+    0.85 *
+      (p.ask +
+        0.2 * (d.terms.localShare - FDI_KINDS[p.kind].domesticShare) +
+        0.03 * (d.terms.jobsShare - 1) +
+        0.02 * (p.buildMonths / d.terms.months - 1)),
     0,
     0.3,
   );
@@ -56,11 +59,11 @@ export function offerInvestment(s: GameState, id: number, terms: Partial<Deal['t
     next.jobsShare >= 0.8 &&
     next.jobsShare <= 1.2 &&
     Number.isInteger(next.months) &&
-    next.months >= 6 &&
+    next.months >= (boomOn(s) ? 1 : 6) &&
     next.months <= 36
   ))
     return 'Choose valid incentive, sourcing, training and delivery terms.';
-  if (d.rounds >= 3) return 'Three negotiation rounds have been used. Accept the counteroffer or decline.';
+  if (d.rounds >= DEAL_ROUNDS) return 'All negotiation rounds have been used. Accept the counteroffer or decline.';
   d.terms = next;
   d.rounds++;
   d.version++;

@@ -620,3 +620,17 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   shows rank, economy, GDP and the gap to Malaysia, and appears only where the board exists (new Malaysia campaigns).
   Opening US$497bn puts Malaysia 38th, with the Philippines $5bn ahead and Denmark $3bn. Rivals beyond 2028 keep their
   2027–28 growth rate, as before. Iran, Iraq and Ukraine appear because the IMF lists them; their paths are the IMF's, not a judgement.
+- **D-086 Deal Room clarity, looser deals, monthly GDP reasons (user request, PROJECT_SPEC §29).**
+  *Looser negotiation:* `DEAL_ROUNDS` 3 → 6 for every deal kind; takeover rival premium 1.08–1.25 → 1.00–1.06 (same single
+  random draw, so streams are unchanged), counter premium +0.01 → +0.005, bid floor 1.05 → 0.90; supply duration premium
+  0.002 → 0.0005 a month and price floor 0.95 → 0.85; export buyer ceiling `1.04 − 0.002·months·(1−indexation)` →
+  `1.15 − 0.0005·…` and bid cap 1.15 → 1.30; Deal Room investors ask 15% less grant. Signing checks are unchanged.
+  *Expected profit* (`src/engine/deal-outlook.ts`, read-only estimates from the terms): enterprise deals show the stake's share
+  of yearly profit and payback years (takeover and startup), or 8% loan interest (rescue loan); the LNG hedge shows gain at today's
+  gas price; export, supply, concession and investment deals pay no direct profit, so they say so and show the economic
+  return or cost instead (extra exports, jobs and leverage, price protection, service payments). Hidden quality rolls are not
+  revealed; takeover risk is stated as about 1 in 4 failing integration (quality below 0.75 of 0.5–1.5).
+  *Charts:* `bnTick` formats billions as RM850bn then RM1.4tn. *Monthly GDP* (`src/engine/gdp-history.ts`) is derived from
+  closed reports, so older saves work: per month, US$ run rate at that month's FX, the move split into output (valued at last
+  month's rate) and ringgit rate, top two sector movers in ringgit, real output and CPI change, and the first active shock.
+- **D-087 Boom mode FDI: 1-month builds and more offers (user request).** In Boom mode every new FDI pledge builds in `BOOM.fdiBuildMonths` = 1 month (the Deal Room "months to build" slider goes down to 1), the climate gets +`BOOM.fdiAttractiveness` = 10 points, and the weekly arrival hazard is capped at 0.9 (multiplier stays 4). Realistic mode is unchanged. Instant builds front-load demand, so the year-two inflation hump rises to about 14% (the boom test bound is now 15%) and year-three GDP reaches about US$2.5tn.

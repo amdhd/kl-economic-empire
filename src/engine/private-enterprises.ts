@@ -3,7 +3,7 @@ import { khazanahNav } from './soe';
 import { closeRescue, rescuePayments, liquidateEnterprise } from './rescues';
 import type { GameState, SectorId } from '../types/game';
 import type { Deal } from '../types/deals';
-import { addDeal, dealLog, reserveDeal } from './deals';
+import { addDeal, dealLog, reserveDeal, DEAL_ROUNDS } from './deals';
 import { calibrationFor } from './calibration';
 import { navMYR } from './sovereign-fund';
 import { rand } from './rng';
@@ -41,7 +41,7 @@ export function enterpriseOffers(s: GameState): void {
     'Minority primary equity; company receives investment cash. 1% entry fee. Follow-on round after six months; loss and dilution are possible. Private holdings are capped at 10% of SWF NAV.';
 }
 export function offerEnterprise(s: GameState, d: Deal, terms: Partial<Deal['terms']>): string | null {
-  if (d.status !== 'negotiating' || s.scheduler.lastDay >= d.deadline || d.rounds >= 3)
+  if (d.status !== 'negotiating' || s.scheduler.lastDay >= d.deadline || d.rounds >= DEAL_ROUNDS)
     return 'Negotiation is closed.';
   const t = { ...d.terms, ...terms };
   if (!(t.stake >= 0.1 && t.stake <= 0.4)) return 'Startup ownership must be 10–40%.';
