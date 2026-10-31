@@ -188,11 +188,17 @@ function DividendPolicy() {
   );
 }
 
+/** The target is a UI choice, not game state: remember it per campaign so leaving the panel does not reset it to current holdings. */
+const savedTargets = new Map<string, { my: number; us: number }>();
+
 function TargetAllocation({ myPct, usPct }: { myPct: number; usPct: number }) {
   const g = useGameState();
   const command = useGame.getState().command;
-  const [my, setMy] = useState(Math.round(myPct * 100));
-  const [us, setUs] = useState(Math.round(usPct * 100));
+  const saved = savedTargets.get(g.campaignId);
+  const [my, setMyRaw] = useState(saved?.my ?? Math.round(myPct * 100));
+  const [us, setUsRaw] = useState(saved?.us ?? Math.round(usPct * 100));
+  const setMy = (v: number) => { setMyRaw(v); savedTargets.set(g.campaignId, { my: v, us }); };
+  const setUs = (v: number) => { setUsRaw(v); savedTargets.set(g.campaignId, { my, us: v }); };
   const [confirm, setConfirm] = useState(false);
   const cash = 100 - my - us;
   const plan = useMemo(() => (cash >= 0 ? planRebalance(g, my / 100, us / 100) : null), [g, g.reports.length, my, us, cash, confirm]); // eslint-disable-line react-hooks/exhaustive-deps
