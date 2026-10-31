@@ -1,0 +1,23 @@
+import { expect, test } from '@playwright/test';
+test('map appearance switches themes, toggles landmarks and persists after reload', async ({ page }) => {
+  const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
+  await page.goto('/');
+  await page.getByTestId('start-campaign').click();
+  await page.getByTestId('map-appearance').locator('summary').click();
+  const theme = page.getByLabel('Map theme');
+  await expect(theme).toHaveValue('modern-glass');
+  await expect(page.getByText('GLASS TOWER · FICTIONAL', { exact: true })).toBeVisible({ timeout: 20000 });
+  await theme.selectOption('original');
+  await page.getByLabel('Show fictional glass landmark').uncheck();
+  await expect(page.getByText('GLASS TOWER · FICTIONAL', { exact: true })).not.toBeVisible();
+  await page.reload();
+  await page.getByTestId('start-campaign').click();
+  await page.getByTestId('map-appearance').locator('summary').click();
+  await expect(theme).toHaveValue('original');
+  await expect(page.getByLabel('Show fictional glass landmark')).not.toBeChecked();
+  await theme.selectOption('modern-glass');
+  await page.getByLabel('Show fictional glass landmark').check();
+  await page.getByRole('button', { name: 'View glass tower', exact: true }).click();
+  await expect(page.getByText('GLASS TOWER · FICTIONAL', { exact: true })).toBeVisible();
+  expect(errors).toEqual([]);
+});

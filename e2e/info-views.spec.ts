@@ -9,7 +9,7 @@ test('closing Info views dismisses its inspector and reopening starts with categ
   await expect(launcher).toHaveAttribute('aria-expanded', 'false');
   await expect(categories).not.toBeVisible();
   await launcher.click();
-  await expect(categories.getByRole('button')).toHaveCount(17);
+  await expect(categories.getByRole('button')).toHaveCount(18);
   await page.getByTestId('nav-population').click();
   await expect(page.getByTestId('nav-population')).toHaveAttribute('aria-pressed', 'true');
   const inspector = page.getByRole('region', { name: 'Population', exact: true });
@@ -44,7 +44,7 @@ test('compact desktop layout keeps the inspector and bottom controls inside the 
   await page.getByTestId('panel').locator('.panel-body').evaluate(el => { el.scrollTop = el.scrollHeight; });
   await expect(page.getByText('Births, deaths and age groups are not modeled.', { exact: false })).toBeInViewport();
   await expect(page.getByTestId('btn-speed-3')).toBeInViewport();
-  await expect(page.getByTestId('bottom-fund-cash')).toBeInViewport();
+  await expect(page.getByTestId('bottom-treasury')).toBeInViewport();
 });
 
 for (const viewport of [{ width: 1600, height: 900 }, { width: 1280, height: 720 }]) {

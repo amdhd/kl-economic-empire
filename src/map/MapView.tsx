@@ -1,3 +1,5 @@
+import { appearanceSnapshot, useAppearance } from './appearance';
+import { createThemePainter, glassTower, LANDMARK_CENTER } from './glass-theme';
 import { Map as MlMap, Marker, NavigationControl, ScaleControl, setWorkerUrl } from 'maplibre-gl';
 // MapLibre v6 locates its worker relative to its own module URL, which breaks once bundled.
 // The worker build is self-contained, so point at it explicitly (works in dev and production).
@@ -53,6 +55,11 @@ export function MapView() {
     map.addControl(new NavigationControl({ visualizePitch: true }), 'bottom-right');
     map.addControl(new ScaleControl({ unit: 'metric' }), 'bottom-right');
 
+    let repaint: (() => void) | undefined;
+    const unsubscribeAppearance = useAppearance.subscribe(() => repaint?.());
+    let landmarkMarker: Marker | undefined;
+    const focusLandmark = () => map.flyTo({ center: LANDMARK_CENTER, zoom: 17, pitch: 65, bearing: -35, duration: 1600 });
+    window.addEventListener('kl:landmark', focusLandmark);
     let loaded = false;
     const timeout = setTimeout(() => {
       if (!loaded) setError('Map tiles are taking too long to load — check your internet connection. The simulation keeps running offline.');
@@ -78,6 +85,15 @@ export function MapView() {
         /* older renderer */
       }
       map.setLight({ anchor: 'map', position: [1.4, 210, 35], intensity: 0.35, color: '#fff6e8' });
+      map.addSource('fictional-glass-tower', { type: 'geojson', data: glassTower() });
+      map.addLayer({ id: 'fictional-glass-tower', type: 'fill-extrusion', source: 'fictional-glass-tower', paint: { 'fill-extrusion-color': ['get', 'color'], 'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-base': ['get', 'base'], 'fill-extrusion-opacity': 0.96, 'fill-extrusion-vertical-gradient': true } });
+      const label = document.createElement('div');
+      label.className = 'glass rounded px-2 py-1 text-[10px] text-cyan-200';
+      label.textContent = 'GLASS TOWER · FICTIONAL';
+      landmarkMarker = new Marker({ element: label }).setLngLat(LANDMARK_CENTER).addTo(map);
+      const paintTheme = createThemePainter(map);
+      repaint = () => { const appearance = appearanceSnapshot(); paintTheme(appearance); label.style.display = appearance.landmarks ? '' : 'none'; };
+      repaint();
     });
     map.on('click', 'building-3d', (e) => {
       const f = e.features?.[0];
@@ -150,6 +166,9 @@ export function MapView() {
 
     return () => {
       clearTimeout(timeout);
+      unsubscribeAppearance();
+      landmarkMarker?.remove();
+      window.removeEventListener('kl:landmark', focusLandmark);
       unsub();
       unsubSel();
       window.removeEventListener('kl:fly', flyHandler);

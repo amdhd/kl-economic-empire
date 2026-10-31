@@ -1,3 +1,4 @@
+import { useAppearance, validAppearance } from '../map/appearance';
 import { flushCloud, syncCloud } from '../persistence/cloud';
 // Thin UI store. The engine mutates `game` in place; `rev` bumps whenever economic state changes
 // (hourly tick or player command) so selectors re-run. The visual clock is published separately
@@ -10,7 +11,7 @@ import { deserialize, serialize } from '../persistence/save';
 import { readSlot, writeSlot, type SlotId } from '../persistence/storage';
 import type { GameSpeed, GameState, ScenarioId, TickerId } from '../types/game';
 
-export type PanelId = 'population' | 'controls' | 'trade' | 'sources' | 'fiscal' | 'commodities' | 'partners' | 'soe' | 'overview' | 'policies' | 'projects' | 'debt' | 'markets' | 'fund' | 'economy' | 'reports' | 'objectives';
+export type PanelId = 'finance' | 'population' | 'controls' | 'trade' | 'sources' | 'fiscal' | 'commodities' | 'partners' | 'soe' | 'overview' | 'policies' | 'projects' | 'debt' | 'markets' | 'fund' | 'economy' | 'reports' | 'objectives';
 export type Selection = { kind: 'company'; id: TickerId } | { kind: 'district'; id: string } | null;
 export interface Toast {
   id: number;
@@ -124,6 +125,8 @@ export const useGame = create<Store>((set, get) => ({
         return false;
       }
       const game = deserialize(json);
+      const appearance: unknown = JSON.parse(json).appearance;
+      if (validAppearance(appearance)) useAppearance.getState().update(appearance);
       set({ game, rev: get().rev + 1, uiMinute: displayMinutes(game.clock), selection: null, showNewGame: false,
         panel: game.scheduler.campaignEnded ? 'objectives' : get().panel });
       lastAutosaveDay = klDay(game.clock.hour * 60);

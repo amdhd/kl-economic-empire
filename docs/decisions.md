@@ -306,3 +306,11 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   autosaves are coalesced per slot and throttled to one upload per 5 minutes; pause, tab hide, manual slot saves and
   campaign end upload immediately; only the newest snapshot is sent, and snapshots the game just serialized skip
   re-validation. Rules also require the email/password provider (`email_verified` is optional; see docs/cloud-saves.md).
+- **D-049 City-builder bottom toolbar and Economy window (user request, 31 Oct 2026).** Supersedes D-041's bottom dock of
+  nine stat cards plus a cash row. The bottom is one slim toolbar: time controls and clock, campaign month and close
+  countdown, the news ticker, an approval chip and a single money readout (treasury balance with its change over the
+  last day). Clicking the money readout opens a centred, tabbed Economy window modelled on city-builder finance screens:
+  Summary (all former stat cards, cash positions, fiscal flows), Budget, Taxation, Loans and Production, each with a
+  line list, a slider editor and an explanation column, and the monthly balance pinned to the list. Edits use the same
+  commands and lags as the full panels (budgets tomorrow, taxes next month); no economic rule changes.
+- **D-050 Modern Glass appearance (user-directed).** Default to London-inspired steel-blue building colors, charcoal roads, muted greenery and overcast lighting, with an original KL palette toggle. Add one original 168m tiered elliptical extrusion prototype near KLCC, explicitly labeled fictional and switchable; no copied models, company ownership or economic effects. This is stylized glass shading, not physically reflective materials. Cosmetic preferences persist separately in local storage and optionally in the save envelope (including cloud saves); old saves remain valid without an engine schema change. No construction tools or economic rules are introduced.

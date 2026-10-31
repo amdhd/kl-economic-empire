@@ -13,6 +13,7 @@ const paths: Record<string, string> = {
   sources: 'M5 3h14v18H5V3Zm4 5h6m-6 4h6m-6 4h4',
   reports: 'M4 3h16v18H4V3Zm4 5h8m-8 4h8m-8 4h5',
   fiscal: 'M4 4h16v16H4V4Zm4 12 3-4 3 2 4-6M8 8h3',
+  finance: 'M12 3v18M17 7.5c0-1.9-2.2-3-5-3s-5 1.1-5 3 2.2 2.6 5 3.2 5 1.6 5 3.6-2.2 3.2-5 3.2-5-1.3-5-3.2',
   partners: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm-9-9h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18',
   commodities: 'M7 3h10M8 3v4l-3 4v9h14v-9l-3-4V3M5 14h14',
   soe: 'M3 21V10l5 3V10l5 3V6l8 4v11H3Zm4-4h2m4 0h2',
