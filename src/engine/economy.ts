@@ -1,7 +1,7 @@
 import { sectorTax } from './policy-controls';
 import { confidenceChannels, householdBehaviour, householdSpending } from './household-behavior';
 import { calibrationFor } from './calibration';
-import { baselineFor, nationalV2, trendFor } from '../data/economic-baseline';
+import { baselineFor, demandFor, nationalV2, trendFor } from '../data/economic-baseline';
 import { COMMODITY_IMPORT, UTILITY_FUEL_PASSTHROUGH, FUEL_CPI_WEIGHT, HOUSEHOLD_EQUITY0, PUBLIC_CAPITAL_ELASTICITY, WEALTH_MPC } from '../data/world';
 import { publicCapitalFactor } from './fiscal-rules';
 import { palmHouseholdDelta } from './soe';
@@ -21,7 +21,6 @@ import { clamp, toMinor } from './util';
 /** Monthly amounts are 'per average month'; daily flow = monthly × 12/365. */
 export const PER_DAY = 12 / 365;
 const zero = (): Vec => Object.fromEntries(SECTOR_IDS.map((s) => [s, 0])) as Vec;
-const TOURISM_LEVY_ELASTICITY = 1.5;
 const PRICE_SPEED = 0.025; // daily convergence of sector prices to cost-based targets
 const RENT_SPEED = 0.01;
 const LABOR_STRETCH = 1.08;
@@ -104,7 +103,7 @@ export function exportIndex(s: GameState, j: SectorId): number {
   const e = s.external;
   const fxf = e.myrPerUsd / BASELINE.myrPerUsd;
   const rel = s.sectors[j].price / (fxf * e.usPrice);
-  const levyHit = clamp(1 - TOURISM_LEVY_ELASTICITY * (s.government.policies.tax.consumption - BASE_TAX.consumption), 0.4, 1.3);
+  const levyHit = clamp(1 - demandFor(s).visitorLevyElasticity * (s.government.policies.tax.consumption - BASE_TAX.consumption), 0.4, 1.3);
   const mix = SECTORS[j].exportMix;
   let idx = 0;
   idx += (mix.my ?? 0) * e.myDemand * Math.pow(s.sectors[j].price / (s.indicators.cpi / 100), -0.3);
@@ -139,13 +138,18 @@ export function householdDemand(s: GameState, transfersPaid: number) {
   const disposable = wages + transfersPaid + other - householdTax - interestH - amortH;
   // Permanent-income smoothing: households spend out of a blend of current and smoothed income,
   // drawing down savings when income dips (spec: DrawdownFromSavings).
-  const permanentIncome = hh.permanentIncome + 0.012 * (disposable - hh.permanentIncome);
+  // Model 3: households also expect trend nominal income growth, and correct toward current income slowly (D-056).
+  const D = demandFor(s);
+  const permanentIncome = hh.permanentIncome * (1 + D.permanentDrift / 365) + D.permanentSpeed * (disposable - hh.permanentIncome);
   // Wealth effect: households spend a small share of listed-equity gains and losses (model 2).
   const wealthSpend = nationalV2(s) ? (WEALTH_MPC / 365) * HOUSEHOLD_EQUITY0 * (hh.equityIndex - 1) : 0;
   // Pump prices: extra fuel spending comes out of the household budget for other goods (model 2).
-  const { consumption, spending, fuelAdjustment } = householdSpending(disposable, permanentIncome, hh.savings, hh.mpc, wealthSpend, householdFuelBillDelta(s));
+  const { consumption: basket, spending, fuelAdjustment } = householdSpending(disposable, permanentIncome, hh.savings, hh.mpc, wealthSpend, householdFuelBillDelta(s), D.currentIncomeWeight);
+  // A share of the non-fuel basket buys finished imports directly; it leaves the domestic sectors (model 3).
+  const importedConsumption = basket * D.importedConsumption;
+  const consumption = basket - importedConsumption;
   const credit = hh.newCreditMonthly * PER_DAY;
-  return { wagesBy, wages, other, householdTax, interestH, amortH, disposable, permanentIncome, consumption, spending, fuelAdjustment, credit };
+  return { wagesBy, wages, other, householdTax, interestH, amortH, disposable, permanentIncome, consumption, importedConsumption, spending, fuelAdjustment, credit };
 }
 
 export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEconomy {
@@ -269,7 +273,8 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
   // they do not create real output or enter base-price real GDP (opening tariff = zero).
   gdpNominal += tariffPaid + steelDutyPaid;
   // --- Prices: move toward cost-based targets with demand-pressure markups -----------------------
-  const cpiIdx = s.indicators.cpi / 100;
+  // Model 3 anchors margins to pre-tax domestic prices, so a levy or pump-price change is not re-marked-up by every sector.
+  const cpiIdx = demandFor(s).taxFreePriceAnchor ? producerAnchor(s) : s.indicators.cpi / 100;
   const nextP: Vec = zero();
   for (const j of SECTOR_IDS) {
     const sec = s.sectors[j];
@@ -298,6 +303,13 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
   return { gdpNominal, gdpReal, levy, householdTax };
 }
 
+/** Basket-weighted domestic prices excluding the consumption levy and pump prices (1 at opening). */
+export function producerAnchor(s: GameState): number {
+  let c = 0;
+  for (const j of SECTOR_IDS) c += CPI_WEIGHTS[j] * (j === 'prop' ? s.households.rentIndex : s.sectors[j].price);
+  return c;
+}
+
 export function computeCpi(s: GameState): number {
   const levyF = (1 + s.government.policies.tax.consumption) / (1 + BASE_TAX.consumption);
   let c = 0;
@@ -319,7 +331,7 @@ export function weekly(s: GameState): void {
     const sec = s.sectors[j];
     // Hire toward the labour needed for demand that capital capacity can serve.
     const need = sec.demandCapped / (CAL.laborProd0[j] * sec.productivity * productivityBoost(s, j));
-    sec.employment += 0.12 * (need - sec.employment);
+    sec.employment += demandFor(s).hiringSpeed * (need - sec.employment);
     total += sec.employment;
   }
   const maxEmp = hh.laborForce * 0.985;
@@ -337,6 +349,7 @@ export function monthClose(s: GameState, inflationYoY: number, unemployment: num
   const CAL = calibrationFor(s);
   const BASE_LEND_RATE = baselineFor(s).opr + 0.02;
   const TREND = trendFor(s);
+  const DEMAND = demandFor(s);
   const hh = s.households;
   const bank = s.bank;
   const confidence = confidenceChannels(hh.confidence);
@@ -357,7 +370,7 @@ export function monthClose(s: GameState, inflationYoY: number, unemployment: num
     // Investment: after-tax return vs baseline, cost of credit, utilisation and confidence
     const rok = (afterTax * 365) / days / sec.capital;
     const g = clamp(
-      TREND.capitalGrowth + 0.12 * (rok - CAL.rok0[j]) - 0.6 * (bank.lendingRate - BASE_LEND_RATE) + 0.12 * (sec.avgUtil - NORMAL_UTIL) + confidence.investmentGrowth,
+      TREND.capitalGrowth + 0.12 * (rok - CAL.rok0[j]) - DEMAND.investmentRate * (bank.lendingRate - BASE_LEND_RATE) + 0.12 * (sec.avgUtil - NORMAL_UTIL) + confidence.investmentGrowth,
       -0.02,
       0.09,
     );
@@ -370,7 +383,7 @@ export function monthClose(s: GameState, inflationYoY: number, unemployment: num
   // Credit: firms' external financing need + households' borrowing demand vs bank supply
   let firmNeed = 0;
   for (const j of SECTOR_IDS) firmNeed += Math.max(0, desired[j] - internal[j]);
-  const hhDemand = bank.loansH * (HOUSEHOLD_AMORT_MONTHLY + 0.004 * confidence.creditGrowthMultiplier * clamp(1 - 8 * (bank.lendingRate - BASE_LEND_RATE), 0.2, 1.6));
+  const hhDemand = bank.loansH * (HOUSEHOLD_AMORT_MONTHLY + 0.004 * confidence.creditGrowthMultiplier * clamp(1 - DEMAND.creditRate * (bank.lendingRate - BASE_LEND_RATE), 0.2, 1.6));
   const firmRepay = bank.loansF * 0.01;
   const supply = creditSupply(s);
   const demandTotal = firmNeed + firmRepay + hhDemand;
@@ -408,7 +421,7 @@ export function monthClose(s: GameState, inflationYoY: number, unemployment: num
   hh.expectedInflation = clamp(0.82 * hh.expectedInflation + 0.1 * inflationYoY + 0.08 * BASELINE.inflationTarget, -0.02, 0.15);
   // Workforce (incl. commuters/migrants) grows on trend and partially follows labour demand.
   hh.laborForce *= 1 + TREND.laborForce / 12;
-  hh.laborForce += 0.06 * (hh.employed / (1 - TREND.naturalUnemployment) - hh.laborForce);
+  hh.laborForce += DEMAND.laborForcePull * (hh.employed / (1 - TREND.naturalUnemployment) - hh.laborForce);
   hh.population *= 1 + 0.012 / 12;
 
   const behaviour = householdBehaviour(hh.confidence, hh.mpc, unemployment - TREND.naturalUnemployment, coreInflation, incomeTrend, s.external.riskAppetite);

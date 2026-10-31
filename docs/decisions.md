@@ -360,3 +360,26 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   Unchanged policy now leaves the deficit near its opening ~3.8–3.9% (spending tracks the economy), so consolidation
   remains the player's choice. CPI still settles ~1.3%/yr because world commodity prices are flat in nominal USD;
   this is recorded as an open calibration issue.
+- **D-056 Demand multiplier recalibration (model 3).** Harness first: `tools/multipliers.ts` (`npm run multipliers`,
+  `tests/multipliers.test.ts`) runs paired same-seed campaigns with events/episodes off and one shock from 1 Feb 2027:
+  +1% of GDP government purchases, OPR +25/+100bp held above the baseline path, oil +10%/+50%, consumption levy +1pp,
+  RON95 eligibility removal. Benchmarks: spending multiplier 0.3–0.8 (Rafiq, IMF WP/13/149, finds Malaysian multipliers
+  declined after 1998), OPR 25bp ≈ 0.1–0.16pp of GDP (Bank Muamalat SVAR, 2025), Okun 0.1–0.45 and sacrifice ratio
+  0.5–4 (typical EM ranges; no Malaysia-specific Okun estimate was found, so these are labelled assumptions).
+  Model-3 changes (`NATIONAL_DEMAND`; model 1/2 keep `LEGACY_DEMAND`): 12% of household cash spending buys finished
+  imports (in calibration too); desired spending weights current income 0.2 (was 0.5); permanent income corrects
+  0.2%/day (was 1.2%) and drifts with expected trend nominal income (5.9%/yr); hiring adjusts 2%/week (was 12%);
+  investment −0.2 and household credit −4 per unit lending-rate change (were −0.6, −8); workforce pull 15%/month (was
+  6%, migrant/participation flows); OPR gap weight 0.75 (was 0.2); producers anchor non-labour margins to prices
+  excluding the levy and pump prices; visitor levy elasticity 0.75 (was 1.5); PETRONAS capex scales with the lagged
+  oil/gas index (elasticity 0.5). Productivity is lowered to 2.3% and potential to 3.6% (revising D-055) so supply
+  matches the ~3.5% demand path and unemployment holds near 3%. Results and remaining gaps (4-quarter spending 0.81,
+  oil +10% −0.38%, levy multiplier 0.9: an unrecycled oil windfall and full levy incidence) are in economy-model.md.
+- **D-057 Wealth credit against trend (model 3).** After D-056, tax rises cost much less output, and the tax-maximiser
+  bot scored best (61.2 vs hands-off 57.1) on 93 wealth points despite 0.7% real growth: the D-051 credit compared
+  living standards with *opening* levels. Model 3 compares output with the potential path and real income per head
+  with the productivity path, removes 4% of the credit per 1% shortfall (`1 − 4·(1 − min(ratios, services))`), and
+  lowers the wealth slope from 400 to 300 points per unit of real net-wealth change ÷ opening GDP. Losses keep their
+  full penalty. Model 1/2 saves keep the D-051 rule. The counter-cyclical bot in `tools/campaigns.ts` now measures
+  "neutral" against the inherited budget path, not the 2027 level (it had been cancelling indexation). Its campaign test
+  now checks recession unemployment and a bounded score cost instead of a score gain.

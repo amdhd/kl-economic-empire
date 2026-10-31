@@ -14,7 +14,8 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"tests/**/*.ts\" \"e2e/**/*.ts\"",
     "campaign": "vitest run tests/campaign.test.ts",
     "balance": "node scripts/balance.mjs",
-    "profile": "node scripts/profile.mjs"
+    "profile": "node scripts/profile.mjs",
+    "multipliers": "node scripts/multipliers.mjs"
   },
   "dependencies": {
     "firebase": "^13.1.0",

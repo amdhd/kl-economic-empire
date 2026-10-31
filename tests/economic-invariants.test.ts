@@ -116,7 +116,8 @@ describe('GDP measurement', () => {
     const finalDemand = SECTOR_IDS.reduce((sum, j) => sum + CAL.f0[j], 0);
     const imports = SECTOR_IDS.reduce((sum, j) => sum + SECTORS[j].importShare * s.sectors[j].output, 0);
     const grossOutput = SECTOR_IDS.reduce((sum, j) => sum + s.sectors[j].mtd.nominalOutput, 0);
-    expect((e.gdpNominal - e.levy) / (finalDemand - imports)).toBeCloseTo(1, 10);
+    // Model-3 permanent income already drifts with expected trend income on day one (D-056), adding ~0.005%.
+    expect((e.gdpNominal - e.levy) / (finalDemand - imports)).toBeCloseTo(1, 3);
     expect(grossOutput).toBeGreaterThan(e.gdpNominal * 1.5);
   });
 

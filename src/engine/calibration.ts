@@ -1,7 +1,7 @@
 // One-off steady-state calibration of the KL input–output economy. Pure and deterministic.
 // Final demand f = (I − A)·Y0; household, government and investment components come from the
 // behavioural rules evaluated at baseline, and exports are the residual (asserted positive in tests).
-import { BASE_BUDGET, BASE_BUDGET_V1, BASE_TAX, BASELINE, LEGACY_BASELINE, LEGACY_BUDGET, LEGACY_TREND, NATIONAL_GDP, NATIONAL_TREND, BUDGET_PURCHASES, INVESTMENT_GOODS, IO, SECTOR_IDS, SECTORS } from '../data/economic-baseline';
+import { BASE_BUDGET, BASE_BUDGET_V1, BASE_TAX, BASELINE, LEGACY_BASELINE, LEGACY_BUDGET, LEGACY_TREND, NATIONAL_DEMAND, NATIONAL_GDP, NATIONAL_TREND, BUDGET_PURCHASES, INVESTMENT_GOODS, IO, SECTOR_IDS, SECTORS } from '../data/economic-baseline';
 import type { BudgetCategory, SectorId, GameState } from '../types/game';
 import { DEVELOPMENT_ANNUAL0, DEVELOPMENT_PURCHASES, RESOURCE_VA0 } from '../data/world';
 
@@ -62,7 +62,7 @@ export interface Calibration {
   gdpDaily: number;
 }
 
-function calibrate(BASELINE = LEGACY_BASELINE, BASE_BUDGET = LEGACY_BUDGET, scale = 1, developmentAnnual = 0, capitalGrowth = CAPITAL_GROWTH0): Calibration {
+function calibrate(BASELINE = LEGACY_BASELINE, BASE_BUDGET = LEGACY_BUDGET, scale = 1, developmentAnnual = 0, capitalGrowth = CAPITAL_GROWTH0, importedConsumption = 0): Calibration {
   const BASE_LEND_RATE = BASELINE.opr + 0.02;
   const vaAnnual = (j: SectorId) => SECTORS[j].vaAnnual * scale;
   const n = SECTOR_IDS.length;
@@ -122,7 +122,7 @@ function calibrate(BASELINE = LEGACY_BASELINE, BASE_BUDGET = LEGACY_BUDGET, scal
   const C0 = zero();
   let levy = 0;
   for (const j of SECTOR_IDS) {
-    let spend = consumption * SECTORS[j].consumption + credit * (CREDIT_SPEND[j] ?? 0);
+    let spend = consumption * (1 - importedConsumption) * SECTORS[j].consumption + credit * (CREDIT_SPEND[j] ?? 0);
     if (j === 'cons') {
       levy += spend - spend / (1 + BASE_TAX.consumption);
       spend /= 1 + BASE_TAX.consumption;
@@ -159,9 +159,9 @@ function calibrate(BASELINE = LEGACY_BASELINE, BASE_BUDGET = LEGACY_BUDGET, scal
 
 export const LEGACY_CAL: Calibration = calibrate();
 /** Linear solve for the sector scale whose GDP (sector value added + product levy) hits `target`. */
-function nationalScale(budget: typeof BASE_BUDGET, target: number, developmentAnnual: number, capitalGrowth = CAPITAL_GROWTH0): number {
-  const c1 = calibrate(BASELINE, budget, 1, developmentAnnual, capitalGrowth).gdpDaily * 365;
-  const c2 = calibrate(BASELINE, budget, 2, developmentAnnual, capitalGrowth).gdpDaily * 365;
+function nationalScale(budget: typeof BASE_BUDGET, target: number, developmentAnnual: number, capitalGrowth = CAPITAL_GROWTH0, importedConsumption = 0): number {
+  const c1 = calibrate(BASELINE, budget, 1, developmentAnnual, capitalGrowth, importedConsumption).gdpDaily * 365;
+  const c2 = calibrate(BASELINE, budget, 2, developmentAnnual, capitalGrowth, importedConsumption).gdpDaily * 365;
   return 1 + (target - c1) / (c2 - c1);
 }
 /** Model 1 (schema-5 saves): the seven sectors carry all of GDP; no development budget. */
@@ -173,8 +173,8 @@ export const NATIONAL_SCALE = nationalScale(BASE_BUDGET, NATIONAL_GDP - RESOURCE
 export const CAL_V2: Calibration = calibrate(BASELINE, BASE_BUDGET, NATIONAL_SCALE, DEVELOPMENT_ANNUAL0);
 /** Model 3 (current national campaigns): the same economy, with opening investment on the national capital-growth
  * trend (D-055). */
-export const NATIONAL_SCALE_V3 = nationalScale(BASE_BUDGET, NATIONAL_GDP - RESOURCE_VA0, DEVELOPMENT_ANNUAL0, NATIONAL_TREND.capitalGrowth);
-export const CAL: Calibration = calibrate(BASELINE, BASE_BUDGET, NATIONAL_SCALE_V3, DEVELOPMENT_ANNUAL0, NATIONAL_TREND.capitalGrowth);
+export const NATIONAL_SCALE_V3 = nationalScale(BASE_BUDGET, NATIONAL_GDP - RESOURCE_VA0, DEVELOPMENT_ANNUAL0, NATIONAL_TREND.capitalGrowth, NATIONAL_DEMAND.importedConsumption);
+export const CAL: Calibration = calibrate(BASELINE, BASE_BUDGET, NATIONAL_SCALE_V3, DEVELOPMENT_ANNUAL0, NATIONAL_TREND.capitalGrowth, NATIONAL_DEMAND.importedConsumption);
 export const calibrationFor = (s: Pick<GameState, 'baseline'>): Calibration =>
   s.baseline.profile === 'legacy-kl' ? LEGACY_CAL : s.baseline.model === 1 ? CAL_V1 : s.baseline.model === 2 ? CAL_V2 : CAL;
 export const SECTOR_INDEX: Record<SectorId, number> = Object.fromEntries(SECTOR_IDS.map((s, i) => [s, i])) as Record<SectorId, number>;

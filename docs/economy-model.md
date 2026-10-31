@@ -673,11 +673,11 @@ New national campaigns use model 3; model-1/2 saves keep their previous trend an
 
 | Parameter (`NATIONAL_TREND`) | Model 3 | Model 1/2 (`LEGACY_TREND`) | Used in |
 |---|---:|---:|---|
-| Labour productivity growth | 2.6%/yr | 1.5% | sector productivity, wage rule |
+| Labour productivity growth | 2.3%/yr (2.6% before D-056) | 1.5% | sector productivity, wage rule |
 | Workforce trend | 1.6%/yr | 1.0% | `LF *= 1 + trend/12`, then the 6% monthly pull toward `employed/(1−u*)` |
 | Natural unemployment `u*` | 3.0% | 3.5% | workforce pull, Phillips curve, confidence, NPLs |
 | Capital growth `g0` | 4.0%/yr | 3.5% | calibration (`I0 = K(δ+g0)`, private capital share, residual exports) and the investment rule |
-| Potential growth | 3.8%/yr | 3.5% | OPR output gap path and growth-score benchmark (`growthTarget`) |
+| Potential growth | 3.6%/yr (3.8% before D-056) | 3.5% | OPR output gap path and growth-score benchmark (`growthTarget`) |
 | Other receipts | × nominal GDP index | fixed | see below |
 | Opening budget path | 6%/yr, monthly | none | inherited ministry plans |
 
@@ -705,3 +705,46 @@ opening level (~3.9%), so fiscal-rule credibility still falls without consolidat
 below the 2% anchor, because world commodity prices are flat in nominal USD while US prices trend at 2.5%, and
 expectations put only an 8% monthly weight on the target. `tests/trend.test.ts` covers the steady opening, the 24-month
 no-event path, plan indexation, buoyant receipts, the shared potential and schema-7 compatibility.
+
+## D-056: macro validation and demand recalibration (model 3)
+
+`tools/multipliers.ts` (dev/test only; `npm run multipliers -- --seeds …`) runs a baseline and one shocked campaign per
+experiment with the same seed, random events and commodity episodes disabled, the shock starting 1 Feb 2027. A
+harness-only oil event template sits outside `EVENTS`, so the weekly draws stay aligned. Definitions:
+
+- Spending multiplier = Σ ΔrealGDP / Σ Δreal government purchases over months 1–12 (4q) or 1–23 (8q); the shock is
+  +1% of opening GDP a year across health, services, safety, development and administration (and their plans).
+- OPR: the policy rate is held +25bp / +100bp above the baseline run's daily path; GDP gap averaged over months 21–23.
+- Sacrifice ratio = cumulative output loss (%-years, +100bp) / fall in YoY inflation at month 23.
+- Okun = Δunemployment (pp) / Δreal GDP (%) in months 10–12 of the spending shock.
+- Levy multiplier = −Σ ΔrealGDP / Σ Δreal levy receipts, months 2–13 (+1pp, effective 1 March).
+
+| Metric (mean of seeds 2027, 11, 42, 201) | Before (D-055 only) | After (D-056) | Benchmark |
+|---|---:|---:|---|
+| Spending multiplier, 4q / 8q | 1.17 / 1.13 | 0.81 / 0.79 | 0.3–0.8 / 0.3–0.9 |
+| OPR +25bp, real GDP after 8q | −0.47% | −0.13% | −0.25 … −0.02% |
+| OPR +100bp, real GDP after 8q | −2.21% | −0.55% | — |
+| Okun coefficient | 0.65 | 0.29 | 0.1–0.45 |
+| Sacrifice ratio | 5.8 | 2.7 | 0.5–4 |
+| Oil +10%, real GDP after 4q | −0.87% | −0.38% | −0.3 … +0.3% |
+| Oil +50%, real GDP after ~200 days | −3.25% | −1.76% | — |
+| RON95 eligibility removed, real GDP after ~200 days | −1.38% | −0.28% | — |
+| Consumption levy +1pp, multiplier (4q) | 2.25 | 0.90 | 0.1–0.6 |
+
+Changes (all `NATIONAL_DEMAND`, model 3 only):
+- `desired = MPC·(0.2·YD + 0.8·P) + wealthSpend`; `P ← P·(1 + 0.059/365) + 0.002·(YD − P)`: permanent income expects
+  trend nominal growth and adjusts with a ~1-year half-life.
+- 12% of the non-fuel cash basket buys finished imports (`importedConsumption`), also removed from calibrated `C0`.
+  These imports are a demand leakage; they are not added to the reduced sector trade account.
+- Hiring moves 2% a week toward output-implied labour (labour hoarding); the workforce pull is 15% a month.
+- Investment `g −= 0.2·Δlending rate`; household credit demand `× clamp(1 − 4·Δrate, 0.2, 1.6)`.
+- OPR target `+ 0.75 × output gap`.
+- Price targets index non-labour margins to `producerAnchor` (basket prices without the levy or pump prices).
+- Visitor demand `× (1 − 0.75·Δlevy)`; PETRONAS effective capex `× gasIndex^0.5` (lagged oil/LNG index).
+
+**Remaining gaps, documented rather than forced:** the 4-quarter spending multiplier sits at the top of the range
+because the model has no crowding-out channel besides the OPR: public purchases have ~15% import content, so the
+direct effect alone is ~0.8. Oil and levy shocks are still about 1.3–1.5× the range. The oil windfall (petroleum
+tax, PETRONAS cash) is saved unless the player spends it, and households bear the full levy. Both are player-visible
+levers rather than hidden amplifiers. Coefficients remain fictional game calibration checked against published
+ranges, not estimated Malaysian parameters. `tests/multipliers.test.ts` locks these results in on two seeds.

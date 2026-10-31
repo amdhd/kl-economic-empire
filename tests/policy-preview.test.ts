@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BASE_TAX, SECTOR_IDS, SECTORS } from '../src/data/economic-baseline';
+import { BASE_TAX, NATIONAL_DEMAND, SECTOR_IDS, SECTORS } from '../src/data/economic-baseline';
 import { CAL } from '../src/engine/calibration';
 import { PER_DAY } from '../src/engine/economy';
 import { createGame } from '../src/engine/game';
@@ -11,10 +11,11 @@ describe('static policy forecasts', () => {
     const s = createGame(50);
     const before = clone(s);
     const forecast = estimateTaxChange(s, { ...BASE_TAX, consumption: 0.08 });
-    const residents = CAL.hh.consumption * SECTORS.cons.consumption + CAL.hh.credit * 0.65;
+    // Model 3: a share of the cash basket buys finished imports directly and carries no domestic levy (D-056).
+    const residents = CAL.hh.consumption * (1 - NATIONAL_DEMAND.importedConsumption) * SECTORS.cons.consumption + CAL.hh.credit * 0.65;
     const visitors = CAL.X0.cons * 0.5;
     const expected = (residents * (0.08 / 1.08 - 0.04 / 1.04) + visitors * 0.04) / PER_DAY;
-    expect(forecast.consumption / expected).toBeCloseTo(1, 10);
+    expect(forecast.consumption / expected).toBeCloseTo(1, 3); // permanent income's one-day trend drift (D-056)
     expect(forecast.corporate).toBe(0);
     expect(forecast.property).toBe(0);
     expect(forecast.household).toBe(0);

@@ -58,9 +58,16 @@ export function scoreDrivers(s: GameState) {
     ? (scoreNetWorth(s) + liabilities) / (s.indicators.cpi / 100) - liabilities - s.baseline.publicNetWorth
     : scoreNetWorth(s) / (s.indicators.cpi / 100) - s.baseline.publicNetWorth;
   const income = reports.at(-1)?.realDisposablePerCapita ?? s.baseline.realDisposablePerCapita;
-  const wealthCreditFactor = clamp(Math.min(income / s.baseline.realDisposablePerCapita,
-    realOutput / s.baseline.realGdpAnnual, s.government.serviceQuality / BASELINE.serviceQuality), 0, 1);
-  const rawWealthScore = clamp(50 + 400 * realWealthChange / s.baseline.nominalGdpAnnual, 0, 100);
+  const TREND = trendFor(s);
+  // Model 3 (D-057): living standards are judged against the trend path, and each 1% shortfall costs 4% of the credit,
+  // so wealth bought with stagnation is not rewarded. Earlier models compare with opening levels.
+  const elapsed = Math.max(0, (reports.length - 1) / 12);
+  const outputPath = TREND.trendWealthCredit ? Math.pow(1 + TREND.potentialGrowth, elapsed) : 1;
+  const incomePath = TREND.trendWealthCredit ? Math.pow(1 + TREND.productivity, elapsed) : 1;
+  const sustained = Math.min(income / (s.baseline.realDisposablePerCapita * incomePath),
+    realOutput / (s.baseline.realGdpAnnual * outputPath), s.government.serviceQuality / BASELINE.serviceQuality);
+  const wealthCreditFactor = clamp(TREND.trendWealthCredit ? 1 - 4 * (1 - sustained) : sustained, 0, 1);
+  const rawWealthScore = clamp(50 + TREND.wealthSlope * realWealthChange / s.baseline.nominalGdpAnnual, 0, 100);
   return { realGrowth, growthTarget: growthTarget(s) + externalAdjustment, externalAdjustment, realWealthChange,
     wealthCreditFactor, rawWealthScore };
 }

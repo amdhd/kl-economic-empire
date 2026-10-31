@@ -280,3 +280,29 @@ The growth benchmark rose from 3.5% to 3.8%, yet growth points rose because unto
 Wealth points fell because inherited budgets now grow with the economy instead of silently consolidating. Austerity
 scores lower since cutting a budget now also cancels its indexation. The D-051 limitation remains: the recession
 scenario's endpoint score can exceed balanced play. Bots still never win; 75 stays provisional.
+
+## Demand recalibration and wealth credit — D-056/D-057 (31 October 2026)
+
+Macro validation results are in `docs/economy-model.md` (D-056). Effects on the untouched economy (8 seeds, events
+off, cycles and episodes on): mean growth 3.26%/yr (final 12 months 3.0%). Unemployment holds at 3.2–3.3%,
+and the worst seed's peak falls from 5.7% to 3.7%. Seed variance narrows (2.6–3.9% growth). The noise-free seed-2027
+path is 3.2% / 3.4% growth with unemployment at 3.1–3.2%. Productivity (2.3%) and potential (3.6%) were revised so
+supply matches this demand path.
+
+**Strategy replays** (`npm run balance`, 12 default seeds):
+
+| Strategy | D-055 | D-056 only | D-056 + D-057 | Growth | Wealth | Approval |
+|---|---:|---:|---:|---:|---:|---:|
+| Hands-off | 52.73 | 57.06 | 57.61 | 43.4 | 44.6 | 77.7 |
+| Balanced growth | 51.74 | 55.67 | 56.41 | 43.6 | 42.6 | 78.1 |
+| Tax maximiser | 48.21 | **61.23** | 54.14 | 17.9 | 69.7 | 56.7 |
+| Investment heavy | 52.48 | 56.50 | 57.13 | 44.3 | 43.7 | 77.9 |
+| Austerity | 45.04 | 55.08 | 46.74 | 11.8 | 52.5 | 59.2 |
+| Adaptive | 51.84 | 56.20 | 56.62 | 43.5 | 43.2 | 77.8 |
+| Adverse recession | 57.33 | 58.20 | 58.94 | 50.9 | 42.5 | 77.9 |
+
+Smaller multipliers make the economy steadier and taxes cheaper. Without D-057, tax maximisation would have been
+the best bot strategy. With it, tax and austerity rank below passive play again, and approval still bars both from
+winning. Counter-cyclical stimulus is now roughly score-neutral: it lowers recession unemployment but costs wealth.
+All bots cluster at 54–59 and none wins; 75 stays provisional pending human playtesting. The recession scenario's
+endpoint score still exceeds balanced play (the D-051 limitation).

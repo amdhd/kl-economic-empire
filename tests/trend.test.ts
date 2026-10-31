@@ -4,7 +4,7 @@ import { BASE_BUDGET, LEGACY_TREND, NATIONAL_TREND, trendFor } from '../src/data
 import { CAL, CAL_V2, calibrationFor } from '../src/engine/calibration';
 import { createGame, runHeadless } from '../src/engine/game';
 import { otherPublicReceiptsMonthly } from '../src/engine/government';
-import { growthTarget } from '../src/engine/indicators';
+import { growthTarget, scoreDrivers } from '../src/engine/indicators';
 import { outputGap } from '../src/engine/scheduler';
 import { daysInMonth } from '../src/engine/time';
 import { deserialize, serialize } from '../src/persistence/save';
@@ -80,6 +80,19 @@ describe('national trend (model 3)', () => {
     s.reports.push({ monthKey: s.scheduler.lastMonthKey, realGdp: (s.baseline.realGdpAnnual / 365) * 31 * Math.pow(1 + NATIONAL_TREND.potentialGrowth, 1 / 12) } as MonthlyReport);
     expect(outputGap(s)).toBeCloseTo(0, 10);
   });
+
+  it('judges wealth sustainability against the trend path, not opening levels (D-057)', () => withoutEvents(() => {
+    const s = createGame(60);
+    runUntil(s, 2028, 1, 1, 1);
+    const onTrend = scoreDrivers(s);
+    // Output exactly at its opening level after eleven months is a ~3.3% shortfall versus trend (credit ≈ 0.87 at most).
+    for (const r of s.reports) r.realGdp = (s.baseline.realGdpAnnual / 365) * daysInMonth(Math.floor(r.monthKey / 12), (r.monthKey % 12) + 1);
+    const flat = scoreDrivers(s);
+    expect(flat.wealthCreditFactor).toBeLessThan(0.88);
+    expect(flat.wealthCreditFactor).toBeLessThan(onTrend.wealthCreditFactor);
+    s.baseline.model = 2;
+    expect(scoreDrivers(s).wealthCreditFactor).toBeCloseTo(Math.min(1, s.government.serviceQuality / 0.62, s.reports.at(-1)!.realDisposablePerCapita / s.baseline.realDisposablePerCapita), 10);
+  }));
 
   it('loads schema-7 saves as model 2 on the KL-era trend, calibration and fixed receipts', () => {
     const s = createGame(58);
