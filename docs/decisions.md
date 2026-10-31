@@ -492,3 +492,19 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
 
 
 - **D-074 Plain-English Deal Room (user request).** Display-only: each deal shows a short tag (Foreign investment, Private build, Long-term supply, Startup stake, Bailout, Buy a company, Background check) with a one-line meaning, and each negotiable term has a plain label, a live percentage and a hint. Underlying term keys, rules and accessibility labels changed only in wording; no economic change.
+
+- **D-075 Central-bank powers (user request, schema 12).** Overrides D-012/D-022 ("OPR is exogenous"): the president may steer
+  Bank Negara, defaulting to the old automatic rule so existing results are unchanged. (1) **OPR:** in manual mode the OPR moves
+  towards `targetOpr` only at the existing MPC meetings (1st of odd months), by at most 50bp in 25bp steps, within 1.25%-6%.
+  (2) **Credibility** (0-100, starts 80): manual policy within 50bp of the rule gains 2 per meeting, larger gaps lose 6 points per
+  1pp beyond 50bp; automatic mode recovers a quarter of the gap to 80 each meeting. Below 80 it adds inflation (+0.025pp/pt),
+  10y yield (+1bp/pt) and ringgit weakness (+0.03%/pt). (3) **SRR** 1%-6% (neutral 2%): +3pp loan rate per +1pp requirement and
+  lower willingness. (4) **Bond purchases/sales** up to 8% of GDP, RM20bn per order: -60bp yield, +0.1pp inflation and +0.35% ringgit
+  weakness per 1% of GDP held; no treasury cash and no bank-identity change; BNM earns the average debt coupon on holdings.
+  (5) **BNM bills** drain up to 50% of bank reserves into BNM's MYR float (`bills` is a sen liability, included in the bank identity and
+  netted from reserve equity, so equity is unchanged); BNM pays the OPR on them to banks. This is how the float, and so USD purchases,
+  grows. (6) **Reserve income** monthly: half the 10y UST yield on the USD reserves plus bond coupons, less bill interest, credited
+  to the float; `remitShare` pays that share of net income to the treasury (booked with state-entity dividends and posted before the
+  government close, so reconciliation holds). Opening BNM dividends already sit in other public receipts, so this is extra. Reserves
+  still cannot be spent on the budget. Stylised simulation, not real BNM policy.
+

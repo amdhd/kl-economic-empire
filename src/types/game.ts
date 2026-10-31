@@ -583,6 +583,16 @@ export interface CentralBankState {
   dailyUsdUsed: number;
   lastInterventionDay: number;
   tx: { atMin: number; side: 'buyUSD' | 'sellUSD'; usdMinor: number; myrMinor: number; rate: number }[];
+  /** Monetary policy (D-075). 'auto' follows the fictional BNM rule; 'manual' steers the OPR towards `targetOpr`. */
+  mode: 'auto' | 'manual';
+  targetOpr: number;
+  srr: number; // statutory reserve requirement, share of deposits
+  qeHoldings: number; // MYR of government bonds held by BNM
+  bills: number; // sen of BNM sterilisation bills held by banks (a central-bank liability)
+  credibility: number; // 0..100; falls when manual policy strays far from the rule
+  remitShare: number; // share of monthly reserve income paid to the treasury
+  lastIncome: number; // sen, net reserve income of the last closed month
+  mpc: { day: number; from: number; to: number; rule: number }[];
 }
 export interface BaselineSnapshot {
   profile: 'malaysia' | 'legacy-kl';

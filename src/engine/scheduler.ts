@@ -20,6 +20,7 @@ import { coreCpiOf, updateWorld, weeklyWorld } from './world';
 import { SECTOR_IDS } from '../data/economic-baseline';
 import type { GameState, MonthlyReport, SectorId } from '../types/game';
 import { monthCloseBank } from './banks';
+import { monthCloseCentralBank } from './central-bank';
 import { dailyCompanies, monthCloseCompanies } from './companies';
 import { daily, monthClose as economyMonthClose, resetMonthToDate, weekly } from './economy';
 import { expireEvents, weeklyEvents } from './events';
@@ -133,6 +134,7 @@ function closeMonth(s: GameState, key: number, mods: AggregatedMods): void {
   receiveDividends(s, divs);
   monthCloseFund(s);
   monthCloseSoe(s, key, divs, Math.max(1, s.scheduler.mtdDays));
+  monthCloseCentralBank(s); // before the government close so its remittance falls inside this month's flows
   const govClose = monthCloseGovernment(s);
 
   const ind = s.indicators;

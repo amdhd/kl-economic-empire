@@ -84,7 +84,7 @@ export function scoreDrivers(s: GameState) {
 export function reserveEquityChange(s: GameState, atOpeningFx = false): number {
   const cb = s.centralBank;
   const fx = atOpeningFx ? baselineFor(s).myrPerUsd : s.external.myrPerUsd;
-  return cb.usdReserves / 100 * fx + cb.myrCash / 100 - cb.openingEquityMYR;
+  return cb.usdReserves / 100 * fx + (cb.myrCash - cb.bills) / 100 - cb.openingEquityMYR;
 }
 
 export function publicNetWorth(s: GameState): number {

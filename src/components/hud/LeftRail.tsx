@@ -19,6 +19,7 @@ const GROUPS: { title: string; items: { id: PanelId; label: string; color: strin
   ] },
   { title: 'Trade & resources', items: [
     { id: 'trade', label: 'Trade & FX', color: '#e2c778' },
+    { id: 'central', label: 'Central bank', color: '#f0c36d' },
     { id: 'partners', label: 'Trading partners', color: '#8fd3c7' },
     { id: 'commodities', label: 'Commodities', color: '#e8a86a' },
     { id: 'deals', label: 'Deal Room', color: '#b6a2ee' },

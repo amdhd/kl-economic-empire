@@ -43,7 +43,7 @@ export function TradePanel() {
     <Section title="Central bank · sterilised FX desk">
       <div className="grid grid-cols-2 gap-3">
         <Stat label="Simulated MYR per $1" value={fx(g.external.myrPerUsd)} />
-        <Stat label="Automatic OPR" value={pct(g.external.opr, 2)} />
+        <Stat label={g.centralBank.mode === 'manual' ? 'OPR (you set it)' : 'OPR (automatic)'} value={pct(g.external.opr, 2)} />
         <Stat label="Usable foreign-currency inventory" value={fullMoneyMinor(g.centralBank.usdReserves, 'USD')} />
         <Stat label="Segregated MYR inventory" value={fullMoneyMinor(g.centralBank.myrCash)} />
       </div>

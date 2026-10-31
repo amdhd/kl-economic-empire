@@ -1044,3 +1044,10 @@ Share purchases and loans exchange assets; only funded production contributes to
 unpaid obligations. Public-to-public transfers/distributions cannot manufacture public wealth. Keep the existing
 continuous clock, 24-month boundary, pause/1×/2×/3× and no offline catch-up. Migration preserves prior accounts and
 signed contracts; new agreement rules activate prospectively. Build/test/browser gates apply to each milestone.
+
+## 22. User amendment — central-bank powers (1 November 2026)
+
+The user asked to control the policy rate and other central-bank tools, and to use or grow the BNM FX reserves. This overrides the
+§8 rule that the OPR stays exogenous. The automatic rule remains the default; manual control is bounded by MPC meeting dates, step
+limits and a credibility cost. Reserve operations still cannot be spent on the budget. See D-075 and `docs/economy-model.md`.
+

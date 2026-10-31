@@ -12,6 +12,7 @@ import { COMPANIES } from '../data/companies';
 import { BASE_TAX, BASELINE, LEGACY_BASELINE, LEGACY_BUDGET, LEGACY_TREND, NATIONAL_TREND, BUDGET_LABELS, SECTOR_IDS, SECTORS, TAX_LABELS } from '../data/economic-baseline';
 import { BASE_BUDGET as nationalBudget } from '../data/economic-baseline';
 import { initialCentralBank, interveneFx } from './trade-fx';
+import { setMonetaryPolicy, tradeBills, tradeBonds } from './central-bank';
 import { DEVELOPMENT_ANNUAL0, RESOURCE_VA0 } from '../data/world';
 import { exitEscape, initialFiscal, invokeEscape, setFiscalRule } from './fiscal-rules';
 import { initialSoe, khazanahTrade, setKhazanahPayout, setPetronasPolicy, soeEquity, soeSpecialDividend } from './soe';
@@ -42,7 +43,7 @@ import { seedRng } from './rng';
 import { klDay, klParts, klToEpochMin, monthKey } from './time';
 import { clamp, news, pushBounded, toMinor } from './util';
 
-export const SCHEMA_VERSION = 11;
+export const SCHEMA_VERSION = 12;
 export const START = { year: 2027, month: 1, day: 1, hour: 8 };
 export const CAMPAIGN_MONTHS = 24;
 
@@ -140,7 +141,7 @@ function createWithProfile(seed: number, scenario: ScenarioId, profile: 'malaysi
     policy: initialPolicy(profile === 'malaysia'),
     fdi: initialFdi(seed, profile === 'malaysia'),
     fiscal: initialFiscal(profile === 'malaysia' ? DEVELOPMENT_ANNUAL0 : 0, profile === 'malaysia' ? (376_840_000_000 + DEVELOPMENT_ANNUAL0 - 380_816_996_000) / gdpAnnual : 0),
-    centralBank: initialCentralBank(profile, BASELINE.myrPerUsd),
+    centralBank: { ...initialCentralBank(profile, BASELINE.myrPerUsd), targetOpr: BASELINE.opr },
     events: { active: [], nextId: 1, log: [] },
     indicators: {
       nominalGdpAnnual: gdpAnnual, realGdpAnnual: gdpAnnual, realGrowthYoY: 0, cpi: 100, inflationYoY: 0.02, inflationMoM: 0,
@@ -215,6 +216,9 @@ export type Command =
   | { type: 'khazanahPayout'; payout: number }
   | { type: 'khazanahTrade'; ticker: TickerId; side: 'buy' | 'sell'; fraction: number }
   | { type: 'interveneFx'; side: 'buyUSD' | 'sellUSD'; usdMinor: number }
+  | { type: 'cbPolicy'; mode?: 'auto' | 'manual'; targetOpr?: number; srr?: number; remitShare?: number }
+  | { type: 'cbBonds'; amountMYR: number }
+  | { type: 'cbBills'; amountMYR: number }
   | { type: 'queueTax'; patch: Partial<TaxPolicy> }
   | { type: 'queueBudget'; patch: Partial<BudgetPolicy> }
   | { type: 'setBorrowing'; patch: Partial<BorrowingPolicy> }
@@ -260,6 +264,10 @@ function dispatch(s: GameState, cmd: Command, atMin: number): CommandResult {
     case 'deal': { const err = dealCommand(s, cmd.id, cmd.action); return { ok: !err, message: err ?? 'Deal updated.' }; }
     case 'sectorIncentive': case 'ministryPlan': case 'cancelMinistryPlan': case 'debtStrategy': case 'fxBand': return controlCommand(s, cmd, atMin);
     case 'interveneFx': return interveneFx(s, cmd.side, cmd.usdMinor, atMin);
+    case 'cbPolicy': case 'cbBonds': case 'cbBills': {
+      const err = cmd.type === 'cbPolicy' ? setMonetaryPolicy(s, cmd, atMin) : cmd.type === 'cbBonds' ? tradeBonds(s, cmd.amountMYR, atMin) : tradeBills(s, cmd.amountMYR, atMin);
+      return err ? { ok: false, message: err } : { ok: true, message: 'Central-bank decision recorded.' };
+    }
     case 'queueCommodity': {
       if (!s.world.enabled) return { ok: false, message: 'Commodity policy is available in new Malaysia campaigns.' };
       const err = validateCommodityPolicy(cmd.patch);

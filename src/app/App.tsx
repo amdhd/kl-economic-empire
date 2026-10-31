@@ -27,6 +27,7 @@ import { OverviewPanel } from '../components/panels/OverviewPanel';
 import { PolicyPanel } from '../components/panels/PolicyPanel';
 import { ProjectsPanel } from '../components/panels/ProjectsPanel';
 import { TradePanel } from '../components/panels/TradePanel';
+import { CentralBankPanel } from '../components/panels/CentralBankPanel';
 import { SourcesPanel } from '../components/panels/SourcesPanel';
 import { ReportsPanel } from '../components/panels/ReportsPanel';
 import { MapView } from '../map/MapView';
@@ -50,6 +51,7 @@ const PANELS: Record<PanelId, () => ReactNode> = {
   partners: () => <PartnersPanel />,
   soe: () => <SoePanel />,
   trade: () => <TradePanel />,
+  central: () => <CentralBankPanel />,
   sources: () => <SourcesPanel />,
   overview: () => <OverviewPanel />,
   policies: () => <PolicyPanel />,

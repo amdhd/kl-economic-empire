@@ -7,6 +7,7 @@ import type { ExternalState, GameState, GlobalDriver } from '../types/game';
 import { eventIsActive } from './events';
 import { randnClipped } from './rng';
 import { capitalControls } from './policy';
+import { applyMpcDecision, monetaryEffects } from './central-bank';
 import { clamp } from './util';
 
 export const DRIVERS: GlobalDriver[] = ['semis', 'software', 'ads', 'consumer', 'energy', 'finance', 'health', 'industrial', 'auto'];
@@ -107,22 +108,22 @@ export function updateExternal(s: GameState, mods: AggregatedMods, klInflation: 
 
   // Policy rates: central banks meet on the 1st of alternate months (fictional schedule).
   if (dayOfMonth === 1 && month % 2 === 1) {
-    e.myInflation = clamp(0.85 * (0.02 + 0.03 * (e.oil - 1) + 0.2 * (e.myrPerUsd / BASELINE.myrPerUsd - 1)) + 0.15 * klInflation, -0.02, 0.12);
+    e.myInflation = clamp(0.85 * (0.02 + 0.03 * (e.oil - 1) + 0.2 * (e.myrPerUsd / BASELINE.myrPerUsd - 1)) + 0.15 * klInflation + monetaryEffects(s).inflation, -0.02, 0.12);
     // KL is a large share of the national economy, so its output gap enters the (fictional) rule.
     const oprTarget = BASELINE.opr + 1.3 * (e.myInflation - 0.02) + 0.5 * Math.log(e.myDemand / Math.exp(TREND.my * t)) + demandFor(s).oprGapWeight * klOutputGap;
-    if (Math.abs(oprTarget - e.opr) > 0.00125) e.opr = clamp(e.opr + Math.sign(oprTarget - e.opr) * 0.0025, 0.0125, 0.06);
+    applyMpcDecision(s, oprTarget);
     const fedTarget = 0.0375 + mods.usRate + 1.2 * (Math.log(e.usDemand / Math.exp(TREND.us * t))) + 0.4 * (e.oil - 1) * 0.03;
     if (Math.abs(fedTarget - e.fedRate) > 0.00125) e.fedRate = clamp(e.fedRate + Math.sign(fedTarget - e.fedRate) * 0.0025, 0.005, 0.08);
   }
   const controls = capitalControls(s);
-  e.mgs10 = 0.038 + 0.7 * (e.opr - BASELINE.opr) + 0.004 * cy.my * 10 + controls.yieldPremium;
+  e.mgs10 = 0.038 + 0.7 * (e.opr - BASELINE.opr) + 0.004 * cy.my * 10 + controls.yieldPremium + monetaryEffects(s).yield;
   e.ust10 = 0.042 + 0.6 * (e.fedRate - BASELINE.fedRate) + 0.6 * mods.usRate - 0.02 * (e.riskAppetite - 0.5);
 
   // Ringgit: rate differential, oil (Malaysia is a net energy exporter) and risk appetite.
   const diff = e.opr - e.fedRate - (BASELINE.opr - BASELINE.fedRate);
   s.centralBank.pressure *= Math.exp(-1 / 30);
   // Schema 9: a conversion requirement supports the ringgit; short-term flow controls damp its random swings.
-  e.myrPerUsd = clamp(BASELINE.myrPerUsd * Math.exp(s.centralBank.pressure + controls.fxLevel + cy.fx * (1 - controls.fxDamping) - 1.5 * diff - 0.05 * (e.oil - 1) - 0.08 * (e.riskAppetite - 0.5)) * mods.fx, 3.2, 6.5);
+  e.myrPerUsd = clamp(BASELINE.myrPerUsd * Math.exp(s.centralBank.pressure + monetaryEffects(s).fx + controls.fxLevel + cy.fx * (1 - controls.fxDamping) - 1.5 * diff - 0.05 * (e.oil - 1) - 0.08 * (e.riskAppetite - 0.5)) * mods.fx, 3.2, 6.5);
 
   const d = (name: GlobalDriver, base: number) => base * (mods.drivers[name] ?? 1);
   const g = e.globalDemand, us = e.usDemand, tc = e.techCycle;

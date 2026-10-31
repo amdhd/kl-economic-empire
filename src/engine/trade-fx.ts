@@ -5,11 +5,15 @@ import { assertSafeMinor, clamp, pushBounded, toMinor } from './util';
 
 export const FX_INTERVENTION_SPREAD = 0.002;
 export const FX_DAILY_USD_LIMIT = 1e9;
+/** Monetary-policy defaults that leave every pre-existing result unchanged (D-075). */
+export function neutralMonetaryPolicy(): Pick<CentralBankState, 'mode' | 'targetOpr' | 'srr' | 'qeHoldings' | 'bills' | 'credibility' | 'remitShare' | 'lastIncome' | 'mpc'> {
+  return { mode: 'auto', targetOpr: 0.03, srr: 0.02, qeHoldings: 0, bills: 0, credibility: 80, remitShare: 0, lastIncome: 0, mpc: [] };
+}
 export function initialCentralBank(profile: 'malaysia' | 'legacy-kl', rate: number): CentralBankState {
   const usdReserves = profile === 'malaysia' ? toMinor(116.4e9) : 0;
   const myrCash = profile === 'malaysia' ? toMinor(5e9) : 0; // fictional segregated sterilisation float
   return { usdReserves, myrCash, openingEquityMYR: usdReserves / 100 * rate + myrCash / 100,
-    pressure: 0, dailyUsdUsed: 0, lastInterventionDay: -1, tx: [] };
+    pressure: 0, dailyUsdUsed: 0, lastInterventionDay: -1, tx: [], ...neutralMonetaryPolicy() };
 }
 
 export function quoteIntervention(s: GameState, side: 'buyUSD' | 'sellUSD', usdMinor: number, atMin: number) {
