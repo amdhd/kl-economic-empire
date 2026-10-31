@@ -19,7 +19,7 @@ export function OverviewPanel() {
             <li>Click company pills on the map or open <b>Stock markets</b> to inspect fictional financials. Bursa trades 09:00–17:00 MYT; US stocks trade overnight in KL time.</li>
             <li>Invest the <b>sovereign fund</b> — US shares need USD, converted on the FX desk.</li>
             <li>Adjust <b>taxes & budget</b> (effective tomorrow) and commission <b>projects</b> (benefits on completion).</li>
-            <li>Watch monthly reports. After 24 months your presidency is scored on growth, public wealth, satisfaction and stability.</li>
+            <li>Watch monthly reports. At the end of your term your presidency is scored on growth, public wealth, satisfaction and stability.</li>
           </ol>
           <button className="btn mt-2" onClick={() => setPanel('objectives')}>See the objectives</button>
         </Section>

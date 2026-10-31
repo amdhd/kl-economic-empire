@@ -9,6 +9,7 @@ import { randnClipped } from './rng';
 import { capitalControls } from './policy';
 import { applyMpcDecision, monetaryEffects } from './central-bank';
 import { clamp } from './util';
+import { BOOM, boomOn } from '../data/boom';
 
 export const DRIVERS: GlobalDriver[] = ['semis', 'software', 'ads', 'consumer', 'energy', 'finance', 'health', 'industrial', 'auto'];
 
@@ -123,7 +124,10 @@ export function updateExternal(s: GameState, mods: AggregatedMods, klInflation: 
   const diff = e.opr - e.fedRate - (BASELINE.opr - BASELINE.fedRate);
   s.centralBank.pressure *= Math.exp(-1 / 30);
   // Schema 9: a conversion requirement supports the ringgit; short-term flow controls damp its random swings.
-  e.myrPerUsd = clamp(BASELINE.myrPerUsd * Math.exp(s.centralBank.pressure + monetaryEffects(s).fx + controls.fxLevel + cy.fx * (1 - controls.fxDamping) - 1.5 * diff - 0.05 * (e.oil - 1) - 0.08 * (e.riskAppetite - 0.5)) * mods.fx, 3.2, 6.5);
+  // Boom mode (D-079): productivity-led appreciation as the economy outgrows its opening size (Balassa–Samuelson style).
+  const boom = boomOn(s);
+  const catchUp = boom ? -BOOM.fxProductivityElasticity * Math.log(Math.max(1, s.indicators.realGdpAnnual / s.baseline.realGdpAnnual)) : 0;
+  e.myrPerUsd = clamp(BASELINE.myrPerUsd * Math.exp(catchUp + s.centralBank.pressure + monetaryEffects(s).fx + controls.fxLevel + cy.fx * (1 - controls.fxDamping) - 1.5 * diff - 0.05 * (e.oil - 1) - 0.08 * (e.riskAppetite - 0.5)) * mods.fx, boom ? BOOM.fxFloor : 3.2, 6.5);
 
   const d = (name: GlobalDriver, base: number) => base * (mods.drivers[name] ?? 1);
   const g = e.globalDemand, us = e.usDemand, tc = e.techCycle;

@@ -530,3 +530,30 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   buyer contracts are a new Deal Room kind `export` with a performance bond in escrow. Commodities are excluded from
   product deals (world prices). The score formula is unchanged; the standing board's current account now uses the ledger.
   Model-3 saves migrate by opening the ledger from today; earlier models keep it off. Magnitudes are documented assumptions.
+
+- **D-078 Steadier first-year inflation (user request).** The year-one inflation reading annualised the months observed so far,
+  so a one-month price move was multiplied by up to twelve (a quiet campaign showed −4.4% "deflation" in April). The missing
+  year-ago months are now filled at the 2% opening inflation assumption; from month 13 nothing changes. This moves early
+  wage expectations, MPC decisions and the stability score; the opening state and all accounting are unchanged.
+  Validation consequence, accepted by the user as a documented gap: the sacrifice ratio rises from 3.3 to 4.19 (published
+  0.5–4), and one seed's oil +10% response moves to −0.55% (mean −0.45%, already a known gap). Test guards: sacrifice ratio
+  ≤ 4.6, oil +10% (4q) > −0.6%. Closing the gap needs a wage–price recalibration, not done here.
+
+- **D-079 Term length and Boom sandbox (user request, schema 14).** New games pick a 24/36/60/120-month term; `mode.months`
+  sets the end date. Long terms keep up to 130 monthly reports (months elapsed are counted from that list) and 131 standing
+  records. Pledge and Deal Room pruning now removes only decided-against or unsigned offers, so building or operating FDI
+  and signed agreements are never dropped (the old 120-pledge cap could silently delete operating plants). **Boom mode**
+  (opt-in, Malaysia profile, `src/data/boom.ts`) is a game-design sandbox, not an estimate. It adds:
+  - productivity growth +28% a year, raising output per worker and per machine;
+  - full wage pass-through (×1.15), so pay and demand keep up and prices do not fall;
+  - an investment drive (+12pp, phased in over 12 months; cap 60%, faster plans, looser credit);
+  - migration (+6% a year, faster labour-force response, population follows);
+  - foreign demand that scales with sector capacity (small open economy);
+  - productivity-led ringgit appreciation (−0.35 × log real GDP growth, floor MYR1.00);
+  - FDI pledges ×4 as frequent, growing in size;
+  - Deal Room cohorts for the whole term;
+  - a central-bank growth path that includes the boom.
+  Seeded runs with FDI approvals reach about US$2.0–2.3tn by December 2029 and US$48–52tn (rank 1–2) by year ten. Year-two
+  inflation can overheat to about 8% before cooling. New public debt stops at RM85tn (`DEBT_LIMIT_MYR`) because integer-sen
+  balances top out near RM90tn; ten-year treasury balances stay under RM30tn in tests. Bursa lunar holidays are listed only to
+  2029. The realistic mode is unaffected (tested).

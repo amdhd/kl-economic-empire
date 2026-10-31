@@ -9,6 +9,7 @@ import { initialDeals, addDeal, dealCommand, offerDeal } from './deals';
 import { exportOffers } from './export-contracts';
 import { initialTradeBook, setProgramme, tradeDealCommand, type TradeDealAction } from './trade-book';
 import type { ProgrammeId } from '../data/trade';
+import { CAMPAIGN_LENGTHS, type CampaignMonths } from '../data/boom';
 // Game construction, typed player commands, and the real-time driver.
 import { initialControls, controlCommand } from './policy-controls';
 import { COMPANIES } from '../data/companies';
@@ -46,21 +47,24 @@ import { seedRng } from './rng';
 import { klDay, klParts, klToEpochMin, monthKey } from './time';
 import { clamp, news, pushBounded, toMinor } from './util';
 
-export const SCHEMA_VERSION = 13;
+export const SCHEMA_VERSION = 14;
 export const START = { year: 2027, month: 1, day: 1, hour: 8 };
 export const CAMPAIGN_MONTHS = 24;
 
-export function createGame(seed = 20270101, scenario: ScenarioId = 'balanced', profile: 'malaysia' | 'legacy-kl' = 'malaysia'): GameState {
+export interface GameOptions { months?: CampaignMonths; boom?: boolean }
+
+export function createGame(seed = 20270101, scenario: ScenarioId = 'balanced', profile: 'malaysia' | 'legacy-kl' = 'malaysia', options: GameOptions = {}): GameState {
   const base = profile === 'legacy-kl' ? LEGACY_BASELINE : BASELINE;
   const cal = profile === 'legacy-kl' ? LEGACY_CAL : CAL;
-  return createWithProfile(seed, scenario, profile, base, cal);
+  const months = CAMPAIGN_LENGTHS.includes(options.months ?? 24) ? options.months ?? 24 : 24;
+  return createWithProfile(seed, scenario, profile, base, cal, { months, boom: profile === 'malaysia' && !!options.boom });
 }
 
-function createWithProfile(seed: number, scenario: ScenarioId, profile: 'malaysia' | 'legacy-kl', BASELINE: typeof LEGACY_BASELINE, CAL: typeof LEGACY_CAL): GameState {
+function createWithProfile(seed: number, scenario: ScenarioId, profile: 'malaysia' | 'legacy-kl', BASELINE: typeof LEGACY_BASELINE, CAL: typeof LEGACY_CAL, mode: GameState['mode']): GameState {
   const BASE_LEND_RATE = BASELINE.opr + 0.02;
   const BASE_BUDGET = profile === 'legacy-kl' ? LEGACY_BUDGET : nationalBudget;
   const startMin = klToEpochMin(START.year, START.month, START.day, START.hour);
-  const endMin = klToEpochMin(START.year + CAMPAIGN_MONTHS / 12, START.month, START.day, START.hour);
+  const endMin = klToEpochMin(START.year + mode.months / 12, START.month, START.day, START.hour);
   const startDay = klDay(startMin);
   const mk = monthKey(START.year, START.month);
   const trend = profile === 'legacy-kl' ? LEGACY_TREND : NATIONAL_TREND;
@@ -103,7 +107,8 @@ function createWithProfile(seed: number, scenario: ScenarioId, profile: 'malaysi
     }) : [] },
     deals: initialDeals(seed, profile === 'malaysia', startDay),
     schemaVersion: SCHEMA_VERSION,
-    campaignId: `kl-${seed}-${scenario}`,
+    mode,
+    campaignId: `kl-${seed}-${scenario}${mode.boom ? '-boom' : ''}${mode.months !== 24 ? `-${mode.months}m` : ''}`,
     seed,
     scenario,
     clock: { hour: startMin / 60, subHourMs: 0, speed: 1 as GameSpeed, paused: true, startHour: startMin / 60, endHour: endMin / 60 },

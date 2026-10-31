@@ -6,6 +6,7 @@ import { FdiPanel } from '../components/panels/FdiPanel';
 import { StandingPanel } from '../components/panels/StandingPanel';
 import { SettingsPanel } from '../components/panels/SettingsPanel';
 import { SCENARIOS } from '../data/scenarios';
+import { CAMPAIGN_LENGTHS, type CampaignMonths } from '../data/boom';
 import { EconomyWindow } from '../components/panels/EconomyWindow';
 import { ControlsPanel } from '../components/panels/ControlsPanel';
 import { CommoditiesPanel } from '../components/panels/CommoditiesPanel';
@@ -128,6 +129,8 @@ function NewGameModal() {
   const started = useGame((s) => s.game.scheduler.ticks > 0 || s.game.actions.length > 0);
   const [scenario, setScenario] = useState<ScenarioId>('balanced');
   const [seed, setSeed] = useState(20270101);
+  const [months, setMonths] = useState<CampaignMonths>(24);
+  const [boom, setBoom] = useState(false);
   const [hasAutosave, setHasAutosave] = useState(false);
   const [hasRecovery, setHasRecovery] = useState(false);
   useEffect(() => {
@@ -140,7 +143,7 @@ function NewGameModal() {
         <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-300">Alternate history · 2027</div>
         <h1 className="mt-1 text-[28px] font-black tracking-tight text-white">KL Economic Empire</h1>
         <p className="mt-2 text-[13px] leading-relaxed text-slate-300">
-          Lead a fictional Malaysian presidency from the Kuala Lumpur skyline. New campaigns start with dated Malaysian GDP, federal debt and operating budget figures. Set taxes and budgets, build infrastructure, and run a sovereign wealth fund across 60 simulated Malaysian and US equities. Can you make Malaysia richer and more livable in 24 months — without a fiscal or financial crisis?
+          Lead a fictional Malaysian presidency from the Kuala Lumpur skyline. New campaigns start with dated Malaysian GDP, federal debt and operating budget figures. Set taxes and budgets, build infrastructure, and run a sovereign wealth fund across 60 simulated Malaysian and US equities. Can you make Malaysia richer and more livable — without a fiscal or financial crisis?
         </p>
         <p className="mt-2 rounded-lg bg-amber-400/10 p-2 text-[11.5px] text-amber-200 ring-1 ring-amber-300/20">
           Alternate-history powers and all future outcomes are fictional. Official starting figures have different reference dates; see Baseline & sources. Company names and tickers are real; every price, financial statement and event is simulated. Not investment advice.
@@ -153,6 +156,18 @@ function NewGameModal() {
             </button>
           ))}
         </div>
+        <div className="mt-4 rounded-xl bg-slate-800/50 p-3 ring-1 ring-slate-600/30">
+          <div className="flex flex-wrap items-center gap-2 text-[12px] text-slate-300">
+            <span className="font-semibold text-white">Term length</span>
+            {CAMPAIGN_LENGTHS.map((m) => <button key={m} onClick={() => setMonths(m)} aria-pressed={months === m} data-testid={`term-${m}`}
+              className={`rounded-md px-2.5 py-1 font-semibold ${months === m ? 'bg-emerald-500/20 text-emerald-200 ring-1 ring-emerald-400/50' : 'bg-slate-700/50 text-slate-300'}`}>{m / 12} years</button>)}
+            <span className="text-slate-400">≈ {((m) => `${(m * 0.205).toFixed(0)} hours at 3×`)(months)}</span>
+          </div>
+          <label className="mt-3 flex items-start gap-2 text-[12px] text-slate-300">
+            <input type="checkbox" className="mt-0.5" checked={boom} onChange={(e) => setBoom(e.target.checked)} data-testid="boom-mode" />
+            <span><b className="text-amber-200">Boom mode (sandbox, for fun)</b> — removes realistic speed limits: a productivity and investment boom, migrants arriving with jobs, foreign demand that grows with capacity, a ringgit that strengthens as the economy outgrows its size, mega FDI pledges and Deal Room offers for the whole term. Aim for US$2tn by year 3 and the world's largest economy by year 10. Not a realistic forecast.</span>
+          </label>
+        </div>
         <label className="mt-3 flex items-center gap-2 text-[12px] text-slate-400">
           Seed
           <input className="input num !w-36" type="number" value={seed} onChange={(e) => setSeed(Math.floor(Number(e.target.value)) || 1)} />
@@ -162,7 +177,7 @@ function NewGameModal() {
           {started && <button className="btn" onClick={() => setShowNewGame(false)}>Back to game</button>}
           {hasRecovery && <button className="btn btn-primary" onClick={() => void load('recovery')} data-testid="restore-session">Restore previous session</button>}
           {hasAutosave && <button className="btn" onClick={() => void load('autosave')} data-testid="continue">Continue autosave</button>}
-          <button className="btn btn-primary !px-5 !py-2 !text-[14px]" onClick={() => newGame(seed, scenario)} data-testid="start-campaign">Begin presidency</button>
+          <button className="btn btn-primary !px-5 !py-2 !text-[14px]" onClick={() => newGame(seed, scenario, { months, boom })} data-testid="start-campaign">Begin presidency</button>
         </div>
       </div>
     </div>
@@ -175,7 +190,7 @@ function HelpModal() {
     <div className="fixed inset-0 z-[70] grid place-items-center bg-slate-950/60" onClick={() => setShowHelp(false)} role="dialog" aria-modal="true">
       <div className="glass w-[520px] rounded-2xl p-5 text-[13px] text-slate-300" onClick={(e) => e.stopPropagation()}>
         <div className="mb-2 text-[16px] font-bold text-white">How time works</div>
-        <p>The clock runs continuously: 1× = 20 game minutes per real second, 2× = 40, 3× = 60. There is no skip — a 24-month term takes ~4.9 hours of play at 3×. The game auto-pauses when the tab is hidden and never catches up offline.</p>
+        <p>The clock runs continuously: 1× = 20 game minutes per real second, 2× = 40, 3× = 60. There is no skip — a 2-year term takes ~4.9 hours of play at 3× (10 years ≈ 25 hours). The game auto-pauses when the tab is hidden and never catches up offline.</p>
         <div className="mb-1 mt-3 font-semibold text-white">Shortcuts</div>
         <ul className="space-y-0.5">
           <li><kbd className="chip bg-slate-700">Space</kbd> pause / resume</li>

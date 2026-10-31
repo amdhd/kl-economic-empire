@@ -552,6 +552,8 @@ export interface GameState {
   policy: PolicyState;
   /** Schema 9 (model 3): foreign direct investment pledges, pipeline and metrics (D-059). */
   fdi: FdiState;
+  /** Schema 14 (D-079): campaign length and the opt-in Boom sandbox. */
+  mode: { boom: boolean; months: import('../data/boom').CampaignMonths };
   /** Schema 13 (model 3): trade-ministry ledger at official 2025 levels, promotion programmes and product deals (D-077). */
   tradeBook: TradeBookState;
   events: { active: ActiveEvent[]; nextId: number; log: ActiveEvent[] };

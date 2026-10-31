@@ -14,6 +14,7 @@ import { initialWorld, validateCommodityPolicy, validateWorld } from '../engine/
 import { initialPolicy, validatePolicy } from '../engine/policy';
 import { initialFdi, validateFdi } from '../engine/fdi';
 import { initialTradeBook, validateTradeBook } from '../engine/trade-book';
+import { CAMPAIGN_LENGTHS } from '../data/boom';
 import type { GameState } from '../types/game';
 
 export interface SaveFile {
@@ -56,6 +57,12 @@ const MIGRATIONS: Record<number, Migration> = {
     const s = state as unknown as GameState;
     s.deals ??= initialDeals(s.seed, false, s.scheduler.lastDay);
     for (const f of [s.government.mtd, ...s.reports.map(r => r.gov)]) { f.dealEscrowOut = 0; f.dealEscrowIn = 0; }
+    return state;
+  },
+  // v13 → v14: campaign length and Boom mode (D-079). Existing campaigns are realistic 24-month terms.
+  13: state => {
+    const s = state as unknown as GameState;
+    s.mode ??= { boom: false, months: 24 };
     return state;
   },
   // v12 → v13: trade-ministry ledger (D-077). Model-3 Malaysia saves open it from today at official 2025 levels; nothing
@@ -239,6 +246,7 @@ export function deserialize(json: string): GameState {
   validatePolicy(s.policy);
   validateFdi(s.fdi);
   validateTradeBook(s.tradeBook);
+  if (!s.mode || typeof s.mode.boom !== 'boolean' || !CAMPAIGN_LENGTHS.includes(s.mode.months)) throw new Error('Corrupt save: campaign mode');
   if (s.policy.enabled !== s.fdi.enabled || (s.policy.enabled && s.baseline.model !== 3)) throw new Error('Corrupt save: inconsistent policy generation');
   if (![1, 2, 3].includes(s.baseline.model) || !(s.households.equityIndex > 0)
     || (s.baseline.profile !== 'malaysia' || s.baseline.model === 1) !== !s.world.enabled) throw new Error('Corrupt save: inconsistent model generation');
