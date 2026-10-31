@@ -6,6 +6,7 @@ import { importCost } from '../src/engine/economy';
 import { credibilityPremium, deficitTarget } from '../src/engine/fiscal-rules';
 import { applyCommand, createGame, runHeadless, SCHEMA_VERSION } from '../src/engine/game';
 import { otherPublicReceiptsMonthly, outlaysOf, revenueOf } from '../src/engine/government';
+import { FOREIGN_WORKERS0, WORKER_LEVY0 } from '../src/engine/policy';
 import { publicNetWorth } from '../src/engine/indicators';
 import { nextOpen } from '../src/engine/market-calendar';
 import { khazanahNav, modelledResourceRevenue0 } from '../src/engine/soe';
@@ -25,7 +26,7 @@ describe('national accounts with resources, development spending and SOEs', () =
     expect(s.indicators.nominalGdpAnnual).toBeCloseTo(NATIONAL_GDP, 0);
     expect(CAL.gdpDaily * 365 + RESOURCE_VA0).toBeCloseTo(NATIONAL_GDP, 0);
     const taxes = SECTOR_IDS.reduce((a, j) => a + Math.max(0, CAL.profit0[j]) * 0.18, 0) + 0.04 * 0.5 * CAL.Y0.prop + CAL.levyBase + CAL.hh.tax;
-    expect(taxes * 365 + modelledResourceRevenue0() + otherPublicReceiptsMonthly(s) * 12).toBeCloseTo(380_816_996_000, 0);
+    expect(taxes * 365 + modelledResourceRevenue0() + otherPublicReceiptsMonthly(s) * 12 + WORKER_LEVY0 * FOREIGN_WORKERS0 * 1e6).toBeCloseTo(380_816_996_000, 0);
     expect(s.fiscal.developmentAnnual).toBe(DEVELOPMENT_ANNUAL0);
     // operating 376.84bn + net development 81.5bn − revenue 380.82bn = RM77.5bn, the official 2027 overall balance
     expect(376_840_000_000 + DEVELOPMENT_ANNUAL0 - 380_816_996_000).toBeCloseTo(77_523_004_000, -6);
@@ -336,7 +337,7 @@ describe('saves', () => {
     const s = createGame(961);
     const file = JSON.parse(serialize(s));
     file.state.schemaVersion = 5;
-    for (const k of ['world', 'soe', 'fiscal']) delete file.state[k];
+    for (const k of ['world', 'soe', 'fiscal', 'policy', 'fdi']) delete file.state[k];
     delete file.state.baseline.model;
     delete file.state.households.equityIndex;
     for (const k of ['soeDividend', 'petroleumTax', 'commodityDuty', 'subsidy']) delete file.state.government.mtd[k];

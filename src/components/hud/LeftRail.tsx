@@ -7,6 +7,7 @@ const GROUPS: { title: string; items: { id: PanelId; label: string; color: strin
     { id: 'finance', label: 'Finances', color: '#8fe3a0' },
     { id: 'population', label: 'Population', color: '#78c9ec' },
     { id: 'objectives', label: 'Objectives', color: '#edce79' },
+    { id: 'standing', label: 'Global standing', color: '#f5d98b' },
   ] },
   { title: 'Government', items: [
     { id: 'policies', label: 'Taxes & budget', color: '#a6d582' },
@@ -14,11 +15,13 @@ const GROUPS: { title: string; items: { id: PanelId; label: string; color: strin
     { id: 'debt', label: 'Treasury & debt', color: '#aebdf1' },
     { id: 'fiscal', label: 'Fiscal rules', color: '#f0a3a3' },
     { id: 'controls', label: 'Economic controls', color: '#9dd9d4' },
+    { id: 'decisions', label: 'Policy decisions', color: '#b9e48f' },
   ] },
   { title: 'Trade & resources', items: [
     { id: 'trade', label: 'Trade & FX', color: '#e2c778' },
     { id: 'partners', label: 'Trading partners', color: '#8fd3c7' },
     { id: 'commodities', label: 'Commodities', color: '#e8a86a' },
+    { id: 'fdi', label: 'Investment & FDI', color: '#7fd6b0' },
   ] },
   { title: 'Markets & analysis', items: [
     { id: 'markets', label: 'Stock markets', color: '#a7d782' },

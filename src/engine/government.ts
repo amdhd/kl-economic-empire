@@ -2,6 +2,7 @@ import { sectorTax, ministryOutcomes } from './policy-controls';
 import { baselineFor, budgetFor, nationalV2, trendFor } from '../data/economic-baseline';
 import { DEVELOPMENT_PURCHASES, KL_ECONOMY_SHARE, PUBLIC_CAPITAL_DEPRECIATION } from '../data/world';
 import { credibilityPremium } from './fiscal-rules';
+import { FOREIGN_WORKERS0, WORKER_LEVY0 } from './policy';
 import { modelledResourceRevenue0 } from './soe';
 import { fuelSubsidyDaily, wheatSubsidyDaily, scheduleRetaliation } from './world';
 // Government treasury, debt, budgets, projects and tax settlement.
@@ -23,16 +24,16 @@ export const BOOST_SATURATION = 0.04;
 export const emptyFlows = (): GovMonthFlows => ({
   taxCorporate: 0, taxProperty: 0, taxConsumption: 0, taxHousehold: 0, federalGrant: 0, importTariff: 0, exportSupport: 0,
   soeDividend: 0, petroleumTax: 0, commodityDuty: 0, subsidy: 0, opex: 0, capex: 0,
-  interest: 0, borrowing: 0, principal: 0, swfContribution: 0, swfTransferIn: 0, emergency: 0,
+  interest: 0, borrowing: 0, principal: 0, swfContribution: 0, swfTransferIn: 0, emergency: 0, policyLevy: 0, policyGrant: 0,
 });
 
-const INFLOWS: (keyof GovMonthFlows)[] = ['taxCorporate', 'taxProperty', 'taxConsumption', 'taxHousehold', 'federalGrant', 'importTariff', 'soeDividend', 'petroleumTax', 'commodityDuty', 'borrowing', 'swfTransferIn'];
+const INFLOWS: (keyof GovMonthFlows)[] = ['taxCorporate', 'taxProperty', 'taxConsumption', 'taxHousehold', 'federalGrant', 'importTariff', 'soeDividend', 'petroleumTax', 'commodityDuty', 'borrowing', 'swfTransferIn', 'policyLevy'];
 export const isInflow = (k: keyof GovMonthFlows) => INFLOWS.includes(k);
 
 /** Government revenue lines (borrowing and fund transfers are financing, not revenue). */
-export const REVENUE_KINDS: (keyof GovMonthFlows)[] = ['taxCorporate', 'taxProperty', 'taxConsumption', 'taxHousehold', 'federalGrant', 'importTariff', 'soeDividend', 'petroleumTax', 'commodityDuty'];
+export const REVENUE_KINDS: (keyof GovMonthFlows)[] = ['taxCorporate', 'taxProperty', 'taxConsumption', 'taxHousehold', 'federalGrant', 'importTariff', 'soeDividend', 'petroleumTax', 'commodityDuty', 'policyLevy'];
 /** Government expenditure lines (principal repayment and fund contributions are financing). */
-export const OUTLAY_KINDS: (keyof GovMonthFlows)[] = ['opex', 'capex', 'interest', 'emergency', 'exportSupport', 'subsidy'];
+export const OUTLAY_KINDS: (keyof GovMonthFlows)[] = ['opex', 'capex', 'interest', 'emergency', 'exportSupport', 'subsidy', 'policyGrant'];
 const sumOf = (f: GovMonthFlows, kinds: (keyof GovMonthFlows)[]) => kinds.reduce((a, k) => a + (f[k] ?? 0), 0);
 export const revenueOf = (f: GovMonthFlows) => sumOf(f, REVENUE_KINDS);
 export const outlaysOf = (f: GovMonthFlows) => sumOf(f, OUTLAY_KINDS);
@@ -104,7 +105,9 @@ export interface GovDay {
  * equal the official 2027 estimate; never recalculate it from player policy. Model 3 indexes it to the last
  * closed month's nominal GDP run rate (unit buoyancy, D-055); earlier models keep it fixed in ringgit. */
 export function otherPublicReceiptsMonthly(s: GameState): number {
-  return otherPublicReceiptsBase(s) * (trendFor(s).buoyantReceipts ? s.indicators.nominalGdpAnnual / s.baseline.nominalGdpAnnual : 1);
+  // Schema 9 posts the foreign-worker levy on its own line, so its opening yield leaves the residual (D-059).
+  const levy0 = s.policy?.enabled ? (WORKER_LEVY0 * FOREIGN_WORKERS0 * 1e6) / 12 : 0;
+  return (otherPublicReceiptsBase(s) - levy0) * (trendFor(s).buoyantReceipts ? s.indicators.nominalGdpAnnual / s.baseline.nominalGdpAnnual : 1);
 }
 
 function otherPublicReceiptsBase(s: GameState): number {

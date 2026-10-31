@@ -1,3 +1,4 @@
+import { CompanyLogo } from '../CompanyLogo';
 import { MY_COMPANIES } from '../../data/companies.my';
 import { US_COMPANIES } from '../../data/companies.us';
 import { useMemo, useState } from 'react';
@@ -182,7 +183,7 @@ export function MarketBrowser({
                 >
                   <td className="px-2 py-1.5 font-mono text-[11px] text-slate-400">{r.id}</td>
                   <td className="max-w-40 truncate px-2 py-1.5 text-slate-100" title={r.legalName}>
-                    {r.name}
+                    <CompanyLogo id={r.id} size={18} /> {r.name}
                     {r.hasKlLocation && <span className="ml-1 text-emerald-400/70" title="Has a verified KL map location">◆</span>}
                   </td>
                   <td className="px-2 py-1.5 text-right tabular-nums text-slate-100" data-testid="row-price">

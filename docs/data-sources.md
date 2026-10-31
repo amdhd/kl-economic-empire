@@ -175,3 +175,63 @@ LRCX, ORCL, CRM, ADBE, CSCO, IBM. Reconfirm listings before citing.
 
 Commodity reference levels (APPROX, rounded): LNG Asia spot US$12/MMBtu, thermal coal US$120/t, natural rubber
 US$1,700/t, Thai 5% rice US$420/t, aluminium US$2,500/t, copper US$9,500/t; Malaysian natural rubber output ≈350kt.
+
+## Company logos (D-060, user-directed)
+
+Logos are trademarks of their owners, used only to identify the real listed companies beside clearly fictional simulated data; no endorsement is implied. Files are 256px PNG/JPEG renderings fetched once from Wikimedia Commons/Wikipedia (31 Oct 2026). Licences are as the source page lists them; several are marked "Fair use" there. Companies without a file use a monogram: MY:0128, MY:0166, MY:0208, MY:3867, MY:5005, MY:8869, US:ADBE.
+
+| Ticker | Source file | Licence (as listed) |
+|---|---|---|
+| MY:0097 | [VitroxLogo.png](https://commons.wikimedia.org/wiki/File:VitroxLogo.png) | Public domain |
+| MY:1023 | [CIMB Group Logo.svg](https://commons.wikimedia.org/wiki/File:CIMB_Group_Logo.svg) | Public domain |
+| MY:1155 | [Maybank logo.svg](https://en.wikipedia.org/wiki/File:Maybank_logo.svg) | Fair use |
+| MY:1295 | [Public Bank Berhad logo.svg](https://en.wikipedia.org/wiki/File:Public_Bank_Berhad_logo.svg) | Fair use |
+| MY:3182 | [Genting Logo.svg](https://commons.wikimedia.org/wiki/File:Genting_Logo.svg) | Public domain |
+| MY:4197 | [Sime Darby Berhad Logo.jpg](https://commons.wikimedia.org/wiki/File:Sime_Darby_Berhad_Logo.jpg) | CC BY 4.0 |
+| MY:4677 | [YTL Corporation Berhad Logo (former).svg](https://commons.wikimedia.org/wiki/File:YTL_Corporation_Berhad_Logo_(former).svg) | Public domain |
+| MY:4715 | [Genting Malaysia Berhad logo.png](https://en.wikipedia.org/wiki/File:Genting_Malaysia_Berhad_logo.png) | Fair use |
+| MY:4863 | [Telekom Malaysia logo (2023).svg](https://commons.wikimedia.org/wiki/File:Telekom_Malaysia_logo_(2023).svg) | Public domain |
+| MY:5183 | [PETRONAS Logo (2013).png](https://commons.wikimedia.org/wiki/File:PETRONAS_Logo_(2013).png) | Public domain |
+| MY:5211 | [Sunway logo.png](https://commons.wikimedia.org/wiki/File:Sunway_logo.png) | Public domain |
+| MY:5225 | [IHH Healthcare logo.svg](https://commons.wikimedia.org/wiki/File:IHH_Healthcare_logo.svg) | Public domain |
+| MY:5296 | [MR.DIY logo.png](https://commons.wikimedia.org/wiki/File:MR.DIY_logo.png) | Public domain |
+| MY:5347 | [Tenaga Nasional.svg](https://commons.wikimedia.org/wiki/File:Tenaga_Nasional.svg) | Public domain |
+| MY:5398 | [Gamuda Berhad Logo.png](https://en.wikipedia.org/wiki/File:Gamuda_Berhad_Logo.png) | Fair use |
+| MY:6012 | [Maxis-logo.png](https://commons.wikimedia.org/wiki/File:Maxis-logo.png) | CC BY-SA 4.0 |
+| MY:6033 | [PETRONAS Logo (2013).png](https://commons.wikimedia.org/wiki/File:PETRONAS_Logo_(2013).png) | Public domain |
+| MY:6742 | [Ytlpowr-6742.png](https://commons.wikimedia.org/wiki/File:Ytlpowr-6742.png) | CC BY-SA 4.0 |
+| MY:6888 | [Axiata logo.svg](https://commons.wikimedia.org/wiki/File:Axiata_logo.svg) | Public domain |
+| MY:6947 | [Digi logo.png](https://commons.wikimedia.org/wiki/File:Digi_logo.png) | Copyrighted free use |
+| US:AAPL | [Apple logo black.svg](https://commons.wikimedia.org/wiki/File:Apple_logo_black.svg) | Public domain |
+| US:AMAT | [Applied Materials Logo.svg](https://commons.wikimedia.org/wiki/File:Applied_Materials_Logo.svg) | Public domain |
+| US:AMD | [AMD Logo.svg](https://commons.wikimedia.org/wiki/File:AMD_Logo.svg) | Public domain |
+| US:AMZN | [Amazon logo.svg](https://commons.wikimedia.org/wiki/File:Amazon_logo.svg) | Public domain |
+| US:ARM | [Arm logo 2025.svg](https://commons.wikimedia.org/wiki/File:Arm_logo_2025.svg) | Public domain |
+| US:ASML | [ASML Holding N.V. logo.svg](https://commons.wikimedia.org/wiki/File:ASML_Holding_N.V._logo.svg) | Public domain |
+| US:AVGO | [Broadcom logo (2016-present).svg](https://commons.wikimedia.org/wiki/File:Broadcom_logo_(2016-present).svg) | Public domain |
+| US:BRK.B | [Berkshire-Hathaway-Logo.svg](https://commons.wikimedia.org/wiki/File:Berkshire-Hathaway-Logo.svg) | Public domain |
+| US:COST | [Costco Wholesale logo 2010-10-26.svg](https://commons.wikimedia.org/wiki/File:Costco_Wholesale_logo_2010-10-26.svg) | Public domain |
+| US:CRM | [Salesforce.com logo.svg](https://commons.wikimedia.org/wiki/File:Salesforce.com_logo.svg) | Public domain |
+| US:CSCO | [Cisco logo.svg](https://commons.wikimedia.org/wiki/File:Cisco_logo.svg) | Public domain |
+| US:GOOGL | [Alphabet Inc Logo 2015.svg](https://commons.wikimedia.org/wiki/File:Alphabet_Inc_Logo_2015.svg) | Public domain |
+| US:IBM | [IBM logo.svg](https://commons.wikimedia.org/wiki/File:IBM_logo.svg) | Public domain |
+| US:INTC | [Intel logo (1968-2006).svg](https://commons.wikimedia.org/wiki/File:Intel_logo_(1968-2006).svg) | Public domain |
+| US:JPM | [Logo of JPMorganChase 2024.svg](https://commons.wikimedia.org/wiki/File:Logo_of_JPMorganChase_2024.svg) | Public domain |
+| US:LRCX | [Lam-Research-Logo.svg](https://commons.wikimedia.org/wiki/File:Lam-Research-Logo.svg) | Public domain |
+| US:MA | [Mastercard 2019 logo.svg](https://commons.wikimedia.org/wiki/File:Mastercard_2019_logo.svg) | Public domain |
+| US:META | [Facebook, Inc. Logo 2019.svg](https://commons.wikimedia.org/wiki/File:Facebook,_Inc._Logo_2019.svg) | Public domain |
+| US:MSFT | [Microsoft logo (1980).svg](https://commons.wikimedia.org/wiki/File:Microsoft_logo_(1980).svg) | Public domain |
+| US:MU | [Micron Technology logo 2024.svg](https://commons.wikimedia.org/wiki/File:Micron_Technology_logo_2024.svg) | Public domain |
+| US:NFLX | [Netflix logo.svg](https://commons.wikimedia.org/wiki/File:Netflix_logo.svg) | Public domain |
+| US:NVDA | [NVIDIA logo.svg](https://commons.wikimedia.org/wiki/File:NVIDIA_logo.svg) | Apache License 2.0 |
+| US:ORCL | [Oracle logo.svg](https://commons.wikimedia.org/wiki/File:Oracle_logo.svg) | Public domain |
+| US:PG | [Procter & Gamble logo.svg](https://commons.wikimedia.org/wiki/File:Procter_%26_Gamble_logo.svg) | Public domain |
+| US:PLTR | [Palantir Technologies logo.svg](https://commons.wikimedia.org/wiki/File:Palantir_Technologies_logo.svg) | Public domain |
+| US:QCOM | [Qualcomm-Logo.svg](https://commons.wikimedia.org/wiki/File:Qualcomm-Logo.svg) | Public domain |
+| US:TSLA | [Tesla Motors.svg](https://commons.wikimedia.org/wiki/File:Tesla_Motors.svg) | Public domain |
+| US:TSM | [TSMC wordmark.svg](https://commons.wikimedia.org/wiki/File:TSMC_wordmark.svg) | Public domain |
+| US:TXN | [TexasInstruments-Logo.svg](https://commons.wikimedia.org/wiki/File:TexasInstruments-Logo.svg) | Public domain |
+| US:UNH | [UnitedHealth Group logo.svg](https://commons.wikimedia.org/wiki/File:UnitedHealth_Group_logo.svg) | Public domain |
+| US:V | [Visa Inc. logo (1992–1999).svg](https://commons.wikimedia.org/wiki/File:Visa_Inc._logo_(1992%E2%80%931999).svg) | Public domain |
+| US:WMT | [Walmart logo (2025).svg](https://commons.wikimedia.org/wiki/File:Walmart_logo_(2025).svg) | Public domain |
+| US:XOM | [Exxon Mobil Logo.svg](https://commons.wikimedia.org/wiki/File:Exxon_Mobil_Logo.svg) | Public domain |

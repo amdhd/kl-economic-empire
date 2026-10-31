@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { campaignReport } from '../../engine/campaign-report';
-import { annualRealOutput, computeScore, SCORE_WEIGHTS, VICTORY, outcomeLabel } from '../../engine/indicators';
+import { annualRealOutput, computeScore, SCORE_WEIGHTS, SCORE_WEIGHTS_V3, VICTORY, outcomeLabel } from '../../engine/indicators';
 import { formatKL, monthKeyLabel } from '../../engine/time';
 import { useGame, useGameState } from '../../store/game-store';
 import { money, pct } from '../../utils/format';
@@ -14,6 +14,7 @@ const COMPONENTS = [
   { key: 'wealth', label: 'Public net wealth', why: 'Treasury + SWF NAV + modeled public assets − debt − arrears, plus the central-bank portfolio gain/loss. For Malaysia, assets are CPI-adjusted and nominal debt is retained to prevent inflation-only score gains. Extra credit depends on sustaining real income, output and services.' },
   { key: 'satisfaction', label: 'Citizen satisfaction', why: 'Average approval over the last 6 months.' },
   { key: 'stability', label: 'Financial stability', why: 'Inflation near 2.5%, interest burden below 10% of revenue, low bank defaults, no arrears.' },
+  { key: 'standing', label: 'Global standing', why: 'US$ GDP growth versus the ten largest economies (50%), US$ export growth versus them (25%) and the ringgit against the dollar (25%). See Global standing.' },
 ] as const;
 
 export function ObjectivesPanel() {
@@ -22,6 +23,9 @@ export function ObjectivesPanel() {
   const setPanel = useGame.getState().setPanel;
   const [view, setView] = useState<'score' | 'output' | 'finances' | 'fund'>('score');
   const sc = computeScore(g);
+  const weights: Record<string, number> = sc.standing === undefined ? { ...SCORE_WEIGHTS, standing: 0 } : SCORE_WEIGHTS_V3;
+  const parts = COMPONENTS.filter((c) => weights[c.key] > 0);
+  const val = (k: (typeof COMPONENTS)[number]['key']) => sc[k] ?? 0;
   const sat = g.indicators.satisfaction;
   const ended = g.scheduler.campaignEnded;
   const o = outcomeLabel(g);
@@ -61,19 +65,19 @@ export function ObjectivesPanel() {
         {sc.caps.map((c) => <div key={c} className="mt-2 text-[12px] font-semibold text-rose-300">⚠ {c}</div>)}
       </div>
       <Section title="Score components">
-        {COMPONENTS.map((c) => (
+        {parts.map((c) => (
           <div key={c.key} className="mb-3">
-            <div className="mb-1 flex justify-between text-[12.5px]"><span className="font-semibold">{c.label} <span className="text-slate-500">· weight {SCORE_WEIGHTS[c.key] * 100}%</span></span><span className="num font-bold">{sc[c.key].toFixed(0)}</span></div>
-            <Bar value={sc[c.key]} max={100} color={sc[c.key] >= 70 ? '#34d399' : sc[c.key] >= 45 ? '#fbbf24' : '#f87171'} />
+            <div className="mb-1 flex justify-between text-[12.5px]"><span className="font-semibold">{c.label} <span className="text-slate-500">· weight {Math.round(weights[c.key] * 100)}%</span></span><span className="num font-bold">{val(c.key).toFixed(0)}</span></div>
+            <Bar value={val(c.key)} max={100} color={val(c.key) >= 70 ? '#34d399' : val(c.key) >= 45 ? '#fbbf24' : '#f87171'} />
             <div className="mt-0.5 text-[11px] text-slate-500">{c.why}</div>
           </div>
         ))}
       </Section>
       <Section title="Why this score" >
         <div className="space-y-1 text-[12px] text-slate-300" data-testid="score-explanation">
-          <p>Real GDP growth: {pct(drivers.realGrowth, 2, true)} annualised against a {pct(drivers.growthTarget, 2)} benchmark. Recorded external conditions adjust the 3.5% target by {(drivers.externalAdjustment * 100).toFixed(2)} percentage points, capped at ±1 point.</p>
+          <p>Real GDP growth: {pct(drivers.realGrowth, 2, true)} annualised against a {pct(drivers.growthTarget, 2)} benchmark. Recorded external conditions adjust the potential-growth target by {(drivers.externalAdjustment * 100).toFixed(2)} percentage points, capped at ±1 point.</p>
           <p>Real public wealth change: {money(drivers.realWealthChange)}. Sustainability preserves {pct(drivers.wealthCreditFactor, 0)} of extra wealth credit: the weakest of real income, real output and service quality versus their opening levels. Losses keep their full penalty.</p>
-          <p>Weighted points: {COMPONENTS.map((c) => `${c.label} ${(sc[c.key] * SCORE_WEIGHTS[c.key]).toFixed(1)}`).join(' + ')}{sc.caps.length ? ' (then failure caps apply)' : ''}.</p>
+          <p>Weighted points: {parts.map((c) => `${c.label} ${(val(c.key) * weights[c.key]).toFixed(1)}`).join(' + ')}{sc.caps.length ? ' (then failure caps apply)' : ''}.</p>
           <p className="text-slate-500">External adjustment is an estimate from elapsed recorded shocks, not a counterfactual forecast. Current previews use the latest calibration; imported historical scores retain their earlier calibration.</p>
         </div>
       </Section>

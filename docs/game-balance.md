@@ -310,3 +310,24 @@ endpoint score still exceeds balanced play (the D-051 limitation).
 **After D-058** (fund macro effects, same 12 seeds): hands-off 58.01, balanced growth 56.83, tax maximiser 54.20,
 investment heavy 57.70, austerity 47.51, adaptive 57.08, adverse recession 59.31; no wins. The bots barely trade
 the fund, so these move mainly through Tobin's q.
+
+## Global standing, FDI and policy levers — D-059 (31 October 2026)
+
+`npm run balance` (12 default seeds; bots never touch the new levers or approve pledges, so this measures the new
+score weights and the standing component, not the policies themselves):
+
+| Strategy | Score | Range | Standing mean | Standing range | Approval | Wins |
+|---|---:|---:|---:|---:|---:|---:|
+| Hands-off | 57.97 | 52.17–61.82 | 55.8 | 21–68 | 77.9 | 0/12 |
+| Balanced growth | 57.01 | 51.95–61.02 | 56.1 | 23–68 | 78.3 | 0/12 |
+| Tax maximiser | 53.50 | 48.23–58.02 | 48.2 | 12–62 | 56.7 | 0/12 |
+| Investment heavy | 57.71 | 52.57–61.89 | 55.8 | 22–68 | 78.2 | 0/12 |
+| Austerity | 46.13 | 42.97–49.36 | 36.1 | 10–48 | 59.8 | 0/12 |
+| Adaptive | 57.18 | 52.06–61.09 | 55.8 | 23–68 | 78.0 | 0/12 |
+| Adverse recession | 58.61 | 53.90–63.06 | 52.8 | 26–62 | 78.1 | 0/12 |
+
+Means barely move against D-058, but score ranges widen: the standing component's currency quarter follows the
+simulated ringgit, so random FX swings spread it by ±20 points across seeds. Austerity scores worst on standing
+(slower US$ GDP and exports). Approving pledges, the AI programme and other levers are human choices not exercised
+by these bots; their effects are covered by `tests/policy-fdi.test.ts`. Open: consider damping the currency
+component (for example, a trailing average) after human playtesting.

@@ -10,6 +10,8 @@ import { initialCentralBank } from '../engine/trade-fx';
 import { initialFiscal, validateFiscal } from '../engine/fiscal-rules';
 import { initialSoe, validateSoe } from '../engine/soe';
 import { initialWorld, validateCommodityPolicy, validateWorld } from '../engine/world';
+import { initialPolicy, validatePolicy } from '../engine/policy';
+import { initialFdi, validateFdi } from '../engine/fdi';
 import type { GameState } from '../types/game';
 
 export interface SaveFile {
@@ -48,6 +50,18 @@ export function findNonFinite(v: unknown, path = 'state'): string | null {
 type Migration = (s: Record<string, unknown>) => Record<string, unknown>;
 /** migrations[n] upgrades a state from schema n to n+1. */
 const MIGRATIONS: Record<number, Migration> = {
+  // v8 → v9: policy levers, AI adoption and FDI. Existing saves keep them switched off (neutral, no new draws) and gain
+  // zero policy treasury lines, so balances, replays and scores are unchanged.
+  8: state => {
+    const s = state as unknown as GameState;
+    s.policy ??= initialPolicy(false);
+    s.fdi ??= initialFdi(s.seed, false);
+    for (const flows of [s.government.mtd, ...s.reports.map((r) => r.gov)]) {
+      flows.policyLevy ??= 0;
+      flows.policyGrant ??= 0;
+    }
+    return state;
+  },
   // v7 → v8: ministry plans gain an optional step interval (absent = annual). Existing campaigns keep their model
   // generation (1 or 2) and trend; only new campaigns use model 3's national trend and monthly opening budget path.
   7: state => state,
@@ -191,6 +205,9 @@ export function deserialize(json: string): GameState {
   validateWorld(s.world);
   validateSoe(s.soe);
   validateFiscal(s.fiscal);
+  validatePolicy(s.policy);
+  validateFdi(s.fdi);
+  if (s.policy.enabled !== s.fdi.enabled || (s.policy.enabled && s.baseline.model !== 3)) throw new Error('Corrupt save: inconsistent policy generation');
   if (![1, 2, 3].includes(s.baseline.model) || !(s.households.equityIndex > 0)
     || (s.baseline.profile !== 'malaysia' || s.baseline.model === 1) !== !s.world.enabled) throw new Error('Corrupt save: inconsistent model generation');
   if (!['a', 'b', 'c', 'd'].every((k) => {

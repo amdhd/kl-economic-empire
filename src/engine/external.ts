@@ -6,6 +6,7 @@ import { EVENT_BY_ID, type EventMods } from '../data/events';
 import type { ExternalState, GameState, GlobalDriver } from '../types/game';
 import { eventIsActive } from './events';
 import { randnClipped } from './rng';
+import { capitalControls } from './policy';
 import { clamp } from './util';
 
 export const DRIVERS: GlobalDriver[] = ['semis', 'software', 'ads', 'consumer', 'energy', 'finance', 'health', 'industrial', 'auto'];
@@ -24,6 +25,12 @@ const CYCLES: Record<string, { sd: number; persist: number }> = {
 };
 
 const TREND = { my: 0.042, global: 0.03, us: 0.022, tech: 0.06, tourism: 0.045, usPrice: 0.025 };
+
+/** Simulated demand relative to its trend path (1 = on trend), for the global standing board. */
+export function cycleDeviation(s: GameState, which: 'us' | 'global'): number {
+  const t = s.external.daysElapsed / 365;
+  return which === 'us' ? s.external.usDemand / Math.exp(TREND.us * t) : s.external.globalDemand / Math.exp(TREND.global * t);
+}
 
 export interface AggregatedMods {
   oil: number;
@@ -107,13 +114,15 @@ export function updateExternal(s: GameState, mods: AggregatedMods, klInflation: 
     const fedTarget = 0.0375 + mods.usRate + 1.2 * (Math.log(e.usDemand / Math.exp(TREND.us * t))) + 0.4 * (e.oil - 1) * 0.03;
     if (Math.abs(fedTarget - e.fedRate) > 0.00125) e.fedRate = clamp(e.fedRate + Math.sign(fedTarget - e.fedRate) * 0.0025, 0.005, 0.08);
   }
-  e.mgs10 = 0.038 + 0.7 * (e.opr - BASELINE.opr) + 0.004 * cy.my * 10;
+  const controls = capitalControls(s);
+  e.mgs10 = 0.038 + 0.7 * (e.opr - BASELINE.opr) + 0.004 * cy.my * 10 + controls.yieldPremium;
   e.ust10 = 0.042 + 0.6 * (e.fedRate - BASELINE.fedRate) + 0.6 * mods.usRate - 0.02 * (e.riskAppetite - 0.5);
 
   // Ringgit: rate differential, oil (Malaysia is a net energy exporter) and risk appetite.
   const diff = e.opr - e.fedRate - (BASELINE.opr - BASELINE.fedRate);
   s.centralBank.pressure *= Math.exp(-1 / 30);
-  e.myrPerUsd = clamp(BASELINE.myrPerUsd * Math.exp(s.centralBank.pressure + cy.fx - 1.5 * diff - 0.05 * (e.oil - 1) - 0.08 * (e.riskAppetite - 0.5)) * mods.fx, 3.2, 6.5);
+  // Schema 9: a conversion requirement supports the ringgit; short-term flow controls damp its random swings.
+  e.myrPerUsd = clamp(BASELINE.myrPerUsd * Math.exp(s.centralBank.pressure + controls.fxLevel + cy.fx * (1 - controls.fxDamping) - 1.5 * diff - 0.05 * (e.oil - 1) - 0.08 * (e.riskAppetite - 0.5)) * mods.fx, 3.2, 6.5);
 
   const d = (name: GlobalDriver, base: number) => base * (mods.drivers[name] ?? 1);
   const g = e.globalDemand, us = e.usDemand, tc = e.techCycle;

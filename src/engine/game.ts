@@ -8,10 +8,12 @@ import { DEVELOPMENT_ANNUAL0, RESOURCE_VA0 } from '../data/world';
 import { exitEscape, initialFiscal, invokeEscape, setFiscalRule } from './fiscal-rules';
 import { initialSoe, khazanahTrade, setKhazanahPayout, setPetronasPolicy, soeEquity, soeSpecialDividend } from './soe';
 import { initialWorld, seedWorldHistory, startNegotiation, validateCommodityPolicy } from './world';
+import { initialPolicy, setLever } from './policy';
+import { decidePledge, initialFdi, openingPledge } from './fdi';
 import { outputGap } from './scheduler';
 import { PROJECT_BY_ID } from '../data/projects';
 import type {
-  BorrowingPolicy, BudgetCategory, BudgetPolicy, Currency, GameSpeed, GameState, ScenarioId, SectorState, TaxPolicy, TickerId,
+  BorrowingPolicy, BudgetCategory, BudgetPolicy, Currency, GameSpeed, GameState, LeverId, ScenarioId, SectorState, TaxPolicy, TickerId,
 } from '../types/game';
 import { BASE_MPC, CAL, LEGACY_CAL } from './calibration';
 import type { CommodityPolicy, FiscalRule, PartnerId, PendingPolicy } from '../types/game';
@@ -32,7 +34,7 @@ import { seedRng } from './rng';
 import { klDay, klParts, klToEpochMin, monthKey } from './time';
 import { clamp, news, pushBounded, toMinor } from './util';
 
-export const SCHEMA_VERSION = 8;
+export const SCHEMA_VERSION = 9;
 export const START = { year: 2027, month: 1, day: 1, hour: 8 };
 export const CAMPAIGN_MONTHS = 24;
 
@@ -126,6 +128,8 @@ function createWithProfile(seed: number, scenario: ScenarioId, profile: 'malaysi
     world: initialWorld(seed, profile === 'malaysia'),
     soe: initialSoe(profile === 'malaysia'),
     // Opening deficit for the glide path: official 2027 revenue vs operating + development spending.
+    policy: initialPolicy(profile === 'malaysia'),
+    fdi: initialFdi(seed, profile === 'malaysia'),
     fiscal: initialFiscal(profile === 'malaysia' ? DEVELOPMENT_ANNUAL0 : 0, profile === 'malaysia' ? (376_840_000_000 + DEVELOPMENT_ANNUAL0 - 380_816_996_000) / gdpAnnual : 0),
     centralBank: initialCentralBank(profile, BASELINE.myrPerUsd),
     events: { active: [], nextId: 1, log: [] },
@@ -164,6 +168,7 @@ function createWithProfile(seed: number, scenario: ScenarioId, profile: 'malaysi
     s.external.cycles.us = -0.03;
     s.external.cycles.risk = -0.15;
   }
+  openingPledge(s, startDay);
   if (scenario === 'export-slump') startEvent(s, 'global_slowdown', startDay, 180, 1);
   if (scenario === 'energy-shock') startEvent(s, 'oil_spike', startDay, 90, 1);
   if (s.controls.plans.length) news(s, { kind: 'policy', tone: 'neutral', title: 'Inherited budget path', body: `Operating appropriations are indexed at ${(trend.budgetEscalation * 100).toFixed(0)}% a year, in monthly steps, roughly in line with trend nominal GDP. Development spending stays at its 2027 level. Review or cancel each ministry plan under Economic controls.` });
@@ -205,6 +210,8 @@ export type Command =
   | { type: 'placeOrder'; ticker: TickerId; side: 'buy' | 'sell'; units: number }
   | { type: 'cancelOrder'; id: number }
   | { type: 'fx'; from: Currency; amountMinor: number }
+  | { type: 'setLever'; lever: LeverId; value: number }
+  | { type: 'decidePledge'; id: number; approve: boolean; incentive: number }
   | { type: 'rebalance'; targetMY: number; targetUS: number };
 
 export interface CommandResult {
@@ -315,6 +322,15 @@ function dispatch(s: GameState, cmd: Command, atMin: number): CommandResult {
       const current = { ...s.trade.policy, ...pending };
       if (patch.tariff === current.tariff && patch.exportBudgetMonthly === current.exportBudgetMonthly) return { ok: false, message: 'No change to queue.' };
       return queue(s, 'trade', patch, `Trade: tariff ${(patch.tariff * 100).toFixed(1)}%, export support RM ${(patch.exportBudgetMonthly / 1e6).toFixed(0)}m/month`, firstOfNextMonth(atMin), atMin);
+    }
+    case 'setLever': {
+      const err = setLever(s, cmd.lever, cmd.value, atMin);
+      return err ? { ok: false, message: err } : { ok: true, message: 'Policy decided. Its phase cycle is shown under Policy decisions.' };
+    }
+    case 'decidePledge': {
+      const err = decidePledge(s, cmd.id, cmd.approve, cmd.incentive);
+      const p = s.fdi.pledges.find(x => x.id === cmd.id);
+      return err ? { ok: false, message: err } : { ok: true, message: p?.status === 'building' ? 'Investment approved: build-out starts tomorrow.' : p?.status === 'withdrawn' ? 'The investor walked away from that offer.' : 'Pledge declined.' };
     }
     case 'queueTax': {
       const patch: Partial<TaxPolicy> = {};

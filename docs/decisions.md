@@ -392,3 +392,14 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   ln(equityIndex)` for all share-price moves, using the lagged equity index. 0.02 nearly doubled OPR transmission, so
   0.008 keeps OPR +25bp at −0.17% after 8 quarters. Model 1/2 saves keep trades macro-neutral. The FX desk discloses
   the expected pressure before conversion.
+- **D-059 FDI, policy levers, AI and global standing (user request; schema 9, model 3).** Twelve levers (AI programme,
+  AI adoption credit, reskilling, FDI incentive, green lane, minimum wage, foreign-worker levy and freeze, export-proceeds
+  conversion, short-term flow controls, carbon tax, green incentives) with a phase cycle: announced → effective
+  (tomorrow or the 1st of next month) → linear phase-in → full effect. FDI attractiveness reacts to announcements at once.
+  New treasury lines `policyLevy`/`policyGrant`; the opening worker levy leaves the receipts residual, so opening revenue
+  is unchanged. FDI pledges arrive on a separate RNG stream (main RNG untouched); a scripted opening Alphabet RM10bn data
+  centre pledge. Approved projects buy domestic output, import equipment, pay grants as they build, support the ringgit
+  (−0.003 log per US$bn converted) and add exports once operating. Rivals follow IMF WEO (Oct 2026) US$ GDP paths moved by
+  the simulated cycles. Standing (US$ GDP 50%, exports 25%, ringgit 25%) is 15% of the model-3 score; weights 25/25/22/13/15.
+  All defaults are neutral (existing tests and calibration hold). Schema-8 saves migrate with these systems off.
+- **D-060 Real company logos (user-directed spec amendment).** See PROJECT_SPEC §20 and docs/data-sources.md.

@@ -3,6 +3,9 @@ import { recentIncomeTrend } from './household-behavior';
 import { baselineFor, budgetFor, nationalV2, trendFor } from '../data/economic-baseline';
 import { updateFiscal } from './fiscal-rules';
 import { dailyResources, monthCloseSoe } from './soe';
+import { dailyPolicy, monthClosePolicy } from './policy';
+import { dailyFdi, monthCloseFdi, operatingStock, weeklyFdi } from './fdi';
+import { monthCloseStanding } from './standing';
 import { coreCpiOf, updateWorld, weeklyWorld } from './world';
 // Deterministic hourly tick. Ordering within a tick (see docs/decisions.md D-004):
 //   1. advance clock one hour
@@ -44,6 +47,7 @@ export function runHourTick(s: GameState): void {
       weekly(s);
       weeklyEvents(s, today);
       weeklyWorld(s, today);
+      weeklyFdi(s, today);
       s.scheduler.lastWeekDay = today;
     }
     const mk = monthKey(p.year, p.month);
@@ -79,6 +83,9 @@ function settleDay(s: GameState, day: number): AggregatedMods {
   updateWorld(s, day);
   const gov = dailyGovernment(s, day);
   const res = dailyResources(s, gov.purchases);
+  // Schema 9: policy programmes and FDI build-out buy domestic output; imported FDI equipment is recorded as imports.
+  dailyPolicy(s, gov.purchases);
+  s.trade.mtdImports += dailyFdi(s, gov.purchases).imports;
   const e = daily(s, mods, gov);
   e.gdpNominal += res.gdpNominal;
   s.world.mtd.resourceVa += res.gdpNominal;
@@ -214,6 +221,7 @@ function closeMonth(s: GameState, key: number, mods: AggregatedMods): void {
   report.notes = explainMonth(s, report, prev, govClose.corporateTax);
   pushBounded(s.reports, report, 60);
   if (nationalV2(s)) updateFiscal(s, key, outputGap(s));
+  monthCloseStanding(s, key, s.trade.mtdExports, days);
   ind.score = computeScore(s);
   report.score = ind.score;
   news(s, {
@@ -224,6 +232,8 @@ function closeMonth(s: GameState, key: number, mods: AggregatedMods): void {
   });
 
   s.trade.history.push({ monthKey: key, exports: s.trade.mtdExports, imports: s.trade.mtdImports, tariff: g.importTariff, support: g.exportSupport });
+  monthClosePolicy(s, operatingStock(s, 'datacentre'));
+  monthCloseFdi(s, key);
   s.trade.history = s.trade.history.slice(-60);
   s.trade.mtdExports = 0;
   s.trade.mtdImports = 0;

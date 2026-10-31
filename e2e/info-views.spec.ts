@@ -9,7 +9,7 @@ test('closing Info views dismisses its inspector and reopening starts with categ
   await expect(launcher).toHaveAttribute('aria-expanded', 'false');
   await expect(categories).not.toBeVisible();
   await launcher.click();
-  await expect(categories.getByRole('button')).toHaveCount(18);
+  await expect(categories.getByRole('button')).toHaveCount(21);
   await page.getByTestId('nav-population').click();
   await expect(page.getByTestId('nav-population')).toHaveAttribute('aria-pressed', 'true');
   const inspector = page.getByRole('region', { name: 'Population', exact: true });

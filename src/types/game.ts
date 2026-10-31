@@ -293,6 +293,8 @@ export interface GovMonthFlows {
   swfContribution: number;
   swfTransferIn: number;
   emergency: number;
+  policyLevy: number; // carbon tax and foreign-worker levy (schema 9)
+  policyGrant: number; // FDI co-investment grants, AI, reskilling and green programmes (schema 9)
 }
 
 export interface GovernmentState {
@@ -447,6 +449,8 @@ export interface ScoreBreakdown {
   wealth: number;
   satisfaction: number;
   stability: number;
+  /** Model 3 (D-059): US$ GDP, exports and ringgit against the ten largest economies. */
+  standing?: number;
   total: number;
   caps: string[];
 }
@@ -536,6 +540,10 @@ export interface GameState {
   world: WorldState;
   soe: SoeState;
   fiscal: FiscalState;
+  /** Schema 9 (model 3): toggle-and-slider policy levers, AI adoption and their phase cycles (D-059). */
+  policy: PolicyState;
+  /** Schema 9 (model 3): foreign direct investment pledges, pipeline and metrics (D-059). */
+  fdi: FdiState;
   events: { active: ActiveEvent[]; nextId: number; log: ActiveEvent[] };
   indicators: Indicators;
   baseline: BaselineSnapshot;
@@ -705,4 +713,64 @@ export interface FiscalState {
   escape: { active: boolean; sinceMonth: number; justified: boolean } | null;
   openingDeficit: number; // share of GDP, anchors the glide path
   history: FiscalMonth[];
+}
+
+// ---------------------------------------------------------------- schema 9: policy levers, AI and FDI (D-059)
+export type LeverId =
+  | 'aiProgramme' | 'aiAdoptionCredit' | 'reskilling'
+  | 'fdiIncentive' | 'fdiGreenLane'
+  | 'minimumWage' | 'workerLevy' | 'workerFreeze'
+  | 'exportConversion' | 'hotMoneyControls'
+  | 'carbonTax' | 'greenIncentive';
+
+/** A lever's current setting and its phase cycle: announced → effective → ramping → full effect. */
+export interface PolicyLever {
+  value: number; // setting now in force (0 = off for toggles)
+  from: number; // setting before the latest change (ramp starts here)
+  announcedDay: number; // KL day the change was decided (-1 = opening setting)
+  effectiveDay: number; // KL day the new setting starts to apply
+  rampDays: number; // days from effective start to full effect
+}
+
+export interface PolicyState {
+  enabled: boolean;
+  levers: Record<LeverId, PolicyLever>;
+  aiAdoption: number; // share of tasks using AI tools, economy-wide (0..1)
+  aiEffective: number; // adoption already reflected in productivity (lags adoption ~9 months)
+  greenCapital: number; // cumulative real green investment, MYR
+  emissionsIndex: number; // 1 = opening CO2 per unit of real output × output
+  foreignWorkers: number; // millions
+  mtd: { carbonTax: number; workerLevy: number; fdiGrants: number; aiProgramme: number; reskilling: number; greenGrants: number };
+  lastMonth: PolicyState['mtd'];
+}
+
+export type FdiKind = 'datacentre' | 'semiconductor' | 'ev' | 'renewables' | 'hq';
+export type FdiStatus = 'offered' | 'building' | 'operating' | 'declined' | 'withdrawn';
+export interface FdiPledge {
+  id: number;
+  investor: TickerId;
+  kind: FdiKind;
+  sector: SectorId;
+  title: string;
+  amount: number; // MYR, total investment
+  ask: number; // incentive the investor asks for, share of investment
+  incentive: number; // incentive granted, share of investment
+  jobs: number; // direct jobs once operating
+  buildMonths: number;
+  offeredDay: number;
+  decideByDay: number;
+  startDay: number;
+  spent: number; // MYR disbursed so far
+  status: FdiStatus;
+}
+export interface FdiMonth { monthKey: number; pledged: number; approved: number; realised: number; operatingStock: number; jobs: number; attractiveness: number; grants: number }
+export interface FdiState {
+  enabled: boolean;
+  rng: RngState;
+  nextId: number;
+  pledges: FdiPledge[];
+  mtd: { pledged: number; approved: number; realised: number; grants: number };
+  history: FdiMonth[];
+  /** Global standing (leaderboard) history: Malaysia's US$ GDP run rate and exports at each month close. */
+  standing: { monthKey: number; gdpUsd: number; exportsUsd: number; myrPerUsd: number }[];
 }
