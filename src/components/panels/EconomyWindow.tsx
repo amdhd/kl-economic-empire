@@ -21,6 +21,13 @@ const CATS = Object.keys(BUDGET_LABELS) as BudgetCategory[];
 const TAX_KEYS = Object.keys(TAX_LABELS) as (keyof TaxPolicy)[];
 const TAX_SHORT: Record<keyof TaxPolicy, string> = { corporate: 'Corporate tax', property: 'Property levy', consumption: 'Consumption levy', household: 'Income surcharge' };
 
+/** Per-line icon colours, so the list scans by colour like city-builder budget screens. */
+const LINE_COLOR: Record<string, string> = {
+  health: '#f07a6a', services: '#6fb3f2', safety: '#e9c46a', development: '#8fd3c7', admin: '#b6c2cf', transfers: '#7ed99a',
+  devex: '#f0a95b', interest: '#a9b8f0', subsidy: '#f2b45a', corporate: '#9ad77d', property: '#e8b06a', consumption: '#7fd0f0',
+  household: '#c9a3ef', tariff: '#e2c778', petroleum: '#f59e0b', soe: '#9fb6e8', duty: '#84cc16', other: '#a2b7cc', debt: '#aebdf1',
+};
+
 const BUDGET_INFO: Record<BudgetCategory | 'devex', { icon: string; text: string }> = {
   health: { icon: 'population', text: 'Hospitals and clinics. Real funding drives health coverage and service quality with a lag; cuts lower satisfaction and, if deep, trust.' },
   services: { icon: 'overview', text: 'Education and higher education. Raises service quality and the services outcome; most of it is wages that households spend.' },
@@ -31,10 +38,10 @@ const BUDGET_INFO: Record<BudgetCategory | 'devex', { icon: string; text: string
   devex: { icon: 'projects', text: 'Federal development programme (capital). Builds public capital that raises productivity in every sector slowly. Allowed under the golden rule even when borrowing.' },
 };
 
-function Row({ icon, label, amount, tone, active, onClick, testid }: { icon: string; label: string; amount: string; tone: 'in' | 'out' | 'neutral'; active?: boolean; onClick?: () => void; testid?: string }) {
+function Row({ icon, label, amount, tone, active, onClick, testid, color }: { icon: string; label: string; amount: string; tone: 'in' | 'out' | 'neutral'; active?: boolean; onClick?: () => void; testid?: string; color?: string }) {
   return (
     <button className={`econ-row ${active ? 'is-active' : ''}`} onClick={onClick} data-testid={testid}>
-      <span className="econ-row-icon"><HudIcon name={icon} size={18} /></span>
+      <span className="econ-row-icon" style={color && !active ? { color } : undefined}><HudIcon name={icon} size={18} /></span>
       <span className="econ-row-label">{label}</span>
       <span className={`econ-amount ${tone}`}><span>{tone === 'in' ? '+' : tone === 'out' ? '−' : ''}</span>{amount}</span>
     </button>
@@ -148,10 +155,10 @@ function Budget({ g, balance, label }: { g: GameState; balance: number; label: s
   return (
     <div className="econ-columns">
       <div className="econ-list">
-        {CATS.map((k) => <Row key={k} icon={BUDGET_INFO[k].icon} label={BUDGET_LABELS[k]} amount={money(pending(k) ?? pol[k])} tone="out" active={sel === k} onClick={() => setSel(k)} testid={`econ-budget-${k}`} />)}
-        {g.world.enabled && <Row icon="projects" label="Development (capital)" amount={money((devPending ?? g.fiscal.developmentAnnual) / 12)} tone="out" active={isDev} onClick={() => setSel('devex')} testid="econ-budget-devex" />}
-        <Row icon="debt" label="Debt interest" amount={money(flows.interest)} tone="out" onClick={() => undefined} />
-        {g.world.enabled && <Row icon="commodities" label="Fuel & food subsidies" amount={money(flows.subsidy)} tone="out" onClick={go('commodities')} />}
+        {CATS.map((k) => <Row key={k} icon={BUDGET_INFO[k].icon} label={BUDGET_LABELS[k]} amount={money(pending(k) ?? pol[k])} tone="out" active={sel === k} onClick={() => setSel(k)} testid={`econ-budget-${k}`} color={LINE_COLOR[k]} />)}
+        {g.world.enabled && <Row icon="projects" label="Development (capital)" amount={money((devPending ?? g.fiscal.developmentAnnual) / 12)} tone="out" active={isDev} onClick={() => setSel('devex')} testid="econ-budget-devex" color={LINE_COLOR.devex} />}
+        <Row icon="debt" label="Debt interest" amount={money(flows.interest)} tone="out" onClick={() => undefined} color={LINE_COLOR.interest} />
+        {g.world.enabled && <Row icon="commodities" label="Fuel & food subsidies" amount={money(flows.subsidy)} tone="out" onClick={go('commodities')} color={LINE_COLOR.subsidy} />}
         <Balance balance={balance} label={label} />
       </div>
       <Detail title={isDev ? 'Development (capital)' : BUDGET_LABELS[sel]} action={<button className="btn" onClick={() => setDraft({ ...draft, [sel]: opening })}>RESET</button>}>
@@ -168,7 +175,7 @@ function Budget({ g, balance, label }: { g: GameState; balance: number; label: s
         <button className="btn btn-primary" disabled={Math.abs(value - current) < 1} onClick={apply} data-testid="econ-budget-apply">{isDev ? 'Queue from next month' : 'Queue from tomorrow'}</button>
       </Detail>
       <div className="econ-info">
-        <div className="econ-info-head"><span className="econ-info-icon"><HudIcon name={BUDGET_INFO[sel].icon} size={34} /></span><h3>{isDev ? 'DEVELOPMENT' : BUDGET_LABELS[sel].toUpperCase()}</h3></div>
+        <div className="econ-info-head"><span className="econ-info-icon" style={{ color: LINE_COLOR[sel] }}><HudIcon name={BUDGET_INFO[sel].icon} size={34} /></span><h3>{isDev ? 'DEVELOPMENT' : BUDGET_LABELS[sel].toUpperCase()}</h3></div>
         <p>{BUDGET_INFO[sel].text}</p>
         <div className="econ-effects">
           {outcome !== null && <Line label="Outcome index" value={`${outcome.toFixed(0)}/100`} />}
@@ -196,16 +203,16 @@ function Taxation({ g, balance, label }: { g: GameState; balance: number; label:
   return (
     <div className="econ-columns">
       <div className="econ-list">
-        {TAX_KEYS.map((k) => <Row key={k} icon="policies" label={`${TAX_SHORT[k]} · ${pct(pending(k) ?? pol[k], 1)}`} amount={money(receipts[k])} tone="in" active={sel === k} onClick={() => setSel(k)} testid={`econ-tax-${k}`} />)}
-        <Row icon="trade" label="Import tariffs" amount={money(flows.importTariff)} tone="in" onClick={go('trade')} />
-        {g.world.enabled && <Row icon="soe" label="Petroleum income tax" amount={money(flows.petroleumTax)} tone="in" onClick={go('soe')} />}
-        {g.world.enabled && <Row icon="soe" label="SOE dividends" amount={money(flows.soeDividend)} tone="in" onClick={go('soe')} />}
-        {g.world.enabled && <Row icon="commodities" label="Commodity duties" amount={money(flows.commodityDuty)} tone="in" onClick={go('commodities')} />}
-        <Row icon="sources" label="Other public receipts" amount={money(flows.federalGrant)} tone="in" />
+        {TAX_KEYS.map((k) => <Row key={k} icon="policies" label={`${TAX_SHORT[k]} · ${pct(pending(k) ?? pol[k], 1)}`} amount={money(receipts[k])} tone="in" active={sel === k} onClick={() => setSel(k)} testid={`econ-tax-${k}`} color={LINE_COLOR[k]} />)}
+        <Row icon="trade" label="Import tariffs" amount={money(flows.importTariff)} tone="in" onClick={go('trade')} color={LINE_COLOR.tariff} />
+        {g.world.enabled && <Row icon="soe" label="Petroleum income tax" amount={money(flows.petroleumTax)} tone="in" onClick={go('soe')} color={LINE_COLOR.petroleum} />}
+        {g.world.enabled && <Row icon="soe" label="SOE dividends" amount={money(flows.soeDividend)} tone="in" onClick={go('soe')} color={LINE_COLOR.soe} />}
+        {g.world.enabled && <Row icon="commodities" label="Commodity duties" amount={money(flows.commodityDuty)} tone="in" onClick={go('commodities')} color={LINE_COLOR.duty} />}
+        <Row icon="sources" label="Other public receipts" amount={money(flows.federalGrant)} tone="in" color={LINE_COLOR.other} />
         <Balance balance={balance} label={label} />
       </div>
       <Detail title={meta.label} action={<button className="btn" onClick={() => setDraft({ ...draft, [sel]: pol[sel] })}>RESET</button>}>
-        <label className="econ-slider">
+        <label className="econ-slider reverse">
           <span>Rate</span><span className="num">{pct(value, 1)}</span>
           <input type="range" min={meta.min} max={meta.max} step={0.0025} value={value} onChange={(e) => setDraft({ ...draft, [sel]: Number(e.target.value) })} aria-label="Tax rate" data-testid="econ-tax-slider" />
         </label>
@@ -217,7 +224,7 @@ function Taxation({ g, balance, label }: { g: GameState; balance: number; label:
         <button className="btn btn-primary" disabled={Math.abs(value - current) < 1e-9} onClick={() => { command({ type: 'queueTax', patch: { [sel]: value } }); setDraft({}); }} data-testid="econ-tax-apply">Queue from next month</button>
       </Detail>
       <div className="econ-info">
-        <div className="econ-info-head"><span className="econ-info-icon"><HudIcon name="policies" size={34} /></span><h3>{meta.label.toUpperCase()}</h3></div>
+        <div className="econ-info-head"><span className="econ-info-icon" style={{ color: LINE_COLOR[sel] }}><HudIcon name="policies" size={34} /></span><h3>{meta.label.toUpperCase()}</h3></div>
         <p>{meta.hint}</p>
         <p>The estimate holds demand, prices and profits fixed. Real receipts also move as the economy responds, and every change takes effect on the 1st of next month.</p>
       </div>

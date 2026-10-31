@@ -37,7 +37,7 @@ export function LeftRail() {
       {GROUPS.map(group => <div className="category-group" key={group.title}>
         <div className="label">{group.title}</div>
         <div className="category-grid">{group.items.map(item => <button key={item.id} title={item.label} aria-pressed={panel === item.id} onClick={() => useGame.getState().setPanel(panel === item.id ? null : item.id)} className={`category-button ${panel === item.id ? 'is-active' : ''}`} data-testid={`nav-${item.id}`}>
-          <span style={{ color: item.color }}><HudIcon name={item.id} /></span><span>{item.label}</span>
+          <span style={{ color: item.color }}><HudIcon name={item.id} size={19} /></span><span>{item.label}</span>
         </button>)}</div>
       </div>)}
     </nav>
