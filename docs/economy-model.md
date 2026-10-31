@@ -965,3 +965,12 @@ Skip 15 days and Skip to month close are timing controls, not economic rules. Th
 number of game hours at normal speed. They need a paused clock, never touch the sub-hour clock accumulator, and do not turn
 real time into game time. Stops: fresh critical alert, steered MPC meeting, deal/FDI offer closing within 3 days (once
 per offer), term end. Tested in `tests/skip.test.ts`.
+
+## Infrastructure capacity (Boom mode, D-084)
+
+Three networks, each with a capacity index (opening load = 1.00, capacity 1.25) and a load index driven by smoothed real
+GDP (housing: workforce and income per worker). Overload multiplies sector output capacity by
+`max(0.35, 1/(1 + 1.2 × Σ weight × overload))`; the existing demand-versus-capacity logic then lifts prices and utilisation.
+Capacity grows only through player orders (+0.25 × 1, 2 or 4) paid over the build time (power 18 months, transport 24,
+housing 12) from the treasury's capex line; completion adds capacity. No randomness. Realistic campaigns have no
+`infra` and are bit-for-bit unchanged. Tests: `tests/infrastructure.test.ts`.

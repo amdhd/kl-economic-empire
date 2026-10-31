@@ -13,6 +13,7 @@ import { fuelSubsidyDaily, wheatSubsidyDaily, scheduleRetaliation } from './worl
 // same amount in the month-to-date flow ledger — so the budget identity is testable exactly.
 import { BASE_TAX, BUDGET_LABELS, BUDGET_PURCHASES, SECTOR_IDS } from '../data/economic-baseline';
 import { PROJECT_BY_ID } from '../data/projects';
+import { infraDue, payInfra } from './infrastructure';
 import type { BudgetCategory, GameState, GovMonthFlows, GovernmentState, SectorId } from '../types/game';
 import { calibrationFor, PROPERTY_LEVY_BASE, type Vec } from './calibration';
 import { assertSafeMinor, clamp, news, nowMin, pushBounded, toMinor } from './util';
@@ -169,7 +170,8 @@ export function dailyGovernment(s: GameState, today: number): GovDay {
     if (p.status !== 'building') continue;
     capexDueBy.push({ id: p.id, amt: Math.min(p.cost - p.work, p.cost / p.durationDays) * pCons });
   }
-  const capexDue = capexDueBy.reduce((a, c) => a + c.amt, 0);
+  const infraDueBy = infraDue(s).map((d) => ({ id: d.id, amt: d.amt }));
+  const capexDue = capexDueBy.reduce((a, c) => a + c.amt, 0) + infraDueBy.reduce((a, c) => a + c.amt, 0);
   const emergencyDue = gov.pendingEmergency > 0 ? Math.min(gov.pendingEmergency, gov.pendingEmergency * 0.3 + 5e6) : 0;
   const arrearsDue = gov.unpaidObligations;
   // Federal development programme (model 2) and price subsidies are obligations like any other.
@@ -206,6 +208,14 @@ export function dailyGovernment(s: GameState, today: number): GovDay {
     purchases.ind += paid * 0.2;
     purchases.tech += paid * 0.1;
     if (p.work >= p.cost - 1) completeProject(s, p.id, today);
+  }
+  for (const { id, amt } of infraDueBy) {
+    const paid = post(gov, 'capex', amt * paidFraction);
+    gov.publicAssets += paid * ASSET_CAPITALISATION;
+    purchases.prop += paid * 0.5;
+    purchases.ind += paid * 0.3;
+    purchases.tech += paid * 0.2;
+    payInfra(s, id, paid);
   }
   if (emergencyDue > 0) {
     const paid = post(gov, 'emergency', emergencyDue * paidFraction);

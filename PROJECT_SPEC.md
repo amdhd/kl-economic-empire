@@ -1099,3 +1099,11 @@ Two buttons, **Skip 15 days** and **Skip to month close**, are enabled **only wh
   play resumes.
 
 Skips are an explicit player action, not offline progress. See D-083 and `docs/economy-model.md`.
+
+## 27. User amendment — infrastructure capacity in Boom mode (1 November 2026)
+
+The user found Boom mode had no never-ending problem: success only produced more success. In Boom games, growth now
+loads three national networks (power, transport and ports, housing and services). A network running above its capacity
+throttles the sectors that depend on it, raising prices and slowing growth, and new capacity arrives only years after
+the player commissions and pays for it. The player must build ahead of demand, and each fix raises the next limit.
+Realistic campaigns are unchanged. See D-084 and `docs/economy-model.md`.

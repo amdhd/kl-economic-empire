@@ -12,6 +12,7 @@ const GROUPS: { title: string; items: { id: PanelId; label: string; color: strin
   { title: 'Government', items: [
     { id: 'policies', label: 'Taxes & budget', color: '#a6d582' },
     { id: 'projects', label: 'Projects', color: '#ecb77d' },
+    { id: 'infra', label: 'Infrastructure', color: '#e9c46a' },
     { id: 'debt', label: 'Treasury & debt', color: '#aebdf1' },
     { id: 'fiscal', label: 'Fiscal rules', color: '#f0a3a3' },
     { id: 'controls', label: 'Economic controls', color: '#9dd9d4' },

@@ -7,6 +7,8 @@ import { syncInvestmentDeals } from './investment-deals';
 import type { Deal } from '../types/deals';
 import { initialDeals, addDeal, dealCommand, offerDeal } from './deals';
 import { exportOffers } from './export-contracts';
+import { cancelInfra, initialInfra, orderInfra } from './infrastructure';
+import type { NetworkId } from '../data/infrastructure';
 import { initialTradeBook, setProgramme, tradeDealCommand, type TradeDealAction } from './trade-book';
 import type { ProgrammeId } from '../data/trade';
 import { CAMPAIGN_LENGTHS, type CampaignMonths } from '../data/boom';
@@ -172,6 +174,7 @@ function createWithProfile(seed: number, scenario: ScenarioId, profile: 'malaysi
   seedHistory(s, startDay);
   s.indicators.cpi = computeCpi(s);
   s.tradeBook = initialTradeBook(s, s.fdi.enabled && s.world.enabled);
+  if (mode.boom) s.infra = initialInfra(s.baseline.realGdpAnnual, s.households.laborForce);
   s.scheduler.startNav = navMYR(s);
   s.soe.openingEquity = soeEquity(s);
   if (s.world.enabled) seedWorldHistory(s.world, seed, startDay);
@@ -235,6 +238,8 @@ export type Command =
   | { type: 'cancelPolicy'; id: number }
   | { type: 'startProject'; templateId: string }
   | { type: 'cancelProject'; id: number }
+  | { type: 'buildInfra'; network: NetworkId; steps: number }
+  | { type: 'cancelInfra'; id: number }
   | { type: 'issueBonds'; amount: number }
   | { type: 'repayDebt'; amount: number }
   | { type: 'fundInject'; amount: number }
@@ -447,6 +452,14 @@ function dispatch(s: GameState, cmd: Command, atMin: number): CommandResult {
       logPolicy(s, atMin, atMin, `Commissioned ${t.name} (RM ${(t.cost / 1e9).toFixed(1)}bn over ${Math.round(t.durationDays / 30)} months)`);
       news(s, { kind: 'policy', tone: 'neutral', title: `Commissioned: ${t.name}`, body: `RM ${(t.cost / 1e9).toFixed(1)}bn disbursed over ~${Math.round(t.durationDays / 30)} months. Benefits begin on completion.` });
       return { ok: true, message: `${t.name} commissioned.` };
+    }
+    case 'buildInfra': {
+      const err = orderInfra(s, cmd.network, cmd.steps, klDay(atMin));
+      return err ? { ok: false, message: err } : { ok: true, message: 'Capacity commissioned.' };
+    }
+    case 'cancelInfra': {
+      const err = cancelInfra(s, cmd.id);
+      return err ? { ok: false, message: err } : { ok: true, message: 'Build cancelled. Money already spent is sunk.' };
     }
     case 'cancelProject': {
       const project=gov.projects.find(x=>x.id===cmd.id);
