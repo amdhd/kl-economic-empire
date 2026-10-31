@@ -342,3 +342,21 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   Both retain normal later event probabilities. The Recession card now discloses its existing persistent 3× adverse /
   0.6× other hazard weights and 180-day, 1.3× opening shocks. Scenarios reuse deterministic registered events without
   additional random draws; no new economic equations or saved fields. Saved scenario strings remain in schema 7.
+- **D-055 National growth trend for an untouched economy (model 3, schema 8).** Diagnosis with a monthly probe (events
+  off): the opening is steady (month-1 output, jobs and investment equal the calibration), but the trends disagree.
+  (1) The natural rate was the KL-era 3.5% against a 3.0% national opening, so the workforce pull and Phillips curve
+  dragged unemployment up. (2) Output is demand-determined; autonomous demand grew ~2.6%: exports ~4.4%, government
+  purchases flat in ringgit (≈ −1.2%/yr real), resources flat, investment following utilisation. (3) Supply (workforce
+  1% + productivity 1.5%), capital growth and the OPR/score potential (3.5%) were KL-era values. (4) The omitted-receipts
+  residual was fixed in ringgit, so revenue/GDP fell with nominal growth. Raising supply alone made unemployment worse,
+  confirming demand as the binding constraint. New campaigns use **model 3**: natural rate 3.0%, workforce trend 1.6%,
+  productivity 2.6%, opening capital growth 4.0% (higher turns property's residual exports negative), potential 3.8%
+  (seven sectors ≈ 4.2%, resources flat) for both the OPR output gap and the growth-score benchmark, other receipts
+  indexed to last month's nominal GDP, and inherited ministry plans indexing each operating budget at 6%/yr (trend real
+  growth + 2% target) in monthly steps for five years. Monthly steps avoid a year of falling real purchases followed by a
+  January jump. Development capex stays at its 2027 level. Plans are ordinary, visible, cancellable controls; manual
+  budgets replace them as in D-030. Plans gain optional `everyMonths` (1 or 12; absent = annual), hence schema 8 with
+  a no-op migration. Model 1/2 saves keep their trend, calibration, fixed receipts and no plans, so they replay unchanged.
+  Unchanged policy now leaves the deficit near its opening ~3.8–3.9% (spending tracks the economy), so consolidation
+  remains the player's choice. CPI still settles ~1.3%/yr because world commodity prices are flat in nominal USD;
+  this is recorded as an open calibration issue.

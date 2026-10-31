@@ -1,4 +1,4 @@
-import { baselineFor } from '../data/economic-baseline';
+import { baselineFor, trendFor } from '../data/economic-baseline';
 // Satisfaction, approval and campaign score. All weights/thresholds are transparent constants.
 import { EVENT_BY_ID } from '../data/events';
 import type { GameState, MonthlyReport, ScoreBreakdown } from '../types/game';
@@ -12,6 +12,8 @@ import { clamp } from './util';
 export const SCORE_WEIGHTS = { growth: 0.3, wealth: 0.3, satisfaction: 0.25, stability: 0.15 };
 export const VICTORY = { score: 75, approval: 60 }; // recalibrated from seeded replays (docs/game-balance.md)
 export const GROWTH_TARGET = 0.035;
+/** Growth benchmark before external adjustment: potential growth, so an economy merely on trend scores 50. */
+export const growthTarget = (s: GameState): number => trendFor(s).potentialGrowth;
 export const MAX_EXTERNAL_ADJUSTMENT = 0.01;
 
 /** A duration-weighted run rate, so February and a 31-day month measure the same steady output. */
@@ -59,7 +61,7 @@ export function scoreDrivers(s: GameState) {
   const wealthCreditFactor = clamp(Math.min(income / s.baseline.realDisposablePerCapita,
     realOutput / s.baseline.realGdpAnnual, s.government.serviceQuality / BASELINE.serviceQuality), 0, 1);
   const rawWealthScore = clamp(50 + 400 * realWealthChange / s.baseline.nominalGdpAnnual, 0, 100);
-  return { realGrowth, growthTarget: GROWTH_TARGET + externalAdjustment, externalAdjustment, realWealthChange,
+  return { realGrowth, growthTarget: growthTarget(s) + externalAdjustment, externalAdjustment, realWealthChange,
     wealthCreditFactor, rawWealthScore };
 }
 

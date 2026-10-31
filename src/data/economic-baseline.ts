@@ -144,7 +144,29 @@ export const BASELINE = {
   myrPerUsd: 538_759_540_269 / 132.1e9,
 };
 export const baselineFor = (s: { baseline: { profile: 'malaysia' | 'legacy-kl' } }) => s.baseline.profile === 'legacy-kl' ? LEGACY_BASELINE : BASELINE;
-export const budgetFor = (s: { baseline: { profile: 'malaysia' | 'legacy-kl'; model?: 1 | 2 } }) =>
+export const budgetFor = (s: { baseline: { profile: 'malaysia' | 'legacy-kl'; model?: 1 | 2 | 3 } }) =>
   s.baseline.profile === 'legacy-kl' ? LEGACY_BUDGET : s.baseline.model === 1 ? BASE_BUDGET_V1 : BASE_BUDGET;
 /** Model-2 national campaigns carry the resource sector, development budget, SOEs, commodities and partners. */
-export const nationalV2 = (s: { baseline: { profile: 'malaysia' | 'legacy-kl'; model?: 1 | 2 } }) => s.baseline.profile === 'malaysia' && s.baseline.model !== 1;
+export const nationalV2 = (s: { baseline: { profile: 'malaysia' | 'legacy-kl'; model?: 1 | 2 | 3 } }) => s.baseline.profile === 'malaysia' && s.baseline.model !== 1;
+
+/** Long-run growth path of an untouched economy. Model 1/2 saves keep the original KL-era trend so they replay
+ * unchanged; model 3 (new national campaigns, D-055) makes supply, investment and policy-rate trends agree. */
+export interface TrendParams {
+  productivity: number; // labour productivity, per year
+  laborForce: number; // workforce trend, per year (before the pull toward labour demand)
+  capitalGrowth: number; // desired net capital growth at baseline returns, per year
+  naturalUnemployment: number;
+  potentialGrowth: number; // real potential growth used by the OPR output gap and the growth score
+  /** Index the derived "other public receipts" to nominal GDP instead of fixing them in ringgit. */
+  buoyantReceipts: boolean;
+  /** Annual escalation of the opening ministry plans that new campaigns inherit (0 = no opening plans). */
+  budgetEscalation: number;
+}
+export const LEGACY_TREND: TrendParams = {
+  productivity: 0.015, laborForce: 0.01, capitalGrowth: 0.035, naturalUnemployment: 0.035, potentialGrowth: 0.035, buoyantReceipts: false, budgetEscalation: 0,
+};
+export const NATIONAL_TREND: TrendParams = {
+  productivity: 0.026, laborForce: 0.016, capitalGrowth: 0.04, naturalUnemployment: 0.03, potentialGrowth: 0.038, buoyantReceipts: true, budgetEscalation: 0.06,
+};
+export const trendFor = (s: { baseline: { profile: 'malaysia' | 'legacy-kl'; model?: 1 | 2 | 3 } }): TrendParams =>
+  s.baseline.profile === 'malaysia' && s.baseline.model === 3 ? NATIONAL_TREND : LEGACY_TREND;

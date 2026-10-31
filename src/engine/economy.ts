@@ -1,7 +1,7 @@
 import { sectorTax } from './policy-controls';
 import { confidenceChannels, householdBehaviour, householdSpending } from './household-behavior';
 import { calibrationFor } from './calibration';
-import { baselineFor, nationalV2 } from '../data/economic-baseline';
+import { baselineFor, nationalV2, trendFor } from '../data/economic-baseline';
 import { COMMODITY_IMPORT, UTILITY_FUEL_PASSTHROUGH, FUEL_CPI_WEIGHT, HOUSEHOLD_EQUITY0, PUBLIC_CAPITAL_ELASTICITY, WEALTH_MPC } from '../data/world';
 import { publicCapitalFactor } from './fiscal-rules';
 import { palmHouseholdDelta } from './soe';
@@ -11,7 +11,7 @@ import { foodUserPrice, fuelPriceIndex, householdFuelBillDelta } from './world';
 import { BASE_TAX, CPI_WEIGHTS, INVESTMENT_GOODS, IO, SECTOR_IDS, SECTORS } from '../data/economic-baseline';
 import type { CommodityId, GameState, SectorId } from '../types/game';
 import {
-  CAPITAL_GROWTH0, CREDIT_SPEND, HOUSEHOLD_AMORT_MONTHLY, HOUSEHOLD_RATE_PREMIUM,
+  CREDIT_SPEND, HOUSEHOLD_AMORT_MONTHLY, HOUSEHOLD_RATE_PREMIUM,
   NORMAL_UTIL, PROPERTY_LEVY_BASE, SURCHARGE_BASE_SHARE, type Vec,
 } from './calibration';
 import type { AggregatedMods } from './external';
@@ -336,6 +336,7 @@ export function monthClose(s: GameState, inflationYoY: number, unemployment: num
   const BASELINE = baselineFor(s);
   const CAL = calibrationFor(s);
   const BASE_LEND_RATE = baselineFor(s).opr + 0.02;
+  const TREND = trendFor(s);
   const hh = s.households;
   const bank = s.bank;
   const confidence = confidenceChannels(hh.confidence);
@@ -356,7 +357,7 @@ export function monthClose(s: GameState, inflationYoY: number, unemployment: num
     // Investment: after-tax return vs baseline, cost of credit, utilisation and confidence
     const rok = (afterTax * 365) / days / sec.capital;
     const g = clamp(
-      CAPITAL_GROWTH0 + 0.12 * (rok - CAL.rok0[j]) - 0.6 * (bank.lendingRate - BASE_LEND_RATE) + 0.12 * (sec.avgUtil - NORMAL_UTIL) + confidence.investmentGrowth,
+      TREND.capitalGrowth + 0.12 * (rok - CAL.rok0[j]) - 0.6 * (bank.lendingRate - BASE_LEND_RATE) + 0.12 * (sec.avgUtil - NORMAL_UTIL) + confidence.investmentGrowth,
       -0.02,
       0.09,
     );
@@ -389,7 +390,7 @@ export function monthClose(s: GameState, inflationYoY: number, unemployment: num
     const matured = sec.pipeline.shift() ?? 0;
     sec.pipeline.push(sec.investmentMonthly / pInv / CAL.capitalPerCap[j]);
     sec.capacity += matured - (sec.capacity * BASELINE.depreciation) / 12;
-    sec.productivity *= 1 + BASELINE.trendProductivity / 12;
+    sec.productivity *= 1 + TREND.productivity / 12;
   }
   // Bank balance sheet: new loans create deposits; repayments destroy them.
   bank.loansF += newFirm - firmRepay;
@@ -402,15 +403,15 @@ export function monthClose(s: GameState, inflationYoY: number, unemployment: num
   hh.loans = bank.loansH;
 
   // Wages: expectations + trend productivity + Phillips-curve tightness
-  const wg = clamp((hh.expectedInflation + BASELINE.trendProductivity + 0.6 * (BASELINE.naturalUnemployment - unemployment)) / 12, -0.003, 0.012);
+  const wg = clamp((hh.expectedInflation + TREND.productivity + 0.6 * (TREND.naturalUnemployment - unemployment)) / 12, -0.003, 0.012);
   hh.wageIndex *= 1 + wg;
   hh.expectedInflation = clamp(0.82 * hh.expectedInflation + 0.1 * inflationYoY + 0.08 * BASELINE.inflationTarget, -0.02, 0.15);
   // Workforce (incl. commuters/migrants) grows on trend and partially follows labour demand.
-  hh.laborForce *= 1 + 0.01 / 12;
-  hh.laborForce += 0.06 * (hh.employed / (1 - BASELINE.naturalUnemployment) - hh.laborForce);
+  hh.laborForce *= 1 + TREND.laborForce / 12;
+  hh.laborForce += 0.06 * (hh.employed / (1 - TREND.naturalUnemployment) - hh.laborForce);
   hh.population *= 1 + 0.012 / 12;
 
-  const behaviour = householdBehaviour(hh.confidence, hh.mpc, unemployment - BASELINE.naturalUnemployment, coreInflation, incomeTrend, s.external.riskAppetite);
+  const behaviour = householdBehaviour(hh.confidence, hh.mpc, unemployment - TREND.naturalUnemployment, coreInflation, incomeTrend, s.external.riskAppetite);
   hh.confidence = behaviour.confidence;
   hh.mpc = behaviour.mpc;
 }

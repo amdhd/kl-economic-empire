@@ -666,3 +666,42 @@ New export-slump and energy-shock scenarios use existing slowdown/oil event temp
 now explicitly shown before campaign creation. Tests cover explanation reconciliation, read-only behaviour, alert
 entry/escalation/recovery, disabled rules, invalid preferences, project estimates and scenario save/resume. Browser
 coverage verifies metric clicks, critical versus warning pause, deduplication and persisted preferences.
+
+## D-055: national growth trend (model 3, schema 8)
+
+New national campaigns use model 3; model-1/2 saves keep their previous trend and calibration (`trendFor`, `calibrationFor`).
+
+| Parameter (`NATIONAL_TREND`) | Model 3 | Model 1/2 (`LEGACY_TREND`) | Used in |
+|---|---:|---:|---|
+| Labour productivity growth | 2.6%/yr | 1.5% | sector productivity, wage rule |
+| Workforce trend | 1.6%/yr | 1.0% | `LF *= 1 + trend/12`, then the 6% monthly pull toward `employed/(1−u*)` |
+| Natural unemployment `u*` | 3.0% | 3.5% | workforce pull, Phillips curve, confidence, NPLs |
+| Capital growth `g0` | 4.0%/yr | 3.5% | calibration (`I0 = K(δ+g0)`, private capital share, residual exports) and the investment rule |
+| Potential growth | 3.8%/yr | 3.5% | OPR output gap path and growth-score benchmark (`growthTarget`) |
+| Other receipts | × nominal GDP index | fixed | see below |
+| Opening budget path | 6%/yr, monthly | none | inherited ministry plans |
+
+Steady-state logic: output is demand-determined (`Y = (I−A)⁻¹ f`, capped by capacity), so growth equals the growth
+of autonomous demand (exports, government purchases, resources) with consumption and investment following income
+and utilisation. Supply then has to match: seven-sector potential ≈ workforce + productivity ≈ 4.2%. Resources (~8%
+of GDP) are flat in volume at PETRONAS's opening capex, giving 3.8% overall. Opening capital growth is 4.0% rather
+than 4.2% because property & construction's residual exports turn negative above ~4.1%. Utilisation closes the
+small gap through the investment rule.
+
+**Inherited budget path.** Each operating budget category starts with a ministry plan:
+`monthly = base × (1+m)`, `m = 1.06^{1/12} − 1`, applied on the 1st of every month from February 2027 (`everyMonths = 1`,
+60 steps). After twelve steps the budget is 6% higher, which is trend real growth plus the 2% inflation target. Steps are monthly
+so real purchases do not fall for a year and then jump. They are disclosed once (news item and Economic controls),
+not logged monthly. A manual budget or a cancelled plan stops that category's indexation (D-030). Development capex
+(`fiscal.developmentAnnual`) stays at its 2027 level, as Malaysia's development allocation has been broadly flat.
+
+**Revenue buoyancy.** `otherPublicReceiptsMonthly = residual0 × nominalGdpAnnual / openingNominalGdp`, using the last
+closed month's run rate (the opening value before the first close). It still never responds directly to tax sliders.
+Unit elasticity is an assumption; resource revenue keeps its own commodity-price drivers.
+
+**Results** (no-event runs, see `docs/game-balance.md`): growth ~3.3–3.6% with unemployment flat at 3.0% in a
+noise-free run; 8-seed noisy mean 3.35% with unemployment ~3.2–3.4%. Unchanged policy keeps the deficit near its
+opening level (~3.9%), so fiscal-rule credibility still falls without consolidation. **Open:** CPI settles near 1.3%/yr,
+below the 2% anchor, because world commodity prices are flat in nominal USD while US prices trend at 2.5%, and
+expectations put only an 8% monthly weight on the target. `tests/trend.test.ts` covers the steady opening, the 24-month
+no-event path, plan indexation, buoyant receipts, the shared potential and schema-7 compatibility.

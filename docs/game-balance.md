@@ -235,3 +235,48 @@ external histories. Within-scenario ablations retain the same prescribed shocks.
 
 Final verification for D-051–D-054: production build, lint, **211 unit/invariant/campaign tests** and **35 Playwright
 browser tests** pass. The explanation panel was visually checked at 1280×800 and alert settings at 1600×900.
+
+## National trend — D-055 (31 October 2026)
+
+**Diagnosis.** A monthly probe (events off, seed 2027 and seven others) recorded investment against
+`capital × (δ + g)`, capacity against output, utilisation, employment against the workforce, MPC, confidence, lending
+rate, OPR, exports, wage index and return on capital. The opening was steady. The drift came from inconsistent trends:
+government purchases flat in ringgit, a 3.5% KL-era natural rate against a 3.0% opening, and KL-era supply and
+potential values. Because output is demand-determined, autonomous demand (exports ~4.4%, real government purchases
+≈ −1.2%/yr, flat resources) set growth at ~2.6%. A supply-only fix raised unemployment to ~4.4%.
+
+**No-event 24-month runs** (events off, commodity episodes and background cycles on; 8 seeds 2027, 11, 42, 201–205):
+
+| | Before (8171ec3) | After (model 3) |
+|---|---:|---:|
+| Mean real growth, annualised over the campaign | 2.32% | 3.35% |
+| Mean growth in the final 12 months | 2.40% | 3.52% |
+| Mean unemployment after 12 months / at the end | 3.22% / 3.10% | 3.38% / 3.23% |
+| Mean cash deficit at the end (% GDP) | 3.28% | 3.91% |
+| Mean OPR at the end (opening 2.75%) | 2.22% | 2.38% |
+| Noise-free seed 2027 (cycles and episodes zeroed): growth yr 1 / yr 2 | 2.41% / 2.55% | 3.30% / 3.60% |
+| Noise-free seed 2027: unemployment at 12 / 24 months | 2.94% / 2.94% | 3.03% / 3.07% |
+
+Growth rises about a percentage point. Unemployment stays near the 3.0% opening in the noise-free run under the
+higher growth, although the seven sectors now add 2.6%/yr productivity rather than 1.5%. Noisy seeds still swing
+(2.2–4.7% at the end) because of background cycles; seed 202 (an early oil episode) remains a downturn at 1.75%
+growth, as it should. The structural result is ~3.5% growth against a 3.8% potential. Resources are flat in volume;
+the seven sectors grow ~4.2%. Pre-8171ec3 code (7a68348) gave 2.69% mean growth on the same seeds, with end
+unemployment between 1.5% and 6.2%.
+
+**Strategy replays** (`npm run balance`, 12 default seeds; means of fictional replays):
+
+| Strategy | Score before | Score after | Growth pts before → after | Wealth before → after | Approval before → after | Wins |
+|---|---:|---:|---|---|---|---:|
+| Hands-off | 52.06 | 52.73 | 30.2 → 36.7 | 45.3 → 40.8 | 70.0 → 73.4 | 0/12 |
+| Balanced growth | 50.70 | 51.74 | 29.9 → 36.9 | 43.0 → 38.8 | 70.2 → 73.6 | 0/12 |
+| Tax maximiser | 49.26 | 48.21 | 0.0 → 0.7 | 86.3 → 81.9 | 41.3 → 41.6 | 0/12 |
+| Investment heavy | 51.52 | 52.48 | 30.0 → 37.1 | 44.5 → 40.4 | 69.9 → 73.4 | 0/12 |
+| Austerity | 48.21 | 45.04 | 3.9 → 1.2 | 79.3 → 77.2 | 47.9 → 43.1 | 0/12 |
+| Adaptive | 51.19 | 51.84 | 30.9 → 36.5 | 43.4 → 39.4 | 70.7 → 73.5 | 0/12 |
+| Adverse recession | 56.77 | 57.33 | 45.3 → 52.7 | 43.8 → 37.5 | 73.8 → 77.6 | 0/12 |
+
+The growth benchmark rose from 3.5% to 3.8%, yet growth points rose because untouched growth is now nearer potential.
+Wealth points fell because inherited budgets now grow with the economy instead of silently consolidating. Austerity
+scores lower since cutting a budget now also cancels its indexation. The D-051 limitation remains: the recession
+scenario's endpoint score can exceed balanced play. Bots still never win; 75 stays provisional.

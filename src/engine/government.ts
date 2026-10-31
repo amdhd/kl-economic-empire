@@ -1,5 +1,5 @@
 import { sectorTax, ministryOutcomes } from './policy-controls';
-import { baselineFor, budgetFor, nationalV2 } from '../data/economic-baseline';
+import { baselineFor, budgetFor, nationalV2, trendFor } from '../data/economic-baseline';
 import { DEVELOPMENT_PURCHASES, KL_ECONOMY_SHARE, PUBLIC_CAPITAL_DEPRECIATION } from '../data/world';
 import { credibilityPremium } from './fiscal-rules';
 import { modelledResourceRevenue0 } from './soe';
@@ -100,9 +100,14 @@ export interface GovDay {
   paidFraction: number;
 }
 
-/** The reduced tax model omits federal tax categories. Calibrate their fixed residual so opening
- * total receipts equal the official 2027 estimate; never recalculate it from player policy. */
+/** The reduced tax model omits federal tax categories. Calibrate their residual so opening total receipts
+ * equal the official 2027 estimate; never recalculate it from player policy. Model 3 indexes it to the last
+ * closed month's nominal GDP run rate (unit buoyancy, D-055); earlier models keep it fixed in ringgit. */
 export function otherPublicReceiptsMonthly(s: GameState): number {
+  return otherPublicReceiptsBase(s) * (trendFor(s).buoyantReceipts ? s.indicators.nominalGdpAnnual / s.baseline.nominalGdpAnnual : 1);
+}
+
+function otherPublicReceiptsBase(s: GameState): number {
   const base = baselineFor(s);
   if (s.baseline.profile === 'legacy-kl') return base.federalGrantMonthly;
   const c = calibrationFor(s);

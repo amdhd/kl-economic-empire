@@ -510,7 +510,8 @@ export interface GameState {
   controls: {
     lastTaxReliefMYR: number;
     incentives: { sector: SectorId; cut: number; startMin: number; endMin: number }[];
-    plans: { category: BudgetCategory; monthly: number; growth: number; remaining: number; nextMonth: number }[];
+    /** `everyMonths` (schema 8) is the step interval: 12 = annual player plans (default), 1 = the monthly-indexed opening path. */
+    plans: { category: BudgetCategory; monthly: number; growth: number; remaining: number; nextMonth: number; everyMonths?: 1 | 12 }[];
     outcomes: { health: number; services: number; safety: number };
     debt: { newTermMonths: number; averageMonths: number; refinance: number };
     fxBand: { enabled: boolean; lower: number; upper: number; dailyUSD: number; reserveFloorUSD: number; status: string };
@@ -569,8 +570,9 @@ export interface CentralBankState {
 }
 export interface BaselineSnapshot {
   profile: 'malaysia' | 'legacy-kl';
-  /** National model generation: 1 = schema-5 calibration (no resource sector, no development budget). */
-  model: 1 | 2;
+  /** National model generation: 1 = schema-5 calibration (no resource sector, no development budget);
+   * 2 = resources/SOEs/commodities on the KL-era trend; 3 = national growth trend (D-055). */
+  model: 1 | 2 | 3;
   openingTreasury: number;
   openingDebt: number;
   realGdpAnnual: number;

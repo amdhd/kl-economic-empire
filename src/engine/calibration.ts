@@ -1,7 +1,7 @@
 // One-off steady-state calibration of the KL input–output economy. Pure and deterministic.
 // Final demand f = (I − A)·Y0; household, government and investment components come from the
 // behavioural rules evaluated at baseline, and exports are the residual (asserted positive in tests).
-import { BASE_BUDGET, BASE_BUDGET_V1, BASE_TAX, BASELINE, LEGACY_BASELINE, LEGACY_BUDGET, NATIONAL_GDP, BUDGET_PURCHASES, INVESTMENT_GOODS, IO, SECTOR_IDS, SECTORS } from '../data/economic-baseline';
+import { BASE_BUDGET, BASE_BUDGET_V1, BASE_TAX, BASELINE, LEGACY_BASELINE, LEGACY_BUDGET, LEGACY_TREND, NATIONAL_GDP, NATIONAL_TREND, BUDGET_PURCHASES, INVESTMENT_GOODS, IO, SECTOR_IDS, SECTORS } from '../data/economic-baseline';
 import type { BudgetCategory, SectorId, GameState } from '../types/game';
 import { DEVELOPMENT_ANNUAL0, DEVELOPMENT_PURCHASES, RESOURCE_VA0 } from '../data/world';
 
@@ -36,7 +36,8 @@ export const SURCHARGE_BASE_SHARE = 0.7; // share of the wage bill above the exe
 export const PROPERTY_LEVY_BASE = 0.5; // commercial rental value as a share of property gross output
 export const BASE_MPC = 0.86;
 export const NORMAL_UTIL = 0.85;
-export const CAPITAL_GROWTH0 = 0.035; // baseline desired net capital growth, per year
+/** Baseline desired net capital growth of the KL-era trend (model 1/2); see `trendFor` for model 3. */
+export const CAPITAL_GROWTH0 = LEGACY_TREND.capitalGrowth;
 export const RELATIVE_WAGE: Vec = { fin: 1.6, prop: 0.9, util: 1.3, tech: 1.4, cons: 0.75, health: 1.0, ind: 1.0 };
 
 export interface Calibration {
@@ -61,7 +62,7 @@ export interface Calibration {
   gdpDaily: number;
 }
 
-function calibrate(BASELINE = LEGACY_BASELINE, BASE_BUDGET = LEGACY_BUDGET, scale = 1, developmentAnnual = 0): Calibration {
+function calibrate(BASELINE = LEGACY_BASELINE, BASE_BUDGET = LEGACY_BUDGET, scale = 1, developmentAnnual = 0, capitalGrowth = CAPITAL_GROWTH0): Calibration {
   const BASE_LEND_RATE = BASELINE.opr + 0.02;
   const vaAnnual = (j: SectorId) => SECTORS[j].vaAnnual * scale;
   const n = SECTOR_IDS.length;
@@ -69,7 +70,7 @@ function calibrate(BASELINE = LEGACY_BASELINE, BASE_BUDGET = LEGACY_BUDGET, scal
   // Sector capital-output ratios describe the whole capital stock. When federal development spending is
   // modelled explicitly, its share of gross fixed investment is public capital, so the private stock
   // (and private investment) is reduced by that share rather than counting public investment twice.
-  const fullInvestment = SECTOR_IDS.reduce((a, j) => a + SECTORS[j].capitalToVa * vaAnnual(j), 0) * (BASELINE.depreciation + CAPITAL_GROWTH0);
+  const fullInvestment = SECTOR_IDS.reduce((a, j) => a + SECTORS[j].capitalToVa * vaAnnual(j), 0) * (BASELINE.depreciation + capitalGrowth);
   const privateShare = 1 - developmentAnnual / fullInvestment;
   for (const j of SECTOR_IDS) {
     const colSum = SECTOR_IDS.reduce((s, i) => s + IO[i][j], 0);
@@ -135,7 +136,7 @@ function calibrate(BASELINE = LEGACY_BASELINE, BASE_BUDGET = LEGACY_BUDGET, scal
   }
   // Federal development spending buys construction, equipment and services like other purchases.
   for (const [j, sh] of Object.entries(DEVELOPMENT_PURCHASES)) G0[j as SectorId] += (developmentAnnual / 365) * sh;
-  const Itot = (Ktot * (BASELINE.depreciation + CAPITAL_GROWTH0)) / 365;
+  const Itot = (Ktot * (BASELINE.depreciation + capitalGrowth)) / 365;
   const I0 = zero();
   for (const [j, sh] of Object.entries(INVESTMENT_GOODS)) I0[j as SectorId] = Itot * (sh as number);
 
@@ -158,17 +159,22 @@ function calibrate(BASELINE = LEGACY_BASELINE, BASE_BUDGET = LEGACY_BUDGET, scal
 
 export const LEGACY_CAL: Calibration = calibrate();
 /** Linear solve for the sector scale whose GDP (sector value added + product levy) hits `target`. */
-function nationalScale(budget: typeof BASE_BUDGET, target: number, developmentAnnual: number): number {
-  const c1 = calibrate(BASELINE, budget, 1, developmentAnnual).gdpDaily * 365;
-  const c2 = calibrate(BASELINE, budget, 2, developmentAnnual).gdpDaily * 365;
+function nationalScale(budget: typeof BASE_BUDGET, target: number, developmentAnnual: number, capitalGrowth = CAPITAL_GROWTH0): number {
+  const c1 = calibrate(BASELINE, budget, 1, developmentAnnual, capitalGrowth).gdpDaily * 365;
+  const c2 = calibrate(BASELINE, budget, 2, developmentAnnual, capitalGrowth).gdpDaily * 365;
   return 1 + (target - c1) / (c2 - c1);
 }
 /** Model 1 (schema-5 saves): the seven sectors carry all of GDP; no development budget. */
 export const NATIONAL_SCALE_V1 = nationalScale(BASE_BUDGET_V1, NATIONAL_GDP, 0);
 export const CAL_V1: Calibration = calibrate(BASELINE, BASE_BUDGET_V1, NATIONAL_SCALE_V1);
-/** Model 2: oil & gas and palm oil are a separate resource sector, so the seven sectors carry the rest. */
+/** Model 2: oil & gas and palm oil are a separate resource sector, so the seven sectors carry the rest.
+ * Kept for model-2 saves, whose opening investment used the KL-era 3.5% capital growth. */
 export const NATIONAL_SCALE = nationalScale(BASE_BUDGET, NATIONAL_GDP - RESOURCE_VA0, DEVELOPMENT_ANNUAL0);
-export const CAL: Calibration = calibrate(BASELINE, BASE_BUDGET, NATIONAL_SCALE, DEVELOPMENT_ANNUAL0);
+export const CAL_V2: Calibration = calibrate(BASELINE, BASE_BUDGET, NATIONAL_SCALE, DEVELOPMENT_ANNUAL0);
+/** Model 3 (current national campaigns): the same economy, with opening investment on the national capital-growth
+ * trend (D-055). */
+export const NATIONAL_SCALE_V3 = nationalScale(BASE_BUDGET, NATIONAL_GDP - RESOURCE_VA0, DEVELOPMENT_ANNUAL0, NATIONAL_TREND.capitalGrowth);
+export const CAL: Calibration = calibrate(BASELINE, BASE_BUDGET, NATIONAL_SCALE_V3, DEVELOPMENT_ANNUAL0, NATIONAL_TREND.capitalGrowth);
 export const calibrationFor = (s: Pick<GameState, 'baseline'>): Calibration =>
-  s.baseline.profile === 'legacy-kl' ? LEGACY_CAL : s.baseline.model === 1 ? CAL_V1 : CAL;
+  s.baseline.profile === 'legacy-kl' ? LEGACY_CAL : s.baseline.model === 1 ? CAL_V1 : s.baseline.model === 2 ? CAL_V2 : CAL;
 export const SECTOR_INDEX: Record<SectorId, number> = Object.fromEntries(SECTOR_IDS.map((s, i) => [s, i])) as Record<SectorId, number>;

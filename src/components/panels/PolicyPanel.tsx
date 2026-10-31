@@ -21,7 +21,9 @@ export function PolicyPanel() {
   const pendingTax = (k: keyof TaxPolicy) => g.government.pending.filter((p) => p.kind === 'tax' && k in p.patch).map((p) => (p.patch as TaxPolicy)[k]).at(-1);
   const pendingBudget = (k: BudgetCategory) => g.government.pending.filter((p) => p.kind === 'budget' && k in p.patch).map((p) => (p.patch as BudgetPolicy)[k]).at(-1);
   const [tax, setTax] = useState<TaxPolicy>(() => ({ ...pol.tax, ...Object.fromEntries(TAX_KEYS.map((k) => [k, pendingTax(k) ?? pol.tax[k]])) }));
-  const [budget, setBudget] = useState<BudgetPolicy>(() => ({ ...pol.budget, ...Object.fromEntries(CATS.map((k) => [k, pendingBudget(k) ?? pol.budget[k]])) }));
+  // Only categories the player moved are drafts; the rest track live budgets, which inherited plans index monthly.
+  const [edits, setEdits] = useState<Partial<BudgetPolicy>>({});
+  const budget = Object.fromEntries(CATS.map((k) => [k, edits[k] ?? pendingBudget(k) ?? pol.budget[k]])) as BudgetPolicy;
   const [confirm, setConfirm] = useState<'tax' | 'budget' | null>(null);
 
   const last = g.reports.at(-1);
@@ -86,7 +88,7 @@ export function PolicyPanel() {
                   {budget[k] !== pol.budget[k] && <span className="text-slate-500 line-through">{(pol.budget[k] / 1e6).toFixed(0)}</span>} <b>{(budget[k] / 1e6).toFixed(0)}</b>
                 </span>
               </div>
-              <input type="range" min={0} max={BASE_BUDGET[k] * 2.5} step={10e6} value={budget[k]} onChange={(e) => setBudget({ ...budget, [k]: Number(e.target.value) })} aria-label={BUDGET_LABELS[k]} data-testid={`budget-${k}`} />
+              <input type="range" min={0} max={BASE_BUDGET[k] * 2.5} step={10e6} value={budget[k]} onChange={(e) => setEdits({ ...edits, [k]: Number(e.target.value) })} aria-label={BUDGET_LABELS[k]} data-testid={`budget-${k}`} />
             </div>
           ))}
         </div>
@@ -95,7 +97,7 @@ export function PolicyPanel() {
         </div>
         <div className="mt-2 flex gap-2">
           <button className="btn btn-primary" disabled={!budgetChanged} onClick={() => setConfirm('budget')} data-testid="queue-budget">Queue budget</button>
-          <button className="btn" disabled={!budgetChanged} onClick={() => setBudget({ ...pol.budget })}>Revert</button>
+          <button className="btn" disabled={!budgetChanged} onClick={() => setEdits({})}>Revert</button>
         </div>
       </Section>
 
@@ -121,7 +123,10 @@ export function PolicyPanel() {
           onCancel={() => setConfirm(null)}
           onConfirm={() => {
             if (confirm === 'tax') command({ type: 'queueTax', patch: Object.fromEntries(TAX_KEYS.filter((k) => Math.abs(tax[k] - (pendingTax(k) ?? pol.tax[k])) > 1e-9).map((k) => [k, tax[k]])) });
-            else command({ type: 'queueBudget', patch: Object.fromEntries(CATS.filter((k) => budget[k] !== (pendingBudget(k) ?? pol.budget[k])).map((k) => [k, budget[k]])) });
+            else {
+              command({ type: 'queueBudget', patch: Object.fromEntries(CATS.filter((k) => budget[k] !== (pendingBudget(k) ?? pol.budget[k])).map((k) => [k, budget[k]])) });
+              setEdits({});
+            }
             setConfirm(null);
           }}
         >
@@ -135,7 +140,7 @@ export function PolicyPanel() {
               {CATS.filter((k) => budget[k] !== pol.budget[k]).map((k) => <li key={k}>{BUDGET_LABELS[k]}: RM {(pol.budget[k] / 1e6).toFixed(0)}m → RM {(budget[k] / 1e6).toFixed(0)}m / month</li>)}
               <li>Effective from tomorrow 00:00.</li>
               {g.controls.plans.filter((p) => budget[p.category] !== (pendingBudget(p.category) ?? pol.budget[p.category])).map((p) => (
-                <li key={p.category} className="text-amber-300" data-testid={`plan-replaced-${p.category}`}>Replaces the {BUDGET_LABELS[p.category]} ministry plan; its future annual appropriations are cancelled.</li>
+                <li key={p.category} className="text-amber-300" data-testid={`plan-replaced-${p.category}`}>Replaces the {BUDGET_LABELS[p.category]} ministry plan; its future scheduled appropriations are cancelled.</li>
               ))}
             </ul>
           )}
