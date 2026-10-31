@@ -490,3 +490,5 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   (migration 10→11 adds zeroed lines). Budgets are shown per year (stored monthly). The debt chart gains a 10-year official
   federal-debt reference (2017–Jun 2026; 2023/2025 rounded press figures, 2016 and treasury cash not found citably, so omitted).
 
+
+- **D-074 Plain-English Deal Room (user request).** Display-only: each deal shows a short tag (Foreign investment, Private build, Long-term supply, Startup stake, Bailout, Buy a company, Background check) with a one-line meaning, and each negotiable term has a plain label, a live percentage and a hint. Underlying term keys, rules and accessibility labels changed only in wording; no economic change.

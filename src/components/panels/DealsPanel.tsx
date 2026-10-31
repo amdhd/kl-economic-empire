@@ -9,6 +9,17 @@ import { klDayLabel } from '../../engine/time';
 import { PanelShell } from './PanelShell';
 import { ConfirmDialog } from './ConfirmDialog';
 import { Section } from '../ui';
+/** Plain-English tag and one-line explanation shown at the top of each deal. */
+const DEAL_TAGS: Record<string, { tag: string; plain: string }> = {
+  investment: { tag: 'Foreign investment', plain: 'A company builds a plant here. We can sweeten it with a grant.' },
+  concession: { tag: 'Private build', plain: 'A company builds and runs it. We pay part now and the rest as yearly fees.' },
+  supply: { tag: 'Long-term supply', plain: 'A supplier delivers goods at an agreed price for months. We lock in the price.' },
+  startup: { tag: 'Startup stake', plain: 'We invest in a young company and own part of it. High risk, high reward.' },
+  rescue: { tag: 'Bailout', plain: 'A struggling company needs help. We lend or buy shares to save it.' },
+  diligence: { tag: 'Background check', plain: 'We study a company before deciding whether to deal with it.' },
+  takeover: { tag: 'Buy a company', plain: 'We buy a controlling share of a private company.' },
+};
+
 export function DealsPanel() {
   const g = useGameState();
   const [tab, setTab] = useState('opportunities');
@@ -96,6 +107,10 @@ export function DealsPanel() {
       {items.map((d) => (
         <Section key={d.id} title={d.name}>
           <div data-testid={`deal-${d.id}`} className="space-y-2 text-[12.5px]">
+            <p className="flex flex-wrap items-center gap-2" data-testid={`deal-tag-${d.id}`}>
+              <span className="rounded-full bg-cyan-500/20 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-cyan-200">{DEAL_TAGS[d.kind]?.tag ?? d.kind}</span>
+              <span className="text-slate-300">{DEAL_TAGS[d.kind]?.plain}</span>
+            </p>
             <p>
               {d.counterparty} · {d.kind} · <b>{d.status}</b> · version {d.version}
             </p>
@@ -155,41 +170,41 @@ export function DealsPanel() {
                 <div className="grid grid-cols-2 gap-2">
                   {(d.kind === 'investment'
                     ? ([
-                        ['incentive', 'Grant share', 0, 0.3, 0.01],
-                        ['localShare', 'Domestic sourcing', 0.2, 0.8, 0.05],
-                        ['jobsShare', 'Training effort index', 0.8, 1.2, 0.1],
-                        ['months', 'Delivery months', 6, 36, 1],
+                        ['incentive', 'Government grant', 0, 0.3, 0.01, 'Share of their project cost we pay. More grant keeps the investor happy but costs us cash.', '%'],
+                        ['localShare', 'Local suppliers', 0.2, 0.8, 0.05, 'Share of spending that goes to Malaysian suppliers. Higher means more local business, but the investor may push back.', '%'],
+                        ['jobsShare', 'Worker training', 0.8, 1.2, 0.1, '1.0 is normal. Higher means more local staff get trained, which costs the investor.', ''],
+                        ['months', 'Months to build', 6, 36, 1, 'Longer is easier for them, but we wait longer for jobs and output.', ''],
                       ] as const)
                     : d.kind === 'takeover'
                       ? ([
-                          ['stake', 'Control stake', 0.51, 1, 0.01],
-                          ['priceFactor', 'Valuation multiplier', 1.05, 1.5, 0.01],
-                          ['months', 'Integration months', 3, 12, 1],
+                          ['stake', 'Share of company we buy', 0.51, 1, 0.01, 'Above 51% means we control it.', '%'],
+                          ['priceFactor', 'Price vs market value', 1.05, 1.5, 0.01, '1.10 means we pay 10% above market. A higher price makes sellers agree more easily.', ''],
+                          ['months', 'Months to take over', 3, 12, 1, 'Time to merge it into our portfolio.', ''],
                         ] as const)
                       : d.kind === 'rescue'
                         ? ([
-                            ['protection', 'Financing structure', 0, 1, 1],
-                            ['incentive', 'Creditor haircut', 0, 0.5, 0.1],
-                            ['stake', 'Equity ownership', 0.1, 1, 0.1],
-                            ['months', 'Repayment months', 6, 36, 1],
+                            ['protection', 'Type of rescue', 0, 1, 1, 'A loan gets repaid with interest; buying shares gives us ownership but we can lose the money.', ''],
+                            ['incentive', 'Debt lenders must forgive', 0, 0.5, 0.1, 'Share of its debt that lenders write off. Saves us money, but lenders may refuse.', '%'],
+                            ['stake', 'Share of company we get', 0.1, 1, 0.1, 'Ownership we take in return for the rescue.', '%'],
+                            ['months', 'Months to repay', 6, 36, 1, 'Longer repayment is easier on the company.', ''],
                           ] as const)
                         : d.kind === 'startup'
-                          ? ([['stake', 'Ownership stake', 0.1, 0.4, 0.05]] as const)
+                          ? ([['stake', 'Share of startup we own', 0.1, 0.4, 0.05, 'Bigger share means more profit and control, but founders may refuse.', '%']] as const)
                           : d.kind === 'supply'
                             ? ([
-                                ['months', 'Supply months', 3, 24, 1],
-                                ['priceFactor', 'Price multiplier', 0.95, 1.2, 0.01],
-                                ['protection', 'Indexed share', 0, 1, 0.1],
+                                ['months', 'Contract length (months)', 3, 24, 1, 'How long the supplier must keep delivering.', ''],
+                                ['priceFactor', 'Price vs today', 0.95, 1.2, 0.01, '1.00 is today\'s price. Lower is cheaper for us; the supplier may refuse.', ''],
+                                ['protection', 'Price moves with market', 0, 1, 0.1, '0 means a fixed price. 1 means the price follows the market, up or down.', '%'],
                               ] as const)
                             : ([
-                                ['incentive', 'Public contribution', 0.1, 0.4, 0.05],
-                                ['months', 'Operating months', 12, 60, 1],
-                                ['priceFactor', 'User charge index', 0.5, 1.5, 0.1],
-                                ['protection', 'Guarantee cap share', 0, 0.3, 0.05],
+                                ['incentive', 'Our upfront payment', 0.1, 0.4, 0.05, 'Share of the project cost we pay now. Higher means smaller yearly bills later.', '%'],
+                                ['months', 'Contract length (months)', 12, 60, 1, 'How long the company runs it and we pay yearly fees. Longer means smaller yearly bills.', ''],
+                                ['priceFactor', 'What users pay', 0.5, 1.5, 0.1, '1.0 is the normal price. Higher charges make users pay more, so our yearly bills fall.', ''],
+                                ['protection', 'Safety net we give them', 0, 0.3, 0.05, 'Share of project cost we promise to cover if things go wrong. More safety net makes the company agree, but we carry the risk.', '%'],
                               ] as const)
-                  ).map(([key, label, min, max, step]) => (
+                  ).map(([key, label, min, max, step, hint, unit]) => (
                     <label key={key}>
-                      {label}
+                      {label}{unit === '%' && !(d.kind === 'rescue' && key === 'protection') ? ` (${Math.round((drafts[d.id]?.[key] ?? d.terms[key]) * 100)}%)` : ''}
                       {d.kind === 'rescue' && key === 'protection' ? (
                         <select
                           className="input"
@@ -222,6 +237,7 @@ export function DealsPanel() {
                           aria-label={`${label} for deal ${d.id}`}
                         />
                       )}
+                      <span className="block text-[11px] font-normal text-slate-400">{hint}</span>
                     </label>
                   ))}
                   <button

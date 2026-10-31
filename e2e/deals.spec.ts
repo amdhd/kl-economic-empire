@@ -19,7 +19,7 @@ test('FDI counteroffers revise the signed version and reserve its milestone gran
   const offer = page.getByTestId('deal-2');
   await offer.getByRole('button', { name: 'Review offer', exact: true }).click();
   await page.getByTestId('deals-tab-negotiations').click();
-  await page.getByLabel('Grant share for deal 2').fill('0');
+  await page.getByLabel('Government grant for deal 2').fill('0');
   await page.getByRole('button', { name: 'Send terms (0/3 rounds)' }).click();
   await expect(offer).toContainText('Counteroffer');
   await offer.getByRole('button', { name: 'Review signature' }).click();
@@ -35,7 +35,7 @@ test('concessions disclose future payments and block duplicate public constructi
   await expect(d).toContainText('Private asset');
   await d.getByRole('button', { name: 'Review offer', exact: true }).click();
   await page.getByTestId('deals-tab-negotiations').click();
-  await page.getByLabel('User charge index for deal 3').fill('1.5');
+  await page.getByLabel('What users pay for deal 3').fill('1.5');
   await page.getByRole('button', { name: 'Send terms (0/3 rounds)' }).click();
   await d.getByRole('button', { name: 'Review signature' }).click();
   await page.getByTestId('confirm-btn').click();
@@ -48,7 +48,7 @@ test('supply contracts show indexation terms and delivered volumes', async ({ pa
   const d = page.getByTestId('deal-5');
   await d.getByRole('button', { name: 'Review offer', exact: true }).click();
   await page.getByTestId('deals-tab-negotiations').click();
-  await page.getByLabel('Indexed share for deal 5').fill('0.5');
+  await page.getByLabel('Price moves with market for deal 5').fill('0.5');
   await page.getByRole('button', { name: 'Send terms (0/3 rounds)' }).click();
   await d.getByRole('button', { name: 'Review signature' }).click();
   await page.getByTestId('confirm-btn').click();
@@ -90,7 +90,7 @@ test('takeover bidding discloses rival valuations and closes controlling ownersh
   const d = page.getByTestId('deal-10');
   await d.getByRole('button', { name: 'Review offer', exact: true }).click();
   await page.getByTestId('deals-tab-negotiations').click();
-  await page.getByLabel('Valuation multiplier for deal 10').fill('1.5');
+  await page.getByLabel('Price vs market value for deal 10').fill('1.5');
   await page.getByRole('button', { name: 'Send terms (0/3 rounds)' }).click();
   await expect(d).toContainText('Rival offer');
   await d.getByRole('button', { name: 'Review signature' }).click();
