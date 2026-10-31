@@ -9,6 +9,7 @@ import { flushCloud, syncCloud } from '../persistence/cloud';
 import { create } from 'zustand';
 import { displayMinutes, SPEEDS } from '../engine/clock';
 import { advance, applyCommand, createGame, runHeadless, type Command, type CommandResult, type GameOptions } from '../engine/game';
+import { SKIP_LABEL, startSkip, stepSkip, type SkipKind, type SkipPlan, type SkipStop } from '../engine/skip';
 import { klDay } from '../engine/time';
 import { deserialize, serialize } from '../persistence/save';
 import { readSlot, writeSlot, type SlotId } from '../persistence/storage';
@@ -29,7 +30,15 @@ interface Store {
   alertMemory: AlertMemory;
   alertHistory: (EconomicAlert & { atMin: number })[];
   lastAlertDay: number;
-  checkAlerts: () => void;
+  /** Evaluates daily alerts; returns true when a fresh critical alert fired (a skip stops on it). */
+  checkAlerts: () => boolean;
+  /** Paused-only time skip in progress (PROJECT_SPEC §26). One game day per animation frame. */
+  skip: { kind: SkipKind; plan: SkipPlan } | null;
+  /** Serialized state taken just before the last skip; null once play resumes or a game is loaded. */
+  undoSnapshot: string | null;
+  startSkip: (kind: SkipKind) => void;
+  cancelSkip: () => void;
+  undoSkip: () => void;
   game: GameState;
   rev: number;
   uiMinute: number;
@@ -71,7 +80,7 @@ export const useGame = create<Store>((set, get) => ({
   checkAlerts: () => {
     const st = get(), g = st.game;
     const day = klDay(g.clock.hour * 60);
-    if (day === st.lastAlertDay) return;
+    if (day === st.lastAlertDay) return false;
     const prefs = usePreferences.getState().alerts;
     const { fresh, memory } = alertTransitions(st.alertMemory, economicAlerts(g, prefs, st.alertMemory));
     const stop = prefs.pauseOnCritical && fresh.some(a => a.severity === 'critical');
@@ -86,6 +95,34 @@ export const useGame = create<Store>((set, get) => ({
       const first = fresh.find(a => a.severity === 'critical') ?? fresh[0];
       st.toast('bad', `${stop ? 'Paused · ' : ''}${first.title}${fresh.length > 1 ? ` (+${fresh.length - 1} more)` : ''}${prefs.detail === 'detailed' ? `. ${first.detail}` : ''}`, 'alert');
     }
+    return fresh.some(a => a.severity === 'critical');
+  },
+  skip: null,
+  undoSnapshot: null,
+  startSkip: (kind) => {
+    const st = get();
+    if (st.skip) return;
+    if (st.confirmOpen > 0 && st.pauseOnDialogs) return;
+    const plan = startSkip(st.game, kind);
+    if (typeof plan === 'string') { st.toast('bad', plan); return; }
+    // Undo point: kept in memory and written to the autosave slot before any tick runs.
+    const snapshot = serialize(st.game, 'Before skip');
+    skipAcked.clear();
+    set({ skip: { kind, plan }, undoSnapshot: snapshot });
+    if (!(import.meta.env.DEV && sessionStorage.getItem('klDevNoSave'))) {
+      void writeSlot('autosave', snapshot).then(() => set({ lastSaved: new Date().toLocaleTimeString() }), () => st.toast('bad', 'Autosave before the skip failed; Undo still works until you resume play.'));
+    }
+  },
+  cancelSkip: () => {
+    if (get().skip) set({ skip: null, rev: get().rev + 1 });
+  },
+  undoSkip: () => {
+    const st = get();
+    if (!st.undoSnapshot || !st.game.clock.paused) return;
+    set({ skip: null });
+    applySnapshot(st.undoSnapshot);
+    set({ undoSnapshot: null });
+    get().toast('good', 'Skip undone — back to the state before it began, paused.');
   },
   game: createGame(20270101, 'balanced'),
   rev: 0,
@@ -105,19 +142,22 @@ export const useGame = create<Store>((set, get) => ({
     const g = get().game;
     g.clock.speed = speed;
     if (!g.scheduler.campaignEnded) g.clock.paused = false;
-    set({ rev: get().rev + 1 });
+    set({ rev: get().rev + 1, skip: null, ...(g.clock.paused ? {} : { undoSnapshot: null }) });
   },
   togglePause: () => {
     if (get().confirmOpen > 0 && get().pauseOnDialogs) return;
     const g = get().game;
     if (g.scheduler.campaignEnded) return;
+    // Pause cancels a running skip and stays paused; it never resumes play.
+    if (get().skip) { set({ skip: null, rev: get().rev + 1 }); return; }
     g.clock.paused = !g.clock.paused;
     if (g.clock.paused) void get().save('autosave', 'Autosave');
-    set({ rev: get().rev + 1 });
+    set({ rev: get().rev + 1, ...(g.clock.paused ? {} : { undoSnapshot: null }) });
   },
   pause: () => {
     resumeAfterDialog = false;
     const g = get().game;
+    if (get().skip) set({ skip: null });
     if (!g.clock.paused) {
       g.clock.paused = true;
       set({ rev: get().rev + 1 });
@@ -125,6 +165,7 @@ export const useGame = create<Store>((set, get) => ({
   },
   command: (c) => {
     const g = get().game;
+    if (get().skip) set({ skip: null });
     const res = applyCommand(g, c, Math.floor(displayMinutes(g.clock)));
     get().toast(res.ok ? 'good' : 'bad', res.message);
     set({ rev: get().rev + 1 });
@@ -138,7 +179,8 @@ export const useGame = create<Store>((set, get) => ({
   newGame: (seed, scenario, options) => {
     const game = createGame(seed, scenario, 'malaysia', options);
     resumeAfterDialog = false;
-    set({ game, rev: get().rev + 1, uiMinute: displayMinutes(game.clock), selection: null, panel: null, showNewGame: false,
+    skipAcked.clear();
+    set({ game, skip: null, undoSnapshot: null, rev: get().rev + 1, uiMinute: displayMinutes(game.clock), selection: null, panel: null, showNewGame: false,
       alertMemory: {}, alertHistory: [], lastAlertDay: klDay(game.clock.hour * 60) });
     lastAutosaveDay = klDay(game.clock.hour * 60);
   },
@@ -163,15 +205,8 @@ export const useGame = create<Store>((set, get) => ({
         get().toast('bad', `No save in ${slot}.`);
         return false;
       }
-      const game = deserialize(json);
-      const appearance: unknown = JSON.parse(json).appearance;
-      if (validAppearance(appearance)) useAppearance.getState().update(appearance);
-      resumeAfterDialog = false;
-      set({ game, rev: get().rev + 1, uiMinute: displayMinutes(game.clock), selection: null, showNewGame: false,
-        alertMemory: alertTransitions({}, economicAlerts(game, usePreferences.getState().alerts)).memory,
-        alertHistory: [], lastAlertDay: klDay(game.clock.hour * 60),
-        panel: game.scheduler.campaignEnded ? 'objectives' : get().panel });
-      lastAutosaveDay = klDay(game.clock.hour * 60);
+      applySnapshot(json);
+      set({ undoSnapshot: null });
       get().toast('good', `Loaded ${slot} — paused.`);
       return true;
     } catch (e) {
@@ -190,6 +225,7 @@ export const useGame = create<Store>((set, get) => ({
   },
   dialog: (open) => {
     const st = get();
+    if (open && st.skip) set({ skip: null });
     const n = st.confirmOpen + (open ? 1 : -1);
     if (open && n === 1 && st.pauseOnDialogs && !st.game.clock.paused) {
       st.game.clock.paused = true;
@@ -208,7 +244,10 @@ export const useGame = create<Store>((set, get) => ({
   tick: (delta) => {
     const st = get();
     const g = st.game;
-    if (g.clock.paused) return;
+    if (g.clock.paused) {
+      if (st.skip) runSkipFrame();
+      return;
+    }
     const ticks = advance(g, delta);
     if (ticks > 0) st.checkAlerts();
     const minute = displayMinutes(g.clock);
@@ -229,6 +268,47 @@ export const useGame = create<Store>((set, get) => ({
 }));
 
 let lastAutosaveDay = 0;
+/** Offers and meetings a skip has already stopped for, so the next skip may pass them. Not saved. */
+const skipAcked = new Set<string>();
+
+function applySnapshot(json: string) {
+  const game = deserialize(json);
+  const appearance: unknown = JSON.parse(json).appearance;
+  if (validAppearance(appearance)) useAppearance.getState().update(appearance);
+  resumeAfterDialog = false;
+  skipAcked.clear();
+  useGame.setState((st) => ({ game, skip: null, rev: st.rev + 1, uiMinute: displayMinutes(game.clock), selection: null, showNewGame: false,
+    alertMemory: alertTransitions({}, economicAlerts(game, usePreferences.getState().alerts)).memory,
+    alertHistory: [], lastAlertDay: klDay(game.clock.hour * 60),
+    panel: game.scheduler.campaignEnded ? 'objectives' : st.panel }));
+  lastAutosaveDay = klDay(game.clock.hour * 60);
+}
+
+const SKIP_STOP_TEXT: Record<SkipStop, string> = {
+  done: 'Skip finished.',
+  termEnd: 'Skip stopped: the term has ended.',
+  criticalAlert: 'Skip stopped: critical alert.',
+  dealOffer: 'Skip stopped: a Deal Room offer needs a decision.',
+  fdiPledge: 'Skip stopped: an FDI pledge needs a decision.',
+  mpcMeeting: 'Skip stopped: a central-bank meeting you are steering is next.',
+};
+
+/** One animation frame of a skip: one game day of whole hourly ticks. Uses no real elapsed time. */
+function runSkipFrame() {
+  const st = useGame.getState();
+  const cur = st.skip;
+  if (!cur) return;
+  const g = st.game;
+  const r = stepSkip(g, cur.plan, skipAcked, 24, () => useGame.getState().checkAlerts());
+  const patch: Partial<Store> = { rev: st.rev + 1, uiMinute: displayMinutes(g.clock) };
+  if (r.stop) patch.skip = null;
+  if (r.stop === 'termEnd') patch.panel = 'objectives';
+  useGame.setState(patch);
+  if (!r.stop) return;
+  if (r.stop === 'termEnd') void st.save('autosave', 'Campaign end');
+  const text = r.stop === 'done' ? `${SKIP_LABEL[cur.kind]} finished.` : `${SKIP_STOP_TEXT[r.stop]}${r.detail && r.stop !== 'criticalAlert' ? ` ${r.detail}` : ''}`;
+  st.toast(r.stop === 'done' ? 'good' : 'neutral', text);
+}
 
 /** rAF loop + visibility auto-pause + keyboard shortcuts. Call once at app start. */
 export function startGameLoop(): () => void {
@@ -254,6 +334,7 @@ export function startGameLoop(): () => void {
   const onVis = () => {
     if (document.visibilityState === 'hidden') {
       const st = useGame.getState();
+      st.cancelSkip();
       if (!st.game.clock.paused) {
         st.pause();
         st.toast('neutral', 'Auto-paused while the tab was hidden.');

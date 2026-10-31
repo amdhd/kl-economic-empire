@@ -581,3 +581,17 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   map's trains run at 3× visual pace at 5×. Engine cost is ~1.7 hourly ticks per real second; the browser sample is in
   `docs/performance.md`. Saves accept speed 5 with no schema change; older builds would reject such a save.
 - **D-082 GDP is displayed in US dollars (user request).** Every GDP amount shown to the player (HUD, economy charts, reports, objectives, sector value added, GDP explanation) is the MYR figure ÷ MYR/USD: nominal at that month's (or today's) rate, real GDP and the official history at the opening rate so real growth is not distorted by the ringgit. The engine, saves and ratios ("0f GDP") are unchanged and still MYR; budget, debt, treasury, FDI and trade stay in ringgit. Helper: `gdpUsd` in `src/utils/format.ts`.
+- **D-083 Safe time skip (user request, PROJECT_SPEC §26).** The user explicitly asked to amend the "no skip" rule
+  (AGENTS rule 4, §2/§3/§15, an e2e test). Engine: `src/engine/skip.ts` is pure and React-free and calls the same
+  `runHourTick` as the real-time clock; it uses no randomness of its own and never reads or changes `clock.subHourMs`, so
+  a skip over N hours equals a normal run over N hours (tested, like D-081). It is refused unless the clock is paused.
+  `stepSkip` runs up to 24 ticks per UI frame. Interpretations: (1) "a Deal Room offer or FDI pledge that needs a decision
+  before it expires" = an open/negotiating deal or an `offered` pledge whose deadline is within 3 days (the same window
+  as the existing deal-expiry alert), checked before each tick; each offer stops a skip once and is then remembered
+  (in memory, cleared on load/new game) so the player can choose to let it lapse. (2) "a central-bank meeting the player
+  is steering" = the MPC meeting (1st of odd months) while the central bank is in manual mode; the stop is before the
+  tick that opens that day, once per meeting. (3) "critical alert" = a fresh critical alert from the existing daily alert
+  evaluation, regardless of the pause-on-critical preference. (4) Skip to month close ends on the tick that closes the
+  next month. (5) A 15-day skip never goes past the end of the term. Undo: the pre-skip state is serialized, written to
+  the autosave slot and also held in memory (later pause autosaves overwrite the slot), and is dropped when play resumes.
+  Normal speeds stay at 1/2/3/5 and the 250 ms clamp is unchanged. Skipping changes no economic rule.
