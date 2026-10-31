@@ -218,7 +218,8 @@ export interface TaxPolicy {
   corporate: number; // on taxable profits within the campaign jurisdiction
   property: number; // commercial assessment on rental value
   consumption: number; // levy on consumer & visitor spending
-  household: number; // income surcharge (progressive)
+  household: number; // flat income surcharge (legacy campaigns; 0 and hidden when the income tax is active)
+  incomeTax: number; // progressive income-tax schedule as a multiple of statutory band rates (1 = statutory)
 }
 
 export type BudgetCategory = 'health' | 'services' | 'safety' | 'development' | 'admin' | 'transfers';
@@ -297,6 +298,8 @@ export interface GovMonthFlows {
   swfContribution: number;
   swfTransferIn: number;
   emergency: number;
+  taxIncome: number; // progressive personal income tax (schema 11)
+  nonTaxRevenue: number; // licences, fees, fines, rentals and similar non-tax receipts (schema 11)
   policyLevy: number; // carbon tax and foreign-worker levy (schema 9)
   policyGrant: number; // FDI co-investment grants, AI, reskilling and green programmes (schema 9)
 }
@@ -580,12 +583,26 @@ export interface CentralBankState {
   dailyUsdUsed: number;
   lastInterventionDay: number;
   tx: { atMin: number; side: 'buyUSD' | 'sellUSD'; usdMinor: number; myrMinor: number; rate: number }[];
+  /** Monetary policy (D-075). 'auto' follows the fictional BNM rule; 'manual' steers the OPR towards `targetOpr`. */
+  mode: 'auto' | 'manual';
+  targetOpr: number;
+  srr: number; // statutory reserve requirement, share of deposits
+  qeHoldings: number; // MYR of government bonds held by BNM
+  bills: number; // sen of BNM sterilisation bills held by banks (a central-bank liability)
+  credibility: number; // 0..100; falls when manual policy strays far from the rule
+  remitShare: number; // share of monthly reserve income paid to the treasury
+  lastIncome: number; // sen, net reserve income of the last closed month
+  mpc: { day: number; from: number; to: number; rule: number }[];
 }
 export interface BaselineSnapshot {
   profile: 'malaysia' | 'legacy-kl';
   /** National model generation: 1 = schema-5 calibration (no resource sector, no development budget);
    * 2 = resources/SOEs/commodities on the KL-era trend; 3 = national growth trend (D-055). */
   model: 1 | 2 | 3;
+  /** New campaigns tax earnings with the progressive income-tax schedule (D-073). */
+  pit?: boolean;
+  /** New campaigns model fees, licences and fines as their own receipts line (D-073). */
+  nonTax?: boolean;
   openingTreasury: number;
   openingDebt: number;
   realGdpAnnual: number;

@@ -53,7 +53,7 @@ export const BUDGET_PURCHASES: Record<Exclude<BudgetCategory, 'transfers'>, Part
   admin: { fin: 0.4, tech: 0.3, health: 0.3 },
 };
 
-export const BASE_TAX: TaxPolicy = { corporate: 0.18, property: 0.04, consumption: 0.04, household: 0.02 };
+export const BASE_TAX: TaxPolicy = { corporate: 0.18, property: 0.04, consumption: 0.04, household: 0.02, incomeTax: 1 };
 
 export const LEGACY_BUDGET: BudgetPolicy = {
   health: 900e6,
@@ -78,6 +78,7 @@ export const TAX_LABELS: Record<keyof TaxPolicy, { label: string; min: number; m
   property: { label: 'Commercial property levy', min: 0, max: 0.1, hint: 'On commercial rental value. Partly passed through to rents.' },
   consumption: { label: 'Consumption & visitor levy', min: 0, max: 0.12, hint: 'Regressive; cuts real spending and tourism demand.' },
   household: { label: 'Household income surcharge', min: 0, max: 0.08, hint: 'Progressive; lower-income wages exempt. Hits disposable income.' },
+  incomeTax: { label: 'Personal income tax (progressive bands)', min: 0.5, max: 1.5, hint: 'Scales every statutory band rate (0%–30%). Taxes taxable income, so top earners pay most; hits disposable income.' },
 };
 
 export const LEGACY_BASELINE = {

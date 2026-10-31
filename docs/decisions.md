@@ -476,3 +476,35 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   always paused with no catch-up. Do not replace manual slots or auto-load over the player's choice. If the
   session quota is unavailable, ordinary autosaves remain the fallback; recovery is best effort, not crash-proof.
   Publish a tested production dist to the configured Firebase Hosting project, separate from development edits.
+
+- **D-073 Income tax, fees and debt history (user request).** New Malaysia campaigns (`baseline.pit`, `baseline.nonTax`,
+  schema 11) replace the flat household surcharge with a progressive resident income tax on the statutory YA2025 bands
+  (0% to RM5k, 1%, 3%, 6%, 11%, 19%, 25%, 26%, 28%, 30% above RM2m; RM9k personal + RM4k EPF relief). The model has no tax
+  returns, so bands apply to a stylised ten-point earnings distribution around average sector pay, giving bracket creep as
+  wages rise; the *level* is normalised so the opening yield equals the old calibrated household tax, leaving the opening
+  economy and receipts residual unchanged. The player lever scales every band rate (0.5x–1.5x, queued like other taxes). It posts
+  to a new `taxIncome` line; the old surcharge stays at 0 and hidden. Non-tax revenue (licences, vehicle/business/individual
+  fees, service fees, fines, rentals, MTJA; RM25.9bn of the RM72.5bn 2027 non-tax estimate, MOF Fiscal Outlook 2027) is its own
+  `nonTaxRevenue` line indexed to nominal GDP and removed from the receipts residual so opening revenue still equals RM380.8bn.
+  Investment returns (code 75000) stay with SOE dividends/other receipts. Old saves keep the surcharge and no fees line
+  (migration 10→11 adds zeroed lines). Budgets are shown per year (stored monthly). The debt chart gains a 10-year official
+  federal-debt reference (2017–Jun 2026; 2023/2025 rounded press figures, 2016 and treasury cash not found citably, so omitted).
+
+
+- **D-074 Plain-English Deal Room (user request).** Display-only: each deal shows a short tag (Foreign investment, Private build, Long-term supply, Startup stake, Bailout, Buy a company, Background check) with a one-line meaning, and each negotiable term has a plain label, a live percentage and a hint. Underlying term keys, rules and accessibility labels changed only in wording; no economic change.
+
+- **D-075 Central-bank powers (user request, schema 12).** Overrides D-012/D-022 ("OPR is exogenous"): the president may steer
+  Bank Negara, defaulting to the old automatic rule so existing results are unchanged. (1) **OPR:** in manual mode the OPR moves
+  towards `targetOpr` only at the existing MPC meetings (1st of odd months), by at most 50bp in 25bp steps, within 1.25%-6%.
+  (2) **Credibility** (0-100, starts 80): manual policy within 50bp of the rule gains 2 per meeting, larger gaps lose 6 points per
+  1pp beyond 50bp; automatic mode recovers a quarter of the gap to 80 each meeting. Below 80 it adds inflation (+0.025pp/pt),
+  10y yield (+1bp/pt) and ringgit weakness (+0.03%/pt). (3) **SRR** 1%-6% (neutral 2%): +3pp loan rate per +1pp requirement and
+  lower willingness. (4) **Bond purchases/sales** up to 8% of GDP, RM20bn per order: -60bp yield, +0.1pp inflation and +0.35% ringgit
+  weakness per 1% of GDP held; no treasury cash and no bank-identity change; BNM earns the average debt coupon on holdings.
+  (5) **BNM bills** drain up to 50% of bank reserves into BNM's MYR float (`bills` is a sen liability, included in the bank identity and
+  netted from reserve equity, so equity is unchanged); BNM pays the OPR on them to banks. This is how the float, and so USD purchases,
+  grows. (6) **Reserve income** monthly: half the 10y UST yield on the USD reserves plus bond coupons, less bill interest, credited
+  to the float; `remitShare` pays that share of net income to the treasury (booked with state-entity dividends and posted before the
+  government close, so reconciliation holds). Opening BNM dividends already sit in other public receipts, so this is extra. Reserves
+  still cannot be spent on the budget. Stylised simulation, not real BNM policy.
+

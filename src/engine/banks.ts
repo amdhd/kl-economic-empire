@@ -13,7 +13,7 @@ const OPEX_RATE = 0.008;
 
 export function bankIdentityGap(s: GameState): number {
   const b = s.bank;
-  return b.reserves + b.loansH + b.loansF - b.deposits - b.capital;
+  return b.reserves + s.centralBank.bills / 100 + b.loansH + b.loansF - b.deposits - b.capital;
 }
 
 export function monthCloseBank(s: GameState, mods: AggregatedMods, unemployment: number): void {
@@ -45,6 +45,9 @@ export function monthCloseBank(s: GameState, mods: AggregatedMods, unemployment:
 
   const capitalRatio = b.capital / Math.max(b.loansH + b.loansF, 1);
   b.depositRate = Math.max(0.0025, s.external.opr - DEPOSIT_SPREAD);
-  b.lendingRate = clamp(s.external.opr + 0.02 + mods.creditSpread + 1.5 * (b.nplRate - BASE_NPL) + 2 * Math.max(0, 0.12 - capitalRatio), 0.02, 0.15);
+  // Tighter liquidity (higher reserve requirement, bills issued to drain reserves) raises loan rates and cuts willingness (D-075).
+  const billsShare = s.centralBank.bills / 100 / Math.max(1, loans);
+  const liquidity = 3 * (s.centralBank.srr - 0.02) + 2 * billsShare;
+  b.lendingRate = clamp(s.external.opr + 0.02 + liquidity + mods.creditSpread + 1.5 * (b.nplRate - BASE_NPL) + 2 * Math.max(0, 0.12 - capitalRatio), 0.02, 0.15);
   b.willingness = clamp(0.9 * mods.creditWillingness - 25 * Math.max(0, b.nplRate - BASE_NPL) - 3 * Math.max(0, 0.115 - capitalRatio), 0.1, 1);
 }

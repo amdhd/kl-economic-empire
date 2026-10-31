@@ -879,3 +879,17 @@ remit `0.8 × last closed month's corporate tax / 30` (month one: `0.8 × Σ max
 treasury posts `max(0, bill − instalments paid)`; an overpayment stays with the treasury. Tax relief forgone is measured against the
 full bill. BNM FX reserves are display-only and cannot fund budgets.
 
+## Personal income tax and non-tax revenue (D-073)
+`incomeTaxDaily = k0 × wages × e(avgWage × 365 / jobs, scale)` where `e` averages `bandTax(max(0, m_i·w − 13,000), scale) / (m_i·w)` over
+ten earner groups `m_i` (mean 1) and `k0` scales opening receipts to the calibrated household tax. `scale ∈ [0.5, 1.5]` multiplies
+every band rate. Disposable income falls by the tax; the lever is a tax change like any other (effective tomorrow, estimate in
+the panel, mild trust cost). `nonTaxRevenue = RM25.89bn/12 × nominalGDP/openingGDP` per month, posted daily; the receipts residual
+shrinks by the same opening amount. Debt-history chart data is display-only (`OFFICIAL_FEDERAL_DEBT`).
+
+## Central-bank policy (D-075)
+`applyMpcDecision` at each MPC meeting: auto: `opr += sign(rule - opr) × 25bp` when the gap exceeds 12.5bp; manual: move towards `targetOpr` by
+`min(50bp, round(gap/25bp) × 25bp)`; `credibility += 2` if `|opr - rule| <= 50bp` else `-600 × (|opr - rule| - 0.005)`.
+`monetaryEffects`: `pen = max(0, 80 - credibility)`, `q = qeHoldings / nominalGDP`; inflation `+0.00025·pen + 0.1q`, yield `+0.0001·pen - 0.06q`,
+FX log `+0.0003·pen + 0.35q`. Banks: lending rate `+3(srr - 2%) + 2·bills/loans`. Bank identity: `reserves + bills + loans = deposits + capital`.
+Month close: `income = usd × 0.5 × UST10 / 12 × fx + bonds × debtRate / 12`; `net = income - bills × OPR / 12`; `remit = remitShare × max(0, net)`.
+

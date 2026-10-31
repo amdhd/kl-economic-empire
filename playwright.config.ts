@@ -7,7 +7,9 @@ export default defineConfig({
   testDir: 'e2e',
   timeout: 60_000,
   // Multiple software-rendered WebGL maps can starve the real-time clock test on a laptop.
-  workers: 2,
+  // CI runners have no GPU, so one worker per shard keeps the software-rendered maps from starving the real-time clock tests.
+  workers: process.env.CI ? 1 : 2,
+  retries: process.env.CI ? 2 : 0,
   use: { baseURL: `http://localhost:${port}`, viewport: { width: 1600, height: 900 } },
   webServer: { command: `npx vite --port ${port} --strictPort`, port, reuseExistingServer: true },
 });
