@@ -43,7 +43,7 @@ test('final report explains scores, compares the true opening state and restores
   await expect(page.getByTestId('campaign-comparison')).toContainText('Opening · 01 Jan 2027');
   await expect(page.getByTestId('campaign-comparison')).toContainText('RM 8.9bn');
   await page.getByRole('button', { name: 'Real output', exact: true }).click();
-  await expect(page.getByTestId('panel')).toContainText('real RM bn per year');
+  await expect(page.getByTestId('panel')).toContainText('real US$ bn per year');
   await page.getByTestId('term-fiscal').scrollIntoViewIfNeeded();
   await expect(page.getByTestId('term-fiscal')).toContainText('Public receipts');
   await expect(page.getByTestId('term-fiscal')).toContainText('Bond proceeds');

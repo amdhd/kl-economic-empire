@@ -23,6 +23,12 @@ export function money(value: number, currency: Currency = 'MYR', digits = 1): st
   return `${sign}${pre}${fmt2.format(a)}`;
 }
 
+/** GDP is shown in US dollars (MYR amount ÷ MYR per USD): "US$512.3bn". Budget, debt and FDI stay in ringgit. */
+export function gdpUsd(myr: number, myrPerUsd: number, digits = 1): string {
+  const s = money(myr / myrPerUsd, 'USD', digits);
+  return s.startsWith('−') ? `−US${s.slice(1)}` : `US${s}`;
+}
+
 /** Money from integer minor units (sen / cents). */
 export function moneyMinor(minor: number, currency: Currency = 'MYR', digits = 1): string {
   return money(minor / 100, currency, digits);

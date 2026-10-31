@@ -1,9 +1,10 @@
 import { useState } from 'react';
+import { baselineFor } from '../../data/economic-baseline';
 import { campaignReport } from '../../engine/campaign-report';
 import { annualRealOutput, computeScore, SCORE_WEIGHTS, SCORE_WEIGHTS_V3, VICTORY, outcomeLabel } from '../../engine/indicators';
 import { formatKL, monthKeyLabel } from '../../engine/time';
 import { useGame, useGameState } from '../../store/game-store';
-import { money, pct } from '../../utils/format';
+import { gdpUsd, money, pct } from '../../utils/format';
 import { TimeChart } from '../charts/TimeChart';
 import { PanelShell } from './PanelShell';
 import { Bar, Section, Stat, Tabs } from '../ui';
@@ -32,15 +33,15 @@ export function ObjectivesPanel() {
   const report = campaignReport(g);
   const { opening, closing, drivers } = report;
   const trend = g.reports.map((r) => ({ t: r.monthKey, score: r.score.total, approval: r.approval,
-    output: annualRealOutput([r]) / 1e9, treasury: r.treasury / 1e9, debt: r.debt / 1e9, fund: r.fundNav / 1e9 }));
+    output: annualRealOutput([r]) / baselineFor(g).myrPerUsd / 1e9, treasury: r.treasury / 1e9, debt: r.debt / 1e9, fund: r.fundNav / 1e9 }));
   const charts = {
     score: { unit: 'points (0–100) · month', series: [{ key: 'score', name: 'Score', color: '#34d399' }, { key: 'approval', name: 'Approval', color: '#60a5fa' }] },
-    output: { unit: 'real RM bn per year · month', series: [{ key: 'output', name: 'Real GDP run rate', color: '#34d399' }] },
+    output: { unit: 'real US$ bn per year at the opening MYR/USD · month', series: [{ key: 'output', name: 'Real GDP run rate', color: '#34d399' }] },
     finances: { unit: 'RM bn · month-end', series: [{ key: 'treasury', name: 'Treasury', color: '#34d399' }, { key: 'debt', name: 'Debt', color: '#f87171' }] },
     fund: { unit: 'RM bn · month-end · includes treasury transfers', series: [{ key: 'fund', name: 'SWF NAV', color: '#a78bfa' }] },
   };
   const rows = [
-    ['Real GDP run rate / year', money(opening.realGdp), money(closing.realGdp)],
+    ['Real GDP run rate / year', gdpUsd(opening.realGdp, baselineFor(g).myrPerUsd), gdpUsd(closing.realGdp, baselineFor(g).myrPerUsd)],
     ['Unemployment', pct(opening.unemployment), pct(closing.unemployment)],
     ['Inflation (YoY)', pct(opening.inflation), pct(closing.inflation)],
     ['Treasury', money(opening.treasury), money(closing.treasury)],
