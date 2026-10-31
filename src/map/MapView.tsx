@@ -11,6 +11,7 @@ import { SECTORS } from '../data/economic-baseline';
 import { COMPANY_BY_ID } from '../data/companies';
 import { DISTRICTS } from '../data/geo';
 import { companyLocations, LOCATION_TYPE_LABEL } from './company-markers';
+import { attachLivingMap, companyMarkerCues } from './living-map';
 import { useGame } from '../store/game-store';
 import type { CompanySeed, TickerId } from '../types/game';
 
@@ -52,6 +53,7 @@ export function MapView() {
       return;
     }
     mapRef.current = map;
+    if (import.meta.env.DEV) (window as unknown as { __klMap?: MlMap }).__klMap = map; // dev-only inspection
     const els = markerEls.current;
     map.addControl(new NavigationControl({ visualizePitch: true }), 'bottom-right');
     map.addControl(new ScaleControl({ unit: 'metric' }), 'bottom-right');
@@ -59,6 +61,7 @@ export function MapView() {
     let repaint: (() => void) | undefined;
     const unsubscribeAppearance = useAppearance.subscribe(() => repaint?.());
     let landmarkMarker: Marker | undefined;
+    let detachLiving: (() => void) | undefined;
     const focusLandmark = () => map.flyTo({ center: LANDMARK_CENTER, zoom: 17, pitch: 65, bearing: -35, duration: 1600 });
     window.addEventListener('kl:landmark', focusLandmark);
     let loaded = false;
@@ -95,6 +98,8 @@ export function MapView() {
       const paintTheme = createThemePainter(map);
       repaint = () => { const appearance = appearanceSnapshot(); paintTheme(appearance); label.style.display = appearance.landmarks ? '' : 'none'; };
       repaint();
+      // Trains on the rail network and construction sites (display only).
+      detachLiving = attachLivingMap(map);
     });
     map.on('click', 'building-3d', (e) => {
       const f = e.features?.[0];
@@ -138,8 +143,10 @@ export function MapView() {
     }
 
     // Live price chips: update DOM directly on economic changes (no React re-render of the map).
+    const cues = companyMarkerCues(els);
     const paint = () => {
       const st = useGame.getState();
+      cues(st.game);
       for (const [id, pill] of els) {
         const q = st.game.market.quotes[id];
         if (!q) continue;
@@ -172,6 +179,7 @@ export function MapView() {
       clearTimeout(timeout);
       unsubscribeAppearance();
       landmarkMarker?.remove();
+      detachLiving?.();
       window.removeEventListener('kl:landmark', focusLandmark);
       unsub();
       unsubSel();
