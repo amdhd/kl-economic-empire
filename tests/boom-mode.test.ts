@@ -44,7 +44,7 @@ describe('campaign length and Boom mode (D-079)', () => {
     expect(s.reports.every((r) => r.reconciliation!.cashResidualMinor === 0 && r.reconciliation!.debtResidualMinor === 0)).toBe(true);
     expect(Math.abs(bankIdentityGap(s))).toBeLessThan(1);
     expect(findNonFinite(s)).toBeNull();
-    expect(s.reports.slice(12).every((r) => r.inflationYoY > -0.06 && r.inflationYoY < 0.14)).toBe(true); // infrastructure bottlenecks (D-084) push the year-two overheating hump to about 11–12%
+    expect(s.reports.slice(12).every((r) => r.inflationYoY > -0.06 && r.inflationYoY < 0.16)).toBe(true); // near-instant FDI builds (D-087) plus infrastructure bottlenecks (D-084) push the overheating hump to about 15-16%
     expect(deserialize(serialize(s))).toEqual(s);
   }), 120_000);
 
