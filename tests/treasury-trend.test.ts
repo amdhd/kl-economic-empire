@@ -37,6 +37,15 @@ describe('treasury trend (bottom-bar chip)', () => {
   });
 });
 
+describe('treasury explanation', () => {
+  it('measures month-one cash change from the opening balance in ringgit', async () => {
+    const { createGame } = await import('../src/engine/game');
+    const { explainEconomy } = await import('../src/engine/economic-explanations');
+    const s = createGame(20270101, 'balanced');
+    expect(explainEconomy(s, 'treasury').summary).toContain('change RM0.000bn');
+  });
+});
+
 describe('corporate tax instalments (D-072)', () => {
   it('smooth month-one cash and settle only the difference at month close', async () => {
     const { createGame, runHeadless } = await import('../src/engine/game');

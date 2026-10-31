@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { memo, useId, useMemo } from 'react';
 import { outlaysOf } from '../../engine/government';
 import { fullMoneyMinor, money, pct } from '../../utils/format';
 import { compactBillions, signedBillions, treasuryTrend } from '../../utils/treasury-trend';
@@ -8,7 +8,7 @@ const W = 308;
 const H = 120;
 
 /** Sparkline of daily treasury closes with a soft glow and an end dot, coloured by the weekly trend. */
-function Sparkline({ values, up }: { values: number[]; up: boolean }) {
+const Sparkline = memo(function Sparkline({ values, up }: { values: number[]; up: boolean }) {
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, ''); // safe inside url(#…)
   const color = up ? '#4ade80' : '#ef6a5b';
   const lo = Math.min(...values);
@@ -31,14 +31,17 @@ function Sparkline({ values, up }: { values: number[]; up: boolean }) {
       <circle cx={ex} cy={ey} r="5" fill={color} />
     </svg>
   );
-}
+});
 
 /** Bottom-bar treasury readout: the latest daily close, a ±billions day trend, and a wealth-history card on hover. */
 export function TreasuryChip() {
   const g = useGameState();
   const panel = useGame((s) => s.panel);
+  const popId = useId();
   const setPanel = useGame.getState().setPanel;
-  const t = treasuryTrend(g.daily);
+  // s.daily is mutated in place and capped, so key on the last close's day rather than the array or its length.
+  const lastDay = g.daily.length ? g.daily[g.daily.length - 1].t : -1;
+  const t = useMemo(() => treasuryTrend(g.daily), [lastDay]); // eslint-disable-line react-hooks/exhaustive-deps
   // Updates once per settled day; before the first close it shows the opening balance.
   const minor = t.close === null ? g.government.treasury : Math.round(t.close * 100);
   const dir = (v: number) => (v > 0 ? 'up' : v < 0 ? 'down' : '');
@@ -50,12 +53,12 @@ export function TreasuryChip() {
   return (
     <div className="cs-money-wrap">
       <button className={`cs-money ${panel === 'finance' ? 'is-active' : ''}`} onClick={() => setPanel(panel === 'finance' ? null : 'finance')} aria-pressed={panel === 'finance'}
-        aria-label="Treasury balance at the last daily close. Click for the full Economy window." data-testid="bottom-treasury">
+        aria-label="Treasury balance at the last daily close. Click for the full Economy window." aria-describedby={popId} data-testid="bottom-treasury">
         <span className="cs-coin" aria-hidden><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2" /><circle cx="12" cy="12" r="2.6" /><path d="M6 9.5v5M18 9.5v5" /></svg></span>
         <b className="num">{fullMoneyMinor(minor)}</b>
         <span className={`num cs-trend ${dir(t.dayChange)}`} data-testid="treasury-day-trend">{t.dayChange < 0 ? '▼' : t.dayChange > 0 ? '▲' : '•'} {signedBillions(t.dayChange)}</span>
       </button>
-      <div className={`treasury-pop ${weekUp ? 'up' : 'down'}`} role="tooltip" data-testid="treasury-pop">
+      <div className={`treasury-pop ${weekUp ? 'up' : 'down'}`} role="tooltip" id={popId} data-testid="treasury-pop">
         <div className="tp-label">Treasury balance</div>
         <div className="tp-value num">{compactBillions(minor / 100)}</div>
         <div className="tp-change num">{weekUp ? '▲' : '▼'} {signedBillions(t.weekChange)} ({pct(t.weekPct, 2, true)}) <span>past week</span></div>

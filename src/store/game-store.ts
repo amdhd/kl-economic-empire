@@ -237,8 +237,17 @@ export function startGameLoop(): () => void {
   const frame = (now: number) => {
     const delta = now - last;
     last = now;
-    if (document.visibilityState === 'visible') useGame.getState().tick(delta);
+    // Schedule first: an exception in one tick must not stop the clock loop for the rest of the session.
     raf = requestAnimationFrame(frame);
+    if (document.visibilityState !== 'visible') return;
+    try {
+      useGame.getState().tick(delta);
+    } catch (e) {
+      console.error('Simulation tick failed', e);
+      const st = useGame.getState();
+      st.pause();
+      st.toast('bad', `Paused: simulation error (${(e as Error).message}). Your last autosave is intact.`);
+    }
   };
   raf = requestAnimationFrame(frame);
 
