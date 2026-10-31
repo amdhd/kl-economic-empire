@@ -4,6 +4,7 @@ import { sectorTax, ministryOutcomes } from './policy-controls';
 import { baselineFor, budgetFor, nationalV2, trendFor } from '../data/economic-baseline';
 import { DEVELOPMENT_PURCHASES, KL_ECONOMY_SHARE, PUBLIC_CAPITAL_DEPRECIATION } from '../data/world';
 import { credibilityPremium } from './fiscal-rules';
+import { DEBT_LIMIT_MYR } from '../data/boom';
 import { FOREIGN_WORKERS0, WORKER_LEVY0 } from './policy';
 import { modelledResourceRevenue0 } from './soe';
 import { fuelSubsidyDaily, wheatSubsidyDaily, scheduleRetaliation } from './world';
@@ -73,7 +74,8 @@ export const newIssueCoupon = (s: GameState) => s.government.bondYield + (s.cont
 export function issueDebt(s: GameState, amountMYR: number, reason: string, quiet = false): number {
   const gov = s.government;
   if (!Number.isFinite(amountMYR) || !gov.marketAccess || amountMYR <= 0) return 0;
-  const cap = gov.policies.borrowing.maxDebtToGdp * gdpForRatios(s);
+  // The integer-sen ledger tops out near RM90tn, so new debt also stops at DEBT_LIMIT_MYR (reachable only in Boom mode).
+  const cap = Math.min(gov.policies.borrowing.maxDebtToGdp * gdpForRatios(s), DEBT_LIMIT_MYR);
   const room = Math.max(0, cap - debtMYR(gov));
   const amt = Math.min(amountMYR, room);
   if (amt < 1e6) return 0;

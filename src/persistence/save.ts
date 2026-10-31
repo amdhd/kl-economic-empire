@@ -4,6 +4,7 @@ import { initialControls, validateControls } from '../engine/policy-controls';
 // Versioned save format. Saving never mutates game state or advances the clock.
 import { assertSafeMinor } from '../engine/util';
 import { createGame, SCHEMA_VERSION } from '../engine/game';
+import { SPEEDS } from '../engine/clock';
 import { COMMODITY_IDS } from '../data/world';
 import { COMPANIES } from '../data/companies';
 import { LEGACY_BASELINE, SECTOR_IDS } from '../data/economic-baseline';
@@ -14,6 +15,8 @@ import { initialWorld, validateCommodityPolicy, validateWorld } from '../engine/
 import { initialPolicy, validatePolicy } from '../engine/policy';
 import { initialFdi, validateFdi } from '../engine/fdi';
 import { initialTradeBook, validateTradeBook } from '../engine/trade-book';
+import { addMissingListings } from '../engine/stock-market';
+import { CAMPAIGN_LENGTHS } from '../data/boom';
 import type { GameState } from '../types/game';
 
 export interface SaveFile {
@@ -58,11 +61,23 @@ const MIGRATIONS: Record<number, Migration> = {
     for (const f of [s.government.mtd, ...s.reports.map(r => r.gov)]) { f.dealEscrowOut = 0; f.dealEscrowIn = 0; }
     return state;
   },
+  // v13 → v14: campaign length and Boom mode (D-079). Existing campaigns are realistic 24-month terms.
+  13: state => {
+    const s = state as unknown as GameState;
+    s.mode ??= { boom: false, months: 24 };
+    return state;
+  },
   // v12 → v13: trade-ministry ledger (D-077). Model-3 Malaysia saves open it from today at official 2025 levels; nothing
   // already settled changes. Earlier models keep it switched off.
   12: state => {
     const s = state as unknown as GameState;
     s.tradeBook ??= initialTradeBook(s, !!s.fdi?.enabled && !!s.world?.enabled);
+    return state;
+  },
+  // v14 → v15: 20 more listed securities (D-080). Newcomers open at baseline financials for the current month and a
+  // fundamental price, with history on their exchange's existing dates; the save's rng and every existing account are untouched.
+  14: state => {
+    addMissingListings(state as unknown as GameState);
     return state;
   },
   // v11 → v12: central-bank monetary policy. Existing campaigns stay on the automatic rule with neutral settings.
@@ -214,7 +229,7 @@ export function deserialize(json: string): GameState {
   if (!nonnegative(s.clock.subHourMs) || s.clock.subHourMs >= 3_600_000) throw new Error('Corrupt save: clock out of range');
   if (![s.clock.hour, s.clock.startHour, s.clock.endHour].every(Number.isSafeInteger)
     || s.clock.endHour <= s.clock.startHour || s.clock.hour < s.clock.startHour || s.clock.hour > s.clock.endHour
-    || ![1, 2, 3].includes(s.clock.speed) || typeof s.clock.paused !== 'boolean') throw new Error('Corrupt save: invalid clock');
+    || !SPEEDS.includes(s.clock.speed) || typeof s.clock.paused !== 'boolean') throw new Error('Corrupt save: invalid clock');
   if (typeof s.scheduler.campaignEnded !== 'boolean' || (s.scheduler.campaignEnded && s.clock.hour !== s.clock.endHour)
     || ![s.scheduler.lastDay, s.scheduler.lastWeekDay, s.scheduler.lastMonthKey, s.scheduler.ticks].every(Number.isSafeInteger)) throw new Error('Corrupt save: invalid scheduler');
   if (!['a', 'b', 'c', 'd'].every((k) => {
@@ -239,6 +254,7 @@ export function deserialize(json: string): GameState {
   validatePolicy(s.policy);
   validateFdi(s.fdi);
   validateTradeBook(s.tradeBook);
+  if (!s.mode || typeof s.mode.boom !== 'boolean' || !CAMPAIGN_LENGTHS.includes(s.mode.months)) throw new Error('Corrupt save: campaign mode');
   if (s.policy.enabled !== s.fdi.enabled || (s.policy.enabled && s.baseline.model !== 3)) throw new Error('Corrupt save: inconsistent policy generation');
   if (![1, 2, 3].includes(s.baseline.model) || !(s.households.equityIndex > 0)
     || (s.baseline.profile !== 'malaysia' || s.baseline.model === 1) !== !s.world.enabled) throw new Error('Corrupt save: inconsistent model generation');

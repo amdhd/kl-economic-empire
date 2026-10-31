@@ -76,5 +76,5 @@ export function monthCloseStanding(s: GameState, monthKey: number, monthExportsM
   const fx0 = baselineFor(s).myrPerUsd;
   if (!s.fdi.standing.length) s.fdi.standing.push({ monthKey: monthKey - 1, gdpUsd: s.baseline.nominalGdpAnnual / fx0 / 1e9, exportsUsd: monthExportsMYR * 365 / days / fx0 / 1e9, myrPerUsd: fx0 });
   s.fdi.standing.push({ monthKey, gdpUsd: malaysiaGdpUsd(s), exportsUsd, myrPerUsd: s.external.myrPerUsd });
-  if (s.fdi.standing.length > 61) s.fdi.standing.splice(1, 1); // keep the opening reference
+  if (s.fdi.standing.length > 131) s.fdi.standing.splice(1, 1); // keep the opening reference (130 months covers 10 years)
 }

@@ -14,13 +14,13 @@ const VERIFIED_MARKERS = [
 ].sort();
 
 describe('equity universe', () => {
-  it('has exactly 60 distinct securities: 26 MY + 34 US', () => {
-    expect(COMPANIES).toHaveLength(60);
-    expect(MY_COMPANIES).toHaveLength(26);
-    expect(US_COMPANIES).toHaveLength(34);
-    expect(new Set(COMPANIES.map((c) => c.id)).size).toBe(60);
-    expect(new Set(COMPANIES.map((c) => c.legalName)).size).toBe(60);
-    expect(Object.keys(COMPANY_BY_ID)).toHaveLength(60);
+  it('has exactly 80 distinct securities: 36 MY + 44 US', () => {
+    expect(COMPANIES).toHaveLength(80);
+    expect(MY_COMPANIES).toHaveLength(36);
+    expect(US_COMPANIES).toHaveLength(44);
+    expect(new Set(COMPANIES.map((c) => c.id)).size).toBe(80);
+    expect(new Set(COMPANIES.map((c) => c.legalName)).size).toBe(80);
+    expect(Object.keys(COMPANY_BY_ID)).toHaveLength(80);
   });
 
   it('uses normalised exchange-prefixed IDs and the right listing currency', () => {
@@ -41,11 +41,12 @@ describe('equity universe', () => {
   it('matches the spec seed universe (verified 2026-10-31, see docs/data-sources.md)', () => {
     expect(MY_COMPANIES.map((c) => c.code).sort()).toEqual(
       ['1155', '1023', '1295', '5347', '4863', '6012', '6888', '5225', '5211', '3182', '4715', '5296', '4677', '6742', '8869', '5183', '6033', '4197', '6947', '5398',
-        '0166', '0097', '0128', '5005', '3867', '0208'].sort(),
+        '0166', '0097', '0128', '5005', '3867', '0208', '5285', '2445', '7113', '5168', '5878', '5176', '5246', '3816', '7160', '7204'].sort(),
     );
     expect(US_COMPANIES.map((c) => c.code).sort()).toEqual(
       ['NVDA', 'META', 'MSFT', 'AAPL', 'AMZN', 'GOOGL', 'AVGO', 'TSLA', 'JPM', 'V', 'MA', 'BRK.B', 'XOM', 'COST', 'WMT', 'PG', 'AMD', 'NFLX', 'UNH', 'PLTR',
-        'TSM', 'ASML', 'QCOM', 'INTC', 'MU', 'TXN', 'AMAT', 'LRCX', 'ARM', 'ORCL', 'CRM', 'ADBE', 'CSCO', 'IBM'].sort(),
+        'TSM', 'ASML', 'QCOM', 'INTC', 'MU', 'TXN', 'AMAT', 'LRCX', 'ARM', 'ORCL', 'CRM', 'ADBE', 'CSCO', 'IBM',
+        'ANET', 'KLAC', 'ADI', 'SMCI', 'NOW', 'LLY', 'UPS', 'PLD', 'KO', 'CAT'].sort(),
     );
   });
 

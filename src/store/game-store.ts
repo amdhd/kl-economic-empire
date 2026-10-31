@@ -7,8 +7,8 @@ import { flushCloud, syncCloud } from '../persistence/cloud';
 // (hourly tick or player command) so selectors re-run. The visual clock is published separately
 // and throttled so the whole tree does not re-render every frame.
 import { create } from 'zustand';
-import { displayMinutes } from '../engine/clock';
-import { advance, applyCommand, createGame, runHeadless, type Command, type CommandResult } from '../engine/game';
+import { displayMinutes, SPEEDS } from '../engine/clock';
+import { advance, applyCommand, createGame, runHeadless, type Command, type CommandResult, type GameOptions } from '../engine/game';
 import { klDay } from '../engine/time';
 import { deserialize, serialize } from '../persistence/save';
 import { readSlot, writeSlot, type SlotId } from '../persistence/storage';
@@ -48,7 +48,7 @@ interface Store {
   pause: () => void;
   command: (c: Command) => CommandResult;
   toast: (tone: Toast['tone'], text: string, source?: 'alert') => void;
-  newGame: (seed: number, scenario: ScenarioId) => void;
+  newGame: (seed: number, scenario: ScenarioId, options?: GameOptions) => void;
   /** `cloud: 'throttle'` coalesces routine autosaves into at most one upload per few minutes. */
   save: (slot: SlotId, label?: string, cloud?: 'now' | 'throttle') => Promise<void>;
   load: (slot: SlotId) => Promise<boolean>;
@@ -135,8 +135,8 @@ export const useGame = create<Store>((set, get) => ({
     set({ toasts: [...get().toasts.slice(-3), { id, tone, text, source }] });
     setTimeout(() => set({ toasts: get().toasts.filter((t) => t.id !== id) }), 4200);
   },
-  newGame: (seed, scenario) => {
-    const game = createGame(seed, scenario);
+  newGame: (seed, scenario, options) => {
+    const game = createGame(seed, scenario, 'malaysia', options);
     resumeAfterDialog = false;
     set({ game, rev: get().rev + 1, uiMinute: displayMinutes(game.clock), selection: null, panel: null, showNewGame: false,
       alertMemory: {}, alertHistory: [], lastAlertDay: klDay(game.clock.hour * 60) });
@@ -275,7 +275,7 @@ export function startGameLoop(): () => void {
     if (e.code === 'Space') {
       e.preventDefault();
       st.togglePause();
-    } else if (e.key === '1' || e.key === '2' || e.key === '3') st.setSpeed(Number(e.key) as GameSpeed);
+    } else if (SPEEDS.includes(Number(e.key) as GameSpeed)) st.setSpeed(Number(e.key) as GameSpeed);
     else if (e.key === 'Escape') {
       if (st.selection) st.select(null);
       else st.setPanel(null);

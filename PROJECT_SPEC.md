@@ -1059,3 +1059,20 @@ ledger at official 2025 levels (MITI/DOSM, pinned in `docs/data-sources.md`), ex
 deals with partners and export buyer contracts in the Deal Room. Buyers are fictional and everything after the opening is a
 simulation. The opening economy and the score formula are unchanged. See D-077 and `docs/economy-model.md`.
 
+## 24. User amendment — term length and Boom sandbox (1 November 2026)
+
+The user, playing for fun, asked to reach US$2tn GDP by year three and the world's largest economy by year ten. This
+overrides the fixed 24-month boundary (§21): new campaigns choose a 2-, 3-, 5- or 10-year term (default 2). It adds an
+opt-in **Boom mode** sandbox that removes realistic speed limits on growth. The realistic mode, its calibration and its
+validation are unchanged and remain the default. The continuous clock, pause/1×/2×/3×, no time skip and no offline catch-up
+all still apply, so a 10-year term is about 25 hours of play at 3×. See D-079 and `docs/economy-model.md`.
+
+
+## 25. User amendment — 5× speed (1 November 2026)
+
+The user asked for a faster speed for long terms. This overrides the "Pause, 1×, 2× and 3× only" rule in §2/§3 and the
+"no acceleration beyond 3×" acceptance tests: the controls are now **Pause, 1×, 2×, 3× and 5×** (5× = 100 game minutes per
+real second; key 5). It is the same continuous clock run faster, with the same hourly ticks in the same order, so results at
+5× match 1× and 3× for the same actions at the same game times. There is still no skip, no next-month or next-event button
+and no offline catch-up; long frames are still clamped, so a slow browser runs slower rather than catching up. A 10-year
+term is about 15 hours of play at 5×. See D-081.

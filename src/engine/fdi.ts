@@ -9,6 +9,7 @@ import { post } from './government';
 import { leverTarget, leverValue, LEVERS, MIN_WAGE0, WORKER_LEVY0 } from './policy';
 import { rand, seedRng } from './rng';
 import { clamp, news, pushBounded } from './util';
+import { BOOM, boomOn } from '../data/boom';
 
 interface KindSpec {
   label: string;
@@ -72,10 +73,21 @@ function offer(s: GameState, kind: FdiKind, investor: TickerId, amount: number, 
     amount, ask, incentive: 0, jobs: Math.round((amount / 1e9) * k.jobsPerBn), buildMonths: k.buildMonths, offeredDay: today, decideByDay: today + DECIDE_DAYS,
     startDay: -1, spent: 0, status: 'offered',
   };
-  pushBounded(s.fdi.pledges, pledge, 120);
+  s.fdi.pledges.push(pledge);
+  prunePledges(s.fdi);
   s.fdi.mtd.pledged += amount;
   news(s, { kind: 'fund', tone: 'good', title: `Investment pledge: ${pledge.title}`, body: `Fictional simulated pledge. Asks for a ${(ask * 100).toFixed(0)}% co-investment incentive. Decide within ${DECIDE_DAYS} days in Investment & FDI; otherwise it goes elsewhere.` });
   return pledge;
+}
+
+/** Keep the pledge list bounded by dropping the oldest decided-against offers. Projects that are building or operating
+ * are never dropped: they carry grants, exports and jobs (a plain size cap could silently delete them). */
+export function prunePledges(f: FdiState, limit = 120): void {
+  while (f.pledges.length > limit) {
+    const i = f.pledges.findIndex((p) => p.status === 'declined' || p.status === 'withdrawn');
+    if (i < 0) break;
+    f.pledges.splice(i, 1);
+  }
 }
 
 /** New campaigns open with one headline pledge, so the mechanic is visible early (no RNG). */
@@ -93,10 +105,13 @@ export function weeklyFdi(s: GameState, today: number): void {
   for (const kind of FDI_KIND_IDS) {
     const k = FDI_KINDS[kind];
     const draw = rand(s.fdi.rng), pick = rand(s.fdi.rng), size = rand(s.fdi.rng), askDraw = rand(s.fdi.rng); // fixed draw count per kind
-    const hazard = k.weeklyHazard * Math.pow(attractiveness(s, kind) / 50, 2);
+    const boom = boomOn(s);
+    const hazard = k.weeklyHazard * Math.pow(attractiveness(s, kind) / 50, 2) * (boom ? BOOM.fdiHazard : 1);
     if (draw >= hazard) continue;
     const investor = k.investors[Math.min(k.investors.length - 1, Math.floor(pick * k.investors.length))];
-    const amount = Math.round((k.amount[0] + size * (k.amount[1] - k.amount[0])) / 1e8) * 1e8;
+    // Boom mode: mega-projects that grow with the campaign (D-079).
+    const mega = boom ? BOOM.fdiSizeBase + BOOM.fdiSizePerYear * (s.external.daysElapsed / 365) : 1;
+    const amount = Math.round((k.amount[0] + size * (k.amount[1] - k.amount[0])) * mega / 1e8) * 1e8;
     offer(s, kind, investor, amount, Math.round((k.askRange[0] + askDraw * (k.askRange[1] - k.askRange[0])) * 100) / 100, today);
   }
 }

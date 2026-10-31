@@ -530,3 +530,53 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   buyer contracts are a new Deal Room kind `export` with a performance bond in escrow. Commodities are excluded from
   product deals (world prices). The score formula is unchanged; the standing board's current account now uses the ledger.
   Model-3 saves migrate by opening the ledger from today; earlier models keep it off. Magnitudes are documented assumptions.
+
+- **D-078 Steadier first-year inflation (user request).** The year-one inflation reading annualised the months observed so far,
+  so a one-month price move was multiplied by up to twelve (a quiet campaign showed −4.4% "deflation" in April). The missing
+  year-ago months are now filled at the 2% opening inflation assumption; from month 13 nothing changes. This moves early
+  wage expectations, MPC decisions and the stability score; the opening state and all accounting are unchanged.
+  Validation consequence, accepted by the user as a documented gap: the sacrifice ratio rises from 3.3 to 4.19 (published
+  0.5–4), and one seed's oil +10% response moves to −0.55% (mean −0.45%, already a known gap). Test guards: sacrifice ratio
+  ≤ 4.6, oil +10% (4q) > −0.6%. Closing the gap needs a wage–price recalibration, not done here.
+
+- **D-079 Term length and Boom sandbox (user request, schema 14).** New games pick a 24/36/60/120-month term; `mode.months`
+  sets the end date. Long terms keep up to 130 monthly reports (months elapsed are counted from that list) and 131 standing
+  records. Pledge and Deal Room pruning now removes only decided-against or unsigned offers, so building or operating FDI
+  and signed agreements are never dropped (the old 120-pledge cap could silently delete operating plants). **Boom mode**
+  (opt-in, Malaysia profile, `src/data/boom.ts`) is a game-design sandbox, not an estimate. It adds:
+  - productivity growth +28% a year, raising output per worker and per machine;
+  - full wage pass-through (×1.15), so pay and demand keep up and prices do not fall;
+  - an investment drive (+12pp, phased in over 12 months; cap 60%, faster plans, looser credit);
+  - migration (+6% a year, faster labour-force response, population follows);
+  - foreign demand that scales with sector capacity (small open economy);
+  - productivity-led ringgit appreciation (−0.35 × log real GDP growth, floor MYR1.00);
+  - FDI pledges ×4 as frequent, growing in size;
+  - Deal Room cohorts for the whole term;
+  - a central-bank growth path that includes the boom.
+  Seeded runs with FDI approvals reach about US$2.0–2.3tn by December 2029 and US$48–52tn (rank 1–2) by year ten. Year-two
+  inflation can overheat to about 8% before cooling. New public debt stops at RM85tn (`DEBT_LIMIT_MYR`) because integer-sen
+  balances top out near RM90tn; ten-year treasury balances stay under RM30tn in tests. Bursa lunar holidays are listed only to
+  2029. The realistic mode is unaffected (tested).
+- **D-080 80 securities (user request, schema 15).** The player wanted more ways to make money in the market, so 20 real
+  names fill sector gaps: Bursa plantations (5285 SD Guthrie, 2445 KLK; realised palm price shares 0.75/0.45), gloves
+  (7113 Top Glove, 5168 Hartalega), hospitals (5878 KPJ), a REIT (5176 Sunway REIT, 95% payout, rate-sensitive), port and
+  shipping (5246 Westports, 3816 MISC) and E&E (7160 Pentamaster, 7204 D&O); US AI and chip names (ANET, KLAC, ADI, SMCI,
+  NOW) plus pharma (LLY), parcels (UPS), a logistics REIT (PLD), staples (KO) and machinery (CAT), all S&P 500 members
+  per knowledge as of mid-2026 (reconfirm). Names and tickers are real; every financial value is fictional seed data.
+  No map markers (none has a verified OSM point in KL; MISC's tower is not PETRONAS's). Logos follow D-060; six Bursa
+  names without a Wikipedia/Commons logo use monograms. **Migration** (v14 → v15): unlike D-043's fresh-game copy, each
+  newcomer opens at its baseline financials for the save's current month (month-to-date accruals pro rata), a price within
+  ±12% of today's fundamental and synthetic history on its exchange's existing bar dates. Its draws come from a stream
+  seeded by (campaign seed, ticker), so the save's `rng`, fund and existing companies are untouched; index divisors are
+  rescaled so index levels do not jump. New games draw for 80 securities each hour, so paths differ from 60-security
+  games; paired macro experiments move by up to ~0.1pp per seed with the draw path (dropping *any* three listings moves
+  them as much), so the multiplier harness's 4-quarter spending multiplier and residual-gap guards are now checked on the
+  two-seed mean (both still pass), and one FX lever test's per-seed threshold reflects its measured 1.2–2.0% range.
+  Combined with D-078, the sacrifice ratio's 4-seed mean moves from 4.19 to 4.51 (seeds 3.6–5.0; published 0.5–4), so its
+  guard is now a two-seed mean ≤ 5.0. This widens D-078's documented gap; the user accepted it (1 Nov 2026).
+- **D-081 5× speed (user request, PROJECT_SPEC §25).** Overrides the 3× ceiling (§2/§3, AGENTS rule 4). `SPEEDS` is now
+  1/2/3/5; 5× = 100 game minutes per real second, button `5×` and key `5`. The clock still accumulates real time into
+  whole hourly ticks, so a 5× run produces the same state as 1× for the same game hours (tested), and the 250 ms frame
+  clamp still prevents catch-up (at 5× one clamped frame is 25 game minutes, below one tick). No 4× is added. The living
+  map's trains run at 3× visual pace at 5×. Engine cost is ~1.7 hourly ticks per real second; the browser sample is in
+  `docs/performance.md`. Saves accept speed 5 with no schema change; older builds would reject such a save.

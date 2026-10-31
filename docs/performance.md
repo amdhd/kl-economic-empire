@@ -33,3 +33,13 @@ Full browser tests use two workers. A five-browser WebGL run concurrent with bui
 test (clock remained at its opening hour within the 10-second poll); the complete two-worker run passes. Keep
 performance sampling separate from test/build load and distinguish cold map loading from settled play. A long
 human campaign still needs observation for usability, memory pressure and difficulty (`playtesting.md`).
+
+## 5× sample (D-081) — 2026-11-01
+
+`npm run profile -- --speed 5` (the script now opens the Info views rail before choosing the Economy panel; it had broken
+when the rail became collapsible). Same machine, but this headless Chromium rendered the map in software and its tiles
+never reached network idle, so both speeds were frame-bound this time: **3×: 9 game hours in 12.2 s** (p95 frame 333 ms)
+and **5×: 15 game hours in 12.4 s** (p95 frame 433 ms, 42 long tasks, maximum 430 ms). Each reached 75% of its nominal
+rate. 5× cost no more per frame than 3×, and the frame clamp slowed game time instead of catching up. Engine work at 5× is
+~1.7 hourly ticks per real second (median 0.002 ms each). On a GPU-backed desktop browser the 3× sample earlier ran at full
+rate. A frame-bound browser simply plays 5× below its nominal rate.
