@@ -37,7 +37,7 @@ export function CommoditiesPanel() {
         {grp.items.map((c) => {
           const m = COMMODITIES[c];
           const price = m.reference * w.prices[c] * (m.currency === 'MYR' ? fxf : 1);
-          return <Stat key={c} label={m.name} value={`${m.currency === 'USD' ? 'US$' : 'RM'}${price >= 100 ? price.toFixed(0) : price.toFixed(2)}/${m.unit}`} sub={`${pct(w.prices[c] - 1, 1, true)} vs reference`} />;
+          return <Stat key={c} label={m.name} value={`${m.currency === 'USD' ? '$' : 'RM'}${price >= 100 ? price.toFixed(0) : price.toFixed(2)}/${m.unit}`} sub={`${pct(w.prices[c] - 1, 1, true)} vs reference`} />;
         })}
       </div>)}
     </div>

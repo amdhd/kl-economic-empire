@@ -27,7 +27,7 @@ test('closing Info views dismisses its inspector and reopening starts with categ
   await page.getByRole('button', { name: 'Close panel' }).click();
   await expect(inspector).not.toBeVisible();
   await expect(page.getByTestId('btn-speed-3')).toBeVisible();
-  await expect(page.getByTestId('bottom-treasury')).toContainText('RM 8,865,574,579.00');
+  await expect(page.getByTestId('bottom-treasury')).toContainText('RM 8,865,574,579');
 });
 
 test('compact desktop layout keeps the inspector and bottom controls inside the viewport', async ({ page }) => {

@@ -14,7 +14,7 @@ const COMPONENTS = [
   { key: 'wealth', label: 'Public net wealth', why: 'Treasury + SWF NAV + modeled public assets − debt − arrears, plus the central-bank portfolio gain/loss. For Malaysia, assets are CPI-adjusted and nominal debt is retained to prevent inflation-only score gains. Extra credit depends on sustaining real income, output and services.' },
   { key: 'satisfaction', label: 'Citizen satisfaction', why: 'Average approval over the last 6 months.' },
   { key: 'stability', label: 'Financial stability', why: 'Inflation near 2.5%, interest burden below 10% of revenue, low bank defaults, no arrears.' },
-  { key: 'standing', label: 'Global standing', why: 'US$ GDP growth versus the ten largest economies (50%), US$ export growth versus them (25%) and the ringgit against the dollar (25%). See Global standing.' },
+  { key: 'standing', label: 'Global standing', why: 'GDP growth in $ versus the ten largest economies (50%), export growth in $ versus them (25%) and the ringgit against the dollar (25%). See Global standing.' },
 ] as const;
 
 export function ObjectivesPanel() {

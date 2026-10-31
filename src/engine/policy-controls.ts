@@ -74,5 +74,5 @@ export function automaticFx(s: GameState) {
   const amount = Math.floor(Math.min(b.dailyUSD,Math.max(0,1e9-used),available)*100);
   if (amount<=0) { b.status='Inventory floor or daily limit prevents intervention'; return; }
   const res = interveneFx(s,side,amount,s.clock.hour*60);
-  b.status=res.ok?`${side}: US$${(amount/100).toFixed(0)} settled; pressure enters next fixing`:res.message;
+  b.status=res.ok?`${side}: $${(amount/100).toFixed(0)} settled; pressure enters next fixing`:res.message;
 }

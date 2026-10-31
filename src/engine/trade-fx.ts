@@ -17,7 +17,7 @@ export function quoteIntervention(s: GameState, side: 'buyUSD' | 'sellUSD', usdM
   if (!['buyUSD', 'sellUSD'].includes(side) || !Number.isSafeInteger(usdMinor) || usdMinor <= 0) return { ok: false as const, message: 'Enter a positive, safe USD amount.' };
   const today = klDay(atMin);
   const used = cb.lastInterventionDay === today ? cb.dailyUsdUsed : 0;
-  if (usdMinor / 100 + used > FX_DAILY_USD_LIMIT) return { ok: false as const, message: 'Daily intervention limit is US$1,000,000,000 across both directions.' };
+  if (usdMinor / 100 + used > FX_DAILY_USD_LIMIT) return { ok: false as const, message: 'Daily intervention limit is $1,000,000,000 across both directions.' };
   const rate = s.external.myrPerUsd * (1 + (side === 'buyUSD' ? 1 : -1) * FX_INTERVENTION_SPREAD);
   const major = usdMinor / 100 * rate;
   if (!Number.isFinite(major) || major * 100 > Number.MAX_SAFE_INTEGER) return { ok: false as const, message: 'Intervention exceeds safe accounting limits.' };
@@ -40,6 +40,6 @@ export function interveneFx(s: GameState, side: 'buyUSD' | 'sellUSD', usdMinor: 
   cb.dailyUsdUsed = q.used + usdMinor / 100;
   cb.pressure = clamp(cb.pressure + (side === 'buyUSD' ? 1 : -1) * 0.003 * (usdMinor / 100 / 1e9), -0.08, 0.08);
   pushBounded(cb.tx, { atMin, side, usdMinor, myrMinor: q.myrMinor, rate: q.rate }, 800);
-  pushBounded(s.policyLog, { atMin, effectiveMin: atMin, label: `Central bank ${side === 'buyUSD' ? 'bought' : 'sold'} US$${(usdMinor / 100).toLocaleString('en-MY')}; FX pressure begins at next daily fixing` }, 2000);
+  pushBounded(s.policyLog, { atMin, effectiveMin: atMin, label: `Central bank ${side === 'buyUSD' ? 'bought' : 'sold'} $${(usdMinor / 100).toLocaleString('en-MY')}; FX pressure begins at next daily fixing` }, 2000);
   return { ok: true, message: 'Intervention settled. FX pressure enters the next daily fixing and fades over 30 days.' };
 }

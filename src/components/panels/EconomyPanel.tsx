@@ -109,7 +109,7 @@ export function EconomyPanel() {
             <Stat label="Global demand" value={e.globalDemand.toFixed(3)} />
             <Stat label="US demand" value={e.usDemand.toFixed(3)} />
             <Stat label="Tech cycle" value={e.techCycle.toFixed(3)} />
-            <Stat label="Oil (idx)" value={e.oil.toFixed(2)} sub={`≈ US$${(75 * e.oil).toFixed(0)}/bbl`} />
+            <Stat label="Oil (idx)" value={e.oil.toFixed(2)} sub={`≈ $${(75 * e.oil).toFixed(0)}/bbl`} />
             <Stat label="Tourism" value={e.tourism.toFixed(3)} />
             <Stat label="Risk appetite" value={pct(e.riskAppetite, 0)} />
             <Stat label="Fed / UST10" value={`${pct(e.fedRate, 2)}`} sub={pct(e.ust10, 2)} />

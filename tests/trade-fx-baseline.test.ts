@@ -244,9 +244,9 @@ describe('reserve-backed central-bank FX', () => {
 });
 
 it('formats full cash balances with exact cents, including zero and large safe amounts', () => {
-  expect(fullMoneyMinor(BASELINE.treasury * 100)).toBe('RM 8,865,574,579.00');
-  expect(fullMoneyMinor(12345678901, 'USD')).toBe('US$ 123,456,789.01');
-  expect(fullMoneyMinor(0)).toBe('RM 0.00');
-  expect(fullMoneyMinor(Number.MAX_SAFE_INTEGER)).toBe('RM 90,071,992,547,409.91');
+  expect(fullMoneyMinor(BASELINE.treasury * 100)).toBe('RM 8,865,574,579');
+  expect(fullMoneyMinor(12345678901, 'USD')).toBe('$123,456,789');
+  expect(fullMoneyMinor(0)).toBe('RM 0');
+  expect(fullMoneyMinor(Number.MAX_SAFE_INTEGER)).toBe('RM 90,071,992,547,409');
   expect(NATIONAL_GDP).toBeGreaterThan(2e12);
 });

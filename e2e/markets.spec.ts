@@ -9,7 +9,7 @@ test.describe('Phase 2 market UI (integrated)', () => {
     await expect(page.getByTestId('security-table')).toBeVisible();
   });
 
-  test('lists 26 Malaysian (RM) and 34 US (US$) securities with no duplicates', async ({ page }) => {
+  test('lists 26 Malaysian (RM) and 34 US ($) securities with no duplicates', async ({ page }) => {
     const rows = page.getByTestId('security-row');
     await expect(rows).toHaveCount(26);
     const my = await rows.evaluateAll((els) => els.map((e) => e.getAttribute('data-ticker')));
@@ -19,7 +19,7 @@ test.describe('Phase 2 market UI (integrated)', () => {
     await expect(rows).toHaveCount(34);
     const us = await rows.evaluateAll((els) => els.map((e) => e.getAttribute('data-ticker')));
     expect(us.every((t) => t!.startsWith('US:'))).toBe(true);
-    for (const p of await page.getByTestId('row-price').allTextContents()) expect(p).toMatch(/^US\$ \d/);
+    for (const p of await page.getByTestId('row-price').allTextContents()) expect(p).toMatch(/^\$\d/);
     expect(new Set([...my, ...us]).size).toBe(60);
   });
 
@@ -29,12 +29,12 @@ test.describe('Phase 2 market UI (integrated)', () => {
     await page.getByTestId('security-row').first().click();
     const detail = page.getByTestId('security-detail');
     await expect(detail).toHaveAttribute('data-ticker', 'US:NVDA');
-    await expect(page.getByTestId('detail-price')).toContainText('US$');
+    await expect(page.getByTestId('detail-price')).toContainText('$');
     await expect(detail).toContainText('No verified Kuala Lumpur location');
     for (const res of ['Hour', 'Day', 'Month']) {
       await detail.getByRole('tab', { name: res }).click();
       await expect(page.getByTestId('price-chart')).toBeVisible();
-      await expect(page.getByTestId('price-chart')).toContainText('US$');
+      await expect(page.getByTestId('price-chart')).toContainText('$');
     }
     await expect(page.getByTestId('trade-review')).toBeVisible(); // SWF ticket sits under the detail
     await page.getByLabel('Search ticker').fill('1155');
