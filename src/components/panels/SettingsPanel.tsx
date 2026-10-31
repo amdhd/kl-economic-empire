@@ -25,7 +25,7 @@ export function SettingsPanel() {
     <Section title="Pacing">
       <label className="flex gap-2 text-[13px]"><input type="checkbox" checked={pauseOnDialogs} onChange={e => useGame.getState().setPauseOnDialogs(e.target.checked)} />Pause while confirmation dialogs are open</label>
       <label className="mt-3 flex gap-2 text-[13px]"><input type="checkbox" checked={prefs.pauseOnCritical} onChange={e => update({ pauseOnCritical: e.target.checked })} data-testid="pause-on-critical" />Pause on a new critical economic alert</label>
-      <p className="mt-2 text-[12px] text-slate-400">Warnings keep the clock running. Critical alerts leave it paused until you resume. Time remains limited to 1×, 2× and 3×; hidden tabs always pause.</p>
+      <p className="mt-2 text-[12px] text-slate-400">Warnings keep the clock running. Critical alerts leave it paused until you resume. Time remains limited to 1×, 2×, 3× and 5×; hidden tabs always pause.</p>
     </Section>
     <Section title="Risk thresholds">
       <div className="space-y-4">{RULES.map(rule => <div key={rule.id}>

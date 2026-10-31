@@ -1067,3 +1067,12 @@ opt-in **Boom mode** sandbox that removes realistic speed limits on growth. The 
 validation are unchanged and remain the default. The continuous clock, pause/1×/2×/3×, no time skip and no offline catch-up
 all still apply, so a 10-year term is about 25 hours of play at 3×. See D-079 and `docs/economy-model.md`.
 
+
+## 25. User amendment — 5× speed (1 November 2026)
+
+The user asked for a faster speed for long terms. This overrides the "Pause, 1×, 2× and 3× only" rule in §2/§3 and the
+"no acceleration beyond 3×" acceptance tests: the controls are now **Pause, 1×, 2×, 3× and 5×** (5× = 100 game minutes per
+real second; key 5). It is the same continuous clock run faster, with the same hourly ticks in the same order, so results at
+5× match 1× and 3× for the same actions at the same game times. There is still no skip, no next-month or next-event button
+and no offline catch-up; long frames are still clamped, so a slow browser runs slower rather than catching up. A 10-year
+term is about 15 hours of play at 5×. See D-081.

@@ -7,7 +7,7 @@ import { flushCloud, syncCloud } from '../persistence/cloud';
 // (hourly tick or player command) so selectors re-run. The visual clock is published separately
 // and throttled so the whole tree does not re-render every frame.
 import { create } from 'zustand';
-import { displayMinutes } from '../engine/clock';
+import { displayMinutes, SPEEDS } from '../engine/clock';
 import { advance, applyCommand, createGame, runHeadless, type Command, type CommandResult, type GameOptions } from '../engine/game';
 import { klDay } from '../engine/time';
 import { deserialize, serialize } from '../persistence/save';
@@ -275,7 +275,7 @@ export function startGameLoop(): () => void {
     if (e.code === 'Space') {
       e.preventDefault();
       st.togglePause();
-    } else if (e.key === '1' || e.key === '2' || e.key === '3') st.setSpeed(Number(e.key) as GameSpeed);
+    } else if (SPEEDS.includes(Number(e.key) as GameSpeed)) st.setSpeed(Number(e.key) as GameSpeed);
     else if (e.key === 'Escape') {
       if (st.selection) st.select(null);
       else st.setPanel(null);

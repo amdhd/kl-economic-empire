@@ -82,7 +82,7 @@ describe('market rows, search and charts', () => {
     expect(sharePrice(16.84, 'MYR')).toBe('RM 16.84');
     expect(sharePrice(0.355, 'MYR')).toBe('RM 0.355');
     expect(sharePrice(1234.5, 'USD')).toBe('$1,234.50');
-    expect(rows.filter((r) => r.currency === 'MYR')).toHaveLength(26);
+    expect(rows.filter((r) => r.currency === 'MYR')).toHaveLength(36);
     expect(rows.filter((r) => r.currency === 'USD').every((r) => r.exchange === 'US')).toBe(true);
     const nvda = rows.find((r) => r.id === 'US:NVDA')!;
     expect(nvda.marketCapMYR).toBeCloseTo(nvda.marketCap * s.external.myrPerUsd, 3);
@@ -101,7 +101,7 @@ describe('market rows, search and charts', () => {
     expect(filterRows(rows, { query: 'malayan banking' }).map((r) => r.id)).toEqual(['MY:1155']);
     expect(filterRows(rows, { query: 'brk.b' }).map((r) => r.id)).toEqual(['US:BRK.B']);
     expect(filterRows(rows, { query: 'genting' })).toHaveLength(2);
-    expect(filterRows(rows, { exchange: 'US' })).toHaveLength(34);
+    expect(filterRows(rows, { exchange: 'US' })).toHaveLength(44);
     expect(filterRows(rows, { exchange: 'MY', sector: 'fin' }).map((r) => r.id).sort()).toEqual(['MY:1023', 'MY:1155', 'MY:1295']);
     const g = filterRows(rows, { exchange: 'MY', sort: 'cap' });
     for (let i = 1; i < g.length; i++) expect(g[i - 1].marketCapMYR).toBeGreaterThanOrEqual(g[i].marketCapMYR);

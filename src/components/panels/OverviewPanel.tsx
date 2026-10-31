@@ -15,7 +15,7 @@ export function OverviewPanel() {
       {g.reports.length === 0 && (
         <Section title="Getting started">
           <ol className="list-decimal space-y-1 pl-5 text-[12.5px] text-slate-300">
-            <li>Press <b>Space</b> (or ▶) to start the clock. 1× = 20 game minutes per second; 3× = 1 game hour per second.</li>
+            <li>Press <b>Space</b> (or ▶) to start the clock. 1× = 20 game minutes per second; 3× = 1 game hour per second; 5× = 100 game minutes per second.</li>
             <li>Click company pills on the map or open <b>Stock markets</b> to inspect fictional financials. Bursa trades 09:00–17:00 MYT; US stocks trade overnight in KL time.</li>
             <li>Invest the <b>sovereign fund</b> — US shares need USD, converted on the FX desk.</li>
             <li>Adjust <b>taxes & budget</b> (effective tomorrow) and commission <b>projects</b> (benefits on completion).</li>

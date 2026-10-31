@@ -34,8 +34,8 @@ keeps running offline and the map shows a fallback message).
 ## Controls
 
 - **Space** pause/resume · **1/2/3** speed · **Esc** close panel · **?** help
-- 1× = 20 game minutes per real second, 2× = 40, 3× = 60. There is no skip: a 24-month term is ~14.6 h at 1×
-  or ~4.9 h at 3×. The game auto-pauses (and autosaves) when the tab is hidden and never catches up offline.
+- 1× = 20 game minutes per real second, 2× = 40, 3× = 60, 5× = 100. There is no skip: a 24-month term is ~14.6 h at 1×,
+  ~4.9 h at 3× or ~2.9 h at 5×. The game auto-pauses (and autosaves) when the tab is hidden and never catches up offline.
 - Click company pills on the map (only **OSM-verified** KL locations), or open *Stock markets*.
 - Bursa trades 09:00–12:30 & 14:30–17:00 MYT; US stocks trade 09:30–16:00 New York time (overnight in KL).
   Orders on a closed exchange queue for the next open and expire after 7 days.
@@ -91,7 +91,7 @@ Accounting contributions and current conditions are separated; the game does not
 Open **Alerts & settings** for treasury coverage, unemployment, housing-cost pressure and project-cost warnings.
 Thresholds, notification detail, confirmation pause and optional critical-alert pause are saved on this device.
 Critical alerts pause only when enabled; resume manually after reviewing them. History covers the current session,
-and loading a save does not repeat existing warnings. Time remains Pause / 1× / 2× / 3×, with no offline catch-up.
+and loading a save does not repeat existing warnings. Time remains Pause / 1× / 2× / 3× / 5×, with no offline catch-up.
 New campaigns also offer **Export downturn** and **Energy squeeze**, with starting shocks explained on their cards.
 
 ### Deal Room

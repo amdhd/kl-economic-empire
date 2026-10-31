@@ -22,11 +22,11 @@ function openBursa(seed = 1) {
 }
 
 describe('equity universe', () => {
-  it('has exactly 26 MY + 34 US distinct securities with correct currencies', () => {
-    expect(MY_COMPANIES).toHaveLength(26);
-    expect(US_COMPANIES).toHaveLength(34);
-    expect(new Set(COMPANIES.map((c) => c.id)).size).toBe(60);
-    expect(new Set(COMPANIES.map((c) => c.legalName)).size).toBe(60);
+  it('has exactly 36 MY + 44 US distinct securities with correct currencies', () => {
+    expect(MY_COMPANIES).toHaveLength(36);
+    expect(US_COMPANIES).toHaveLength(44);
+    expect(new Set(COMPANIES.map((c) => c.id)).size).toBe(80);
+    expect(new Set(COMPANIES.map((c) => c.legalName)).size).toBe(80);
     for (const c of COMPANIES) {
       expect(c.id.startsWith(`${c.exchange}:`)).toBe(true);
       const ex = c.exposure;

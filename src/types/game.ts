@@ -5,7 +5,7 @@ import type { DealsState } from './deals';
 
 export type Currency = 'MYR' | 'USD';
 export type Exchange = 'MY' | 'US';
-export type GameSpeed = 1 | 2 | 3;
+export type GameSpeed = 1 | 2 | 3 | 5;
 export type TickerId = `${Exchange}:${string}`;
 
 export type SectorId = 'fin' | 'prop' | 'util' | 'tech' | 'cons' | 'health' | 'ind';

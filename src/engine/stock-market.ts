@@ -3,11 +3,11 @@ import { baselineFor } from '../data/economic-baseline';
 // sector P/E × rate & risk multipliers × sentiment), plus seeded market, sector and idiosyncratic
 // shocks. Prices only move while that exchange's session is open.
 import { COMPANIES, COMPANY_BY_ID } from '../data/companies';
-import type { Bar, Exchange, GameState, IndexState, MarketState, QuoteState, TickerId } from '../types/game';
-import { baseEps, ttmNetIncome } from './companies';
+import type { Bar, Exchange, GameState, IndexState, MarketState, QuoteState, RngState, TickerId } from '../types/game';
+import { baseEps, initialCompany, ttmNetIncome } from './companies';
 import { isOpen, localDayOf, localParts, previousTradingDays, sessionDateKey, sessionTickMinutes } from './market-calendar';
-import { rand, randnClipped } from './rng';
-import { klDayStartMin } from './time';
+import { rand, randnClipped, seedRng } from './rng';
+import { daysInMonth, klDayStartMin, klParts } from './time';
 import { clamp, pushBounded } from './util';
 
 const ERP = 0.05;
@@ -94,25 +94,7 @@ export function seedHistory(s: GameState, startDay: number): void {
   for (const ex of ['MY', 'US'] as Exchange[]) {
     const days = previousTradingDays(ex, localDayOf(ex, startMin) + 1, SEED_DAYS);
     const ticks = days.slice(-SEED_HOURLY_SESSIONS).map((d) => sessionTickMinutes(ex, d));
-    for (const c of COMPANIES) {
-      if (c.exchange !== ex) continue;
-      const q = s.market.quotes[c.id];
-      const sigma = c.vol / Math.sqrt(252);
-      let p = q.price;
-      const bars: Bar[] = [];
-      // Walk backwards from today's opening price, then reverse.
-      for (let k = days.length - 1; k >= 0; k--) {
-        const prev = p / Math.exp(sigma * randnClipped(s.rng, 3));
-        const hi = Math.max(p, prev) * (1 + Math.abs(sigma * 0.4 * rand(s.rng)));
-        const lo = Math.min(p, prev) * (1 - Math.abs(sigma * 0.4 * rand(s.rng)));
-        bars.push({ t: days[k], o: prev, h: hi, l: lo, c: p, v: avgDailyValue(s, c.id) * (0.6 + 0.8 * rand(s.rng)) });
-        p = prev;
-      }
-      q.daily = bars.reverse();
-      q.hourly = [];
-      const first = q.daily.length - ticks.length;
-      ticks.forEach((mins, i) => seedSessionHours(s, q.daily[first + i], mins, sigma, q.hourly));
-    }
+    for (const c of COMPANIES) if (c.exchange === ex) seedQuoteHistory(s, c.id, days, ticks, s.rng);
     const idx = s.market.indices[ex];
     idx.daily = days.map((t, k) => {
       let cap = 0;
@@ -122,18 +104,90 @@ export function seedHistory(s: GameState, startDay: number): void {
   }
 }
 
+/** Synthetic daily bars on `days` ending at today's price, plus hourly bars for the sessions in `ticks` (the latest days). */
+function seedQuoteHistory(s: GameState, id: TickerId, days: number[], ticks: number[][], rng: RngState): void {
+  const c = COMPANY_BY_ID[id];
+  const q = s.market.quotes[id];
+  const sigma = c.vol / Math.sqrt(252);
+  let p = q.price;
+  const bars: Bar[] = [];
+  // Walk backwards from today's opening price, then reverse.
+  for (let k = days.length - 1; k >= 0; k--) {
+    const prev = p / Math.exp(sigma * randnClipped(rng, 3));
+    const hi = Math.max(p, prev) * (1 + Math.abs(sigma * 0.4 * rand(rng)));
+    const lo = Math.min(p, prev) * (1 - Math.abs(sigma * 0.4 * rand(rng)));
+    bars.push({ t: days[k], o: prev, h: hi, l: lo, c: p, v: avgDailyValue(s, id) * (0.6 + 0.8 * rand(rng)) });
+    p = prev;
+  }
+  q.daily = bars.reverse();
+  q.hourly = [];
+  const first = q.daily.length - ticks.length;
+  ticks.forEach((mins, i) => seedSessionHours(rng, q.daily[first + i], mins, sigma, q.hourly));
+}
+
+/**
+ * Lists securities a save predates (D-080 migration). Each newcomer opens from baseline financials for the save's
+ * current month and a fundamental price, with fictional history on the same dates as its exchange's existing bars.
+ * Draws come from a per-security stream derived from the campaign seed, so the save's own `rng` is untouched, and
+ * each index divisor is rescaled so index values do not jump.
+ */
+export function addMissingListings(s: GameState): TickerId[] {
+  const added = COMPANIES.filter((c) => !s.companies[c.id]);
+  if (!added.length) return [];
+  const klTax = s.government.policies.tax.corporate;
+  const mk = s.scheduler.lastMonthKey;
+  const elapsed = Math.max(0, klParts(s.clock.hour * 60).day - 1) / daysInMonth(Math.floor(mk / 12), (mk % 12) + 1);
+  for (const ex of ['MY', 'US'] as Exchange[]) {
+    const fresh = added.filter((c) => c.exchange === ex);
+    if (!fresh.length) continue;
+    const ref = COMPANIES.find((c) => c.exchange === ex && s.market.quotes[c.id])!;
+    const refQuote = s.market.quotes[ref.id];
+    const before = indexCap(s, ex);
+    for (const c of fresh) {
+      const st = initialCompany(c, mk, klTax, s.baseline.profile);
+      // Month-to-date accruals so far this month, at the baseline run rate, so the first close is a full month.
+      const b = st.history.at(-1)!;
+      const opex = (c.revenue * (1 - c.ebitdaMargin)) / 12;
+      st.mtd = { revenue: b.revenue * elapsed, laborCost: opex * c.laborShare * elapsed, energyCost: opex * c.energyShare * elapsed, otherCost: opex * (1 - c.laborShare - c.energyShare) * elapsed, depreciation: ((c.revenue * c.depreciationPct) / 12) * elapsed, interest: b.interest * elapsed };
+      s.companies[c.id] = st;
+      const rng = seedRng((s.seed ^ hashId(c.id)) >>> 0);
+      const fv = fundamentalValue(s, c.id);
+      const price = roundTick(fv * (0.88 + 0.24 * rand(rng)), ex);
+      s.market.quotes[c.id] = { price, prevClose: price, open: price, dayHigh: price, dayLow: price, dayVolume: 0, fundDayValue: 0, fundamental: fv, daily: [], hourly: [] };
+      const days = refQuote.daily.map((d) => d.t);
+      const sessions = days.slice(-SEED_HOURLY_SESSIONS).map((d) => sessionTickMinutes(ex, d));
+      seedQuoteHistory(s, c.id, days, sessions, rng);
+    }
+    const after = indexCap(s, ex);
+    if (before > 0) s.market.indices[ex].divisor *= after / before;
+  }
+  return added.map((c) => c.id);
+}
+
+function indexCap(s: GameState, ex: Exchange): number {
+  let cap = 0;
+  for (const c of COMPANIES) if (c.exchange === ex && s.market.quotes[c.id] && s.companies[c.id]) cap += s.market.quotes[c.id].price * s.companies[c.id].shares;
+  return cap;
+}
+
+function hashId(id: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 16777619);
+  return h >>> 0;
+}
+
 /** Hourly path from bar.o to bar.c over the session's ticks; widens the daily high/low to contain it. */
-function seedSessionHours(s: GameState, bar: Bar, mins: number[], dailySigma: number, out: Bar[]): void {
+function seedSessionHours(rng: RngState, bar: Bar, mins: number[], dailySigma: number, out: Bar[]): void {
   const n = mins.length;
   const step = (dailySigma / Math.sqrt(n)) * 0.8;
   const walk = [0];
-  for (let i = 1; i <= n; i++) walk.push(walk[i - 1] + step * randnClipped(s.rng, 3));
+  for (let i = 1; i <= n; i++) walk.push(walk[i - 1] + step * randnClipped(rng, 3));
   const gap = Math.log(bar.c / bar.o) - walk[n];
   const path = walk.map((w, i) => bar.o * Math.exp(w + (gap * i) / n));
   for (let i = 0; i < n; i++) {
     const o = path[i];
     const c = path[i + 1];
-    const wick = Math.abs(step * 0.3 * rand(s.rng));
+    const wick = Math.abs(step * 0.3 * rand(rng));
     const h = Math.max(o, c) * (1 + wick);
     const l = Math.min(o, c) * (1 - wick);
     bar.h = Math.max(bar.h, h);

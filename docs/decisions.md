@@ -557,5 +557,27 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   inflation can overheat to about 8% before cooling. New public debt stops at RM85tn (`DEBT_LIMIT_MYR`) because integer-sen
   balances top out near RM90tn; ten-year treasury balances stay under RM30tn in tests. Bursa lunar holidays are listed only to
   2029. The realistic mode is unaffected (tested).
-
-- **D-080 GDP is displayed in US dollars (user request).** Every GDP amount shown to the player (HUD, economy charts, reports, objectives, sector value added, GDP explanation) is the MYR figure ÷ MYR/USD: nominal at that month's (or today's) rate, real GDP and the official history at the opening rate so real growth is not distorted by the ringgit. The engine, saves and ratios ("0f GDP") are unchanged and still MYR; budget, debt, treasury, FDI and trade stay in ringgit. Helper: `gdpUsd` in `src/utils/format.ts`.
+- **D-080 80 securities (user request, schema 15).** The player wanted more ways to make money in the market, so 20 real
+  names fill sector gaps: Bursa plantations (5285 SD Guthrie, 2445 KLK; realised palm price shares 0.75/0.45), gloves
+  (7113 Top Glove, 5168 Hartalega), hospitals (5878 KPJ), a REIT (5176 Sunway REIT, 95% payout, rate-sensitive), port and
+  shipping (5246 Westports, 3816 MISC) and E&E (7160 Pentamaster, 7204 D&O); US AI and chip names (ANET, KLAC, ADI, SMCI,
+  NOW) plus pharma (LLY), parcels (UPS), a logistics REIT (PLD), staples (KO) and machinery (CAT), all S&P 500 members
+  per knowledge as of mid-2026 (reconfirm). Names and tickers are real; every financial value is fictional seed data.
+  No map markers (none has a verified OSM point in KL; MISC's tower is not PETRONAS's). Logos follow D-060; six Bursa
+  names without a Wikipedia/Commons logo use monograms. **Migration** (v14 → v15): unlike D-043's fresh-game copy, each
+  newcomer opens at its baseline financials for the save's current month (month-to-date accruals pro rata), a price within
+  ±12% of today's fundamental and synthetic history on its exchange's existing bar dates. Its draws come from a stream
+  seeded by (campaign seed, ticker), so the save's `rng`, fund and existing companies are untouched; index divisors are
+  rescaled so index levels do not jump. New games draw for 80 securities each hour, so paths differ from 60-security
+  games; paired macro experiments move by up to ~0.1pp per seed with the draw path (dropping *any* three listings moves
+  them as much), so the multiplier harness's 4-quarter spending multiplier and residual-gap guards are now checked on the
+  two-seed mean (both still pass), and one FX lever test's per-seed threshold reflects its measured 1.2–2.0% range.
+  Combined with D-078, the sacrifice ratio's 4-seed mean moves from 4.19 to 4.51 (seeds 3.6–5.0; published 0.5–4), so its
+  guard is now a two-seed mean ≤ 5.0. This widens D-078's documented gap; the user accepted it (1 Nov 2026).
+- **D-081 5× speed (user request, PROJECT_SPEC §25).** Overrides the 3× ceiling (§2/§3, AGENTS rule 4). `SPEEDS` is now
+  1/2/3/5; 5× = 100 game minutes per real second, button `5×` and key `5`. The clock still accumulates real time into
+  whole hourly ticks, so a 5× run produces the same state as 1× for the same game hours (tested), and the 250 ms frame
+  clamp still prevents catch-up (at 5× one clamped frame is 25 game minutes, below one tick). No 4× is added. The living
+  map's trains run at 3× visual pace at 5×. Engine cost is ~1.7 hourly ticks per real second; the browser sample is in
+  `docs/performance.md`. Saves accept speed 5 with no schema change; older builds would reject such a save.
+- **D-082 GDP is displayed in US dollars (user request).** Every GDP amount shown to the player (HUD, economy charts, reports, objectives, sector value added, GDP explanation) is the MYR figure ÷ MYR/USD: nominal at that month's (or today's) rate, real GDP and the official history at the opening rate so real growth is not distorted by the ringgit. The engine, saves and ratios ("0f GDP") are unchanged and still MYR; budget, debt, treasury, FDI and trade stay in ringgit. Helper: `gdpUsd` in `src/utils/format.ts`.
