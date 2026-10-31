@@ -5,7 +5,7 @@
 // Opening levels of every modelled receipt are subtracted from the residual "other receipts", so total
 // opening revenue still equals the official 2027 estimate. See docs/economy-model.md "Resources & SOEs".
 import { COMPANIES, COMPANY_BY_ID } from '../data/companies';
-import { BASE_TAX, baselineFor, nationalV2 } from '../data/economic-baseline';
+import { BASE_TAX, baselineFor, demandFor, nationalV2 } from '../data/economic-baseline';
 import {
   KHAZANAH, PALM_DUTIABLE_SHARE, PALM_DUTY0, PALM_FIXED_SHARE, PALM_SMALLHOLDER_SHARE, PALM_VA_SHARE, PALM_VALUE0, PALM_WAGE_SHARE,
   PETRONAS, PITA_RATE, RESOURCE_EXPORT_SHARE, RUBBER_SMALLHOLDER_SHARE, RUBBER_VA_SHARE, RUBBER_VALUE0, UPSTREAM_FIXED_SHARE, UPSTREAM_VA_SHARE, UPSTREAM_VALUE0,
@@ -75,8 +75,10 @@ const fxFactor = (s: GameState) => s.external.myrPerUsd / baselineFor(s).myrPerU
 export const upstreamPriceIndex = (s: GameState) => (0.6 * s.external.oil + 0.4 * s.world.prices.gas) * fxFactor(s);
 export const palmPriceMYR = (s: GameState) => s.world.prices.palm * fxFactor(s);
 
-/** Effective PETRONAS capex: the policy, cut by 30% while cash sits below its floor. */
-export const petronasCapex = (p: PetronasState) => (p.cash < PETRONAS.cashFloor ? p.capexAnnual * 0.7 : p.capexAnnual);
+/** Effective PETRONAS capex: the policy, cut by 30% while cash sits below its floor. In model 3 the programme
+ * also scales with the lagged oil/gas price index (D-056), so part of an oil windfall is reinvested domestically. */
+export const petronasCapex = (p: PetronasState, s?: GameState) =>
+  (p.cash < PETRONAS.cashFloor ? 0.7 : 1) * p.capexAnnual * (s ? Math.pow(s.world.gasIndex, demandFor(s).upstreamOilElasticity) : 1);
 
 /** Palm-sector income reaching households, relative to opening (MYR/day): smallholder profit and estate wages. */
 export function palmHouseholdDelta(s: GameState): number {
@@ -107,7 +109,7 @@ export function dailyResources(s: GameState, purchases: Record<SectorId, number>
   p.mtd.revenue += upRevenue;
   p.mtd.upstreamVa += upVa;
   p.mtd.taxableProfit += upVa - UPSTREAM_FIXED_SHARE * UPSTREAM_VA0 * PER_YEAR * cpiF;
-  const capex = petronasCapex(p);
+  const capex = petronasCapex(p, s);
   p.mtd.capex += capex * PER_YEAR;
   p.capexAvg += (capex - p.capexAvg) / 365;
   // Natural decline is offset only when trailing capex keeps up with the opening programme.

@@ -28,7 +28,7 @@ it('ministry plans apply next month, escalate annually and can cancel future app
   runUntil(s,2028,2,1);expect(s.government.policies.budget.health).toBeCloseTo(old*1.2*1.05,2);
   const current=s.government.policies.budget.health;
   act(s,{type:'cancelMinistryPlan',category:'health'});
-  expect(s.controls.plans).toHaveLength(0);expect(s.government.policies.budget.health).toBe(current);
+  expect(s.controls.plans.some(p=>p.category==='health')).toBe(false);expect(s.government.policies.budget.health).toBe(current);
 }));
 it('service outcome indices reward real funding and deteriorate under unpaid obligations',()=>{
   const base=createGame(803),more=clone(base),unpaid=clone(base);
@@ -97,7 +97,8 @@ it('a manual budget change replaces that ministry plan instead of being overwrit
   const res=act(s,{type:'queueBudget',patch:{health:old*0.9}});
   expect(res.ok).toBe(true);
   expect(s.government.pending.at(-1)?.label).toContain('replaces Healthcare ministry plan');
-  expect(s.controls.plans.map(p=>p.category)).toEqual(['safety']);
+  expect(s.controls.plans.some(p=>p.category==='health')).toBe(false);
+  expect(s.controls.plans.find(p=>p.category==='safety')?.everyMonths).toBeUndefined();
   runUntil(s,2028,2,2);
   expect(s.government.policies.budget.health).toBe(Math.round(old*0.9/1e6)*1e6);
 }));

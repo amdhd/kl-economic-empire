@@ -1,7 +1,7 @@
 // Game construction, typed player commands, and the real-time driver.
 import { initialControls, controlCommand } from './policy-controls';
 import { COMPANIES } from '../data/companies';
-import { BASE_TAX, BASELINE, LEGACY_BASELINE, LEGACY_BUDGET, BUDGET_LABELS, SECTOR_IDS, SECTORS, TAX_LABELS } from '../data/economic-baseline';
+import { BASE_TAX, BASELINE, LEGACY_BASELINE, LEGACY_BUDGET, LEGACY_TREND, NATIONAL_TREND, BUDGET_LABELS, SECTOR_IDS, SECTORS, TAX_LABELS } from '../data/economic-baseline';
 import { BASE_BUDGET as nationalBudget } from '../data/economic-baseline';
 import { initialCentralBank, interveneFx } from './trade-fx';
 import { DEVELOPMENT_ANNUAL0, RESOURCE_VA0 } from '../data/world';
@@ -13,7 +13,7 @@ import { PROJECT_BY_ID } from '../data/projects';
 import type {
   BorrowingPolicy, BudgetCategory, BudgetPolicy, Currency, GameSpeed, GameState, ScenarioId, SectorState, TaxPolicy, TickerId,
 } from '../types/game';
-import { BASE_MPC, CAL, LEGACY_CAL, CAPITAL_GROWTH0 } from './calibration';
+import { BASE_MPC, CAL, LEGACY_CAL } from './calibration';
 import type { CommodityPolicy, FiscalRule, PartnerId, PendingPolicy } from '../types/game';
 import { PARTNERS } from '../data/world';
 const PARTNER_NAMES = Object.fromEntries(Object.entries(PARTNERS).map(([k, v]) => [k, v.name])) as Record<PartnerId, string>;
@@ -32,7 +32,7 @@ import { seedRng } from './rng';
 import { klDay, klParts, klToEpochMin, monthKey } from './time';
 import { clamp, news, pushBounded, toMinor } from './util';
 
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 export const START = { year: 2027, month: 1, day: 1, hour: 8 };
 export const CAMPAIGN_MONTHS = 24;
 
@@ -49,10 +49,11 @@ function createWithProfile(seed: number, scenario: ScenarioId, profile: 'malaysi
   const endMin = klToEpochMin(START.year + CAMPAIGN_MONTHS / 12, START.month, START.day, START.hour);
   const startDay = klDay(startMin);
   const mk = monthKey(START.year, START.month);
+  const trend = profile === 'legacy-kl' ? LEGACY_TREND : NATIONAL_TREND;
 
   const sectors = {} as Record<string, SectorState>;
   for (const j of SECTOR_IDS) {
-    const inv = (CAL.K0[j] * (BASELINE.depreciation + CAPITAL_GROWTH0)) / 12;
+    const inv = (CAL.K0[j] * (BASELINE.depreciation + trend.capitalGrowth)) / 12;
     sectors[j] = {
       id: j,
       capacity: CAL.cap0[j],
@@ -79,7 +80,13 @@ function createWithProfile(seed: number, scenario: ScenarioId, profile: 'malaysi
   const gdpAnnual = CAL.gdpDaily * 365 + (profile === 'malaysia' ? RESOURCE_VA0 : 0);
 
   const s = {
-    controls: initialControls(),
+    // Model 3 inherits a neutral medium-term budget path (D-055): each operating appropriation is indexed at
+    // `budgetEscalation` a year, applied in monthly steps for five years. These are ordinary ministry plans,
+    // so the player sees them and can replace or cancel any of them.
+    controls: { ...initialControls(), plans: trend.budgetEscalation > 0 ? (Object.keys(BASE_BUDGET) as BudgetCategory[]).map(category => {
+      const growth = Math.pow(1 + trend.budgetEscalation, 1 / 12) - 1;
+      return { category, monthly: BASE_BUDGET[category] * (1 + growth), growth, remaining: 60, nextMonth: mk + 1, everyMonths: 1 as const };
+    }) : [] },
     schemaVersion: SCHEMA_VERSION,
     campaignId: `kl-${seed}-${scenario}`,
     seed,
@@ -130,7 +137,7 @@ function createWithProfile(seed: number, scenario: ScenarioId, profile: 'malaysi
       score: { growth: 50, wealth: 50, satisfaction: 62, stability: 80, total: 0, caps: [] },
     },
     baseline: {
-      profile, model: 2, openingTreasury: BASELINE.treasury, openingDebt: BASELINE.debt,
+      profile, model: 3, openingTreasury: BASELINE.treasury, openingDebt: BASELINE.debt,
       realGdpAnnual: gdpAnnual, nominalGdpAnnual: gdpAnnual, publicNetWorth: 0, employment: employed,
       realDisposablePerCapita: (CAL.hh.disposable * 365) / BASELINE.population,
       rentBurden: (CAL.hh.consumption * SECTORS.prop.consumption) / CAL.hh.disposable,
@@ -159,6 +166,7 @@ function createWithProfile(seed: number, scenario: ScenarioId, profile: 'malaysi
   }
   if (scenario === 'export-slump') startEvent(s, 'global_slowdown', startDay, 180, 1);
   if (scenario === 'energy-shock') startEvent(s, 'oil_spike', startDay, 90, 1);
+  if (s.controls.plans.length) news(s, { kind: 'policy', tone: 'neutral', title: 'Inherited budget path', body: `Operating appropriations are indexed at ${(trend.budgetEscalation * 100).toFixed(0)}% a year, in monthly steps, roughly in line with trend nominal GDP. Development spending stays at its 2027 level. Review or cancel each ministry plan under Economic controls.` });
   news(s, { kind: 'system', tone: 'neutral', title: 'Welcome, President', body: 'A fictional Malaysian presidency governs the national economy from the KL map. New campaigns use dated official starting figures; subsequent outcomes are simulations. All companies’ prices and financials are fictional simulations. Press Space to start the clock.' });
   return s;
 }

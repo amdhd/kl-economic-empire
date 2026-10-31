@@ -14,7 +14,7 @@ export function validateControls(c: GameState['controls']) {
     || !(c.fxBand.dailyUSD > 0 && c.fxBand.dailyUSD <= 1e9) || !(c.fxBand.reserveFloorUSD >= 0 && c.fxBand.reserveFloorUSD <= 200e9)
     || typeof c.fxBand.enabled !== 'boolean' || Object.values(c.outcomes).some(v => !(v >= 0 && v <= 100))
     || c.incentives.some(i => !SECTOR_IDS.includes(i.sector) || !(i.cut >= 0 && i.cut <= .15) || !Number.isSafeInteger(i.startMin) || !Number.isSafeInteger(i.endMin) || i.endMin <= i.startMin)
-    || c.plans.some(p => !(p.category in BUDGET_LABELS) || !(p.monthly >= 0 && p.monthly <= 50e9) || !(p.growth >= -.1 && p.growth <= .15) || !Number.isInteger(p.remaining) || p.remaining < 1 || p.remaining > 5 || !Number.isSafeInteger(p.nextMonth))) throw new Error('Invalid policy controls');
+    || c.plans.some(p => !(p.category in BUDGET_LABELS) || !(p.monthly >= 0 && p.monthly <= 50e9) || !(p.growth >= -.1 && p.growth <= .15) || ![undefined, 1, 12].includes(p.everyMonths) || !Number.isInteger(p.remaining) || p.remaining < 1 || p.remaining > (p.everyMonths === 1 ? 60 : 5) || !Number.isSafeInteger(p.nextMonth))) throw new Error('Invalid policy controls');
 }
 export function sectorTax(s: GameState, sector: SectorId, atMin = s.clock.hour * 60 - 1, statutoryRate = s.government.policies.tax.corporate): number {
   const incentive = s.controls.incentives.find(i => i.sector === sector && i.startMin <= atMin && atMin < i.endMin);
@@ -49,8 +49,9 @@ export function applyPlans(s: GameState) {
   const p = klParts(s.clock.hour*60), key = monthKey(p.year,p.month);
   for (const plan of s.controls.plans) if (plan.nextMonth <= key) {
     s.government.policies.budget[plan.category] = plan.monthly;
-    plan.monthly *= 1+plan.growth; plan.nextMonth +=12; plan.remaining--;
-    pushBounded(s.policyLog,{atMin:s.clock.hour*60,effectiveMin:s.clock.hour*60,label:`Budget plan applied: ${BUDGET_LABELS[plan.category]}`},2000);
+    plan.monthly *= 1+plan.growth; plan.nextMonth += plan.everyMonths ?? 12; plan.remaining--;
+    // Monthly indexation steps are disclosed once at campaign creation rather than logged every month.
+    if (plan.everyMonths !== 1) pushBounded(s.policyLog,{atMin:s.clock.hour*60,effectiveMin:s.clock.hour*60,label:`Budget plan applied: ${BUDGET_LABELS[plan.category]}`},2000);
   }
   s.controls.plans = s.controls.plans.filter(p => p.remaining>0);
 }

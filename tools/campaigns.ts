@@ -1,4 +1,4 @@
-import { BASE_BUDGET, budgetFor } from '../src/data/economic-baseline';
+import { BASE_BUDGET, budgetFor, trendFor } from '../src/data/economic-baseline';
 // Test/dev campaign strategies, shared by replays and the command-line balance runner.
 import { applyCommand, createGame, runHeadless, type Command } from '../src/engine/game';
 import { klToEpochMin } from '../src/engine/time';
@@ -13,8 +13,10 @@ function counterCyclical(st: GameState, lastMonth: { n: number }) {
   const u = st.indicators.unemployment;
   const stim = u > 0.045 ? 1 : u < 0.03 ? -1 : 0;
   const b = st.government.policies.budget;
+  // Neutral is the inherited budget path (model 3 indexes it monthly, D-055), not the 2027 level.
+  const path = Math.pow(1 + trendFor(st).budgetEscalation, st.reports.length / 12);
   const base = budgetFor(st);
-  const target = { transfers: base.transfers * (1 + stim * 0.5), development: base.development * (1 + stim * 0.8) };
+  const target = { transfers: base.transfers * path * (1 + stim * 0.5), development: base.development * path * (1 + stim * 0.8) };
   if (target.transfers !== b.transfers || target.development !== b.development) applyCommand(st, { type: 'queueBudget', patch: target }, st.clock.hour * 60);
 }
 

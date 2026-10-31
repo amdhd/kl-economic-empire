@@ -48,6 +48,9 @@ export function findNonFinite(v: unknown, path = 'state'): string | null {
 type Migration = (s: Record<string, unknown>) => Record<string, unknown>;
 /** migrations[n] upgrades a state from schema n to n+1. */
 const MIGRATIONS: Record<number, Migration> = {
+  // v7 → v8: ministry plans gain an optional step interval (absent = annual). Existing campaigns keep their model
+  // generation (1 or 2) and trend; only new campaigns use model 3's national trend and monthly opening budget path.
+  7: state => state,
   4: state => { (state as unknown as GameState).controls ??= initialControls(); return state; },
   // v6 → v7: ten commodities and 60 securities. New commodity indices start at reference; new companies take their
   // opening state from a fresh game with the same seed, and index divisors are rescaled so index values do not jump.
@@ -188,7 +191,7 @@ export function deserialize(json: string): GameState {
   validateWorld(s.world);
   validateSoe(s.soe);
   validateFiscal(s.fiscal);
-  if (![1, 2].includes(s.baseline.model) || !(s.households.equityIndex > 0)
+  if (![1, 2, 3].includes(s.baseline.model) || !(s.households.equityIndex > 0)
     || (s.baseline.profile !== 'malaysia' || s.baseline.model === 1) !== !s.world.enabled) throw new Error('Corrupt save: inconsistent model generation');
   if (!['a', 'b', 'c', 'd'].every((k) => {
     const word = s.world.rng[k as keyof typeof s.world.rng];

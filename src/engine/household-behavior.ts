@@ -38,9 +38,9 @@ export function householdBehaviour(confidence: number, mpc: number, unemployment
  * Fuel is a reallocation of the spending envelope, not a fictitious addition to savings.
  * If mandatory deductions already exceed resources, no discretionary drawdown is permitted.
  */
-export function householdSpending(disposable: number, permanentIncome: number, savings: number, mpc: number, wealthSpend: number, fuelDelta: number) {
+export function householdSpending(disposable: number, permanentIncome: number, savings: number, mpc: number, wealthSpend: number, fuelDelta: number, currentWeight = 0.5) {
   const available = Math.max(0, disposable + savings);
-  const desired = Math.max(0, (0.5 * disposable + 0.5 * permanentIncome) * mpc + wealthSpend);
+  const desired = Math.max(0, (currentWeight * disposable + (1 - currentWeight) * permanentIncome) * mpc + wealthSpend);
   const spending = Math.min(desired, available);
   // A fuel cost increase can crowd out the entire other-goods basket, but cannot spend more than
   // available cash. A price reduction frees basket spending within the same total cash envelope.

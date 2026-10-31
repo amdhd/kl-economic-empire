@@ -40,19 +40,16 @@ describe('24-month campaign', () => {
     for (const s of Object.values(results)) expect(s.scheduler.campaignEnded).toBe(true);
   });
 
-  it('responsive (counter-cyclical) play pays off in downturns', () => {
-    // Single seeds are bimodal and shift whenever the RNG stream changes (D-P2-05), so test
-    // across 12 seeds: the payoff should come where passive play struggles.
+  it('responsive (counter-cyclical) play stabilises unemployment in recessions at a small score cost', () => {
+    // D-056: with multipliers near published ranges, stimulus mainly cushions jobs; its fiscal cost roughly offsets
+    // the growth benefit in the score, so it is no longer expected to raise the score by itself.
     const swf: Script = [5, 12, 19, 26].map((d) => ({ at: [2027, 1, d, 10] as [number, number, number, number], cmd: { type: 'rebalance', targetMY: 0.4, targetUS: 0.4 } as Command }));
-    const seeds = Array.from({ length: 12 }, (_, i) => 301 + i);
-    const pairs = seeds.map((seed) => [play(seed, []).indicators.score.total, play(seed, swf, 'balanced', true).indicators.score.total]);
-    const weak = pairs.filter(([passive]) => passive < 55);
-    expect(weak.length).toBeGreaterThanOrEqual(2);
-    const gain = weak.reduce((a, [p, a2]) => a + a2 - p, 0) / weak.length;
-    expect(gain).toBeGreaterThan(1); // smaller stabilisation benefit after damping the feedback loop
-    const all = pairs.reduce((a, [p, a2]) => a + a2 - p, 0) / pairs.length;
-    // Stimulus has a fiscal cost: it need not beat passive play in healthy campaigns.
-    expect(gain).toBeGreaterThan(all);
+    const seeds = Array.from({ length: 8 }, (_, i) => 301 + i);
+    const meanU = (s: ReturnType<typeof play>) => s.reports.reduce((a, r) => a + r.unemployment, 0) / s.reports.length;
+    const pairs = seeds.map((seed) => [play(seed, [], 'recession'), play(seed, swf, 'recession', true)]);
+    const avg = (f: (p: (typeof pairs)[number]) => number) => pairs.reduce((a, p) => a + f(p), 0) / pairs.length;
+    expect(avg(([p, a]) => meanU(a) - meanU(p))).toBeLessThan(0);
+    expect(avg(([p, a]) => a.indicators.score.total - p.indicators.score.total)).toBeGreaterThan(-1);
   });
 
   it('an adverse global recession reduces cumulative output and household income across seeds', () => {

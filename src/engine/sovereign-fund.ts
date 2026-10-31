@@ -8,7 +8,8 @@ import type { Dividend } from './companies';
 import { post, treasuryMYR } from './government';
 import { isOpen } from './market-calendar';
 import { avgDailyValue } from './stock-market';
-import { assertSafeMinor, news, pushBounded, toMinor } from './util';
+import { assertSafeMinor, clamp, news, pushBounded, toMinor } from './util';
+import { demandFor } from '../data/economic-baseline';
 
 export const FEE_RATE: Record<Exchange, number> = { MY: 0.002, US: 0.0003 }; // brokerage + clearing + stamp, simplified
 export const HALF_SPREAD: Record<Exchange, number> = { MY: 0.001, US: 0.0002 };
@@ -166,6 +167,8 @@ export function executeOrder(s: GameState, order: Order, atMin: number): void {
   else delete f.positions[order.ticker];
   f.feesPaidMYR += q.fees * fx;
   s.market.quotes[order.ticker].fundDayValue += q.gross;
+  // Model 3 (D-058): part of the price impact persists as company sentiment (valuation premium), decaying 5%/day.
+  s.companies[order.ticker].sentiment += (order.side === 'buy' ? 1 : -1) * demandFor(s).fundImpactPersistence * q.impact;
   s.fund.tx.at(-1)!.atMin = atMin;
   order.status = 'filled';
   order.filledMin = atMin;
@@ -201,6 +204,13 @@ export function cancelOrder(s: GameState, orderId: number): boolean {
 }
 
 /** Convert between the fund's MYR and USD cash at the current rate with an explicit spread. */
+/** Model 3 (D-058): a fund conversion is a capital flow. Buying `usdMinor` (negative = selling USD) moves the same
+ * bounded, decaying ringgit pressure as a central-bank operation, from the next daily fixing. */
+function fundFxPressure(s: GameState, usdMinor: number): void {
+  const k = demandFor(s).fundFxPressure;
+  if (k > 0) s.centralBank.pressure = clamp(s.centralBank.pressure + k * (usdMinor / 100 / 1e9), -0.08, 0.08);
+}
+
 export function convertFx(s: GameState, from: Currency, amountMinor: number): string | null {
   const f = s.fund;
   const fx = s.external.myrPerUsd;
@@ -214,6 +224,7 @@ export function convertFx(s: GameState, from: Currency, amountMinor: number): st
     f.myrCash -= amountMinor;
     f.usdCash += usd;
     f.feesPaidMYR += (amountMinor / 100) * (FX_SPREAD / (1 + FX_SPREAD));
+    fundFxPressure(s, usd);
     addTx(s, 'fx', 'MYR', -amountMinor, `Converted to US$ ${(usd / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })} @ ${(fx * (1 + FX_SPREAD)).toFixed(4)}`, { fx, counterCurrency: 'USD', counterAmountMinor: usd });
   } else {
     if (amountMinor > f.usdCash) return 'Insufficient USD cash';
@@ -222,6 +233,7 @@ export function convertFx(s: GameState, from: Currency, amountMinor: number): st
     f.usdCash -= amountMinor;
     f.myrCash += myr;
     f.feesPaidMYR += (amountMinor / 100) * fx * FX_SPREAD;
+    fundFxPressure(s, -amountMinor);
     addTx(s, 'fx', 'USD', -amountMinor, `Converted to RM ${(myr / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })} @ ${(fx * (1 - FX_SPREAD)).toFixed(4)}`, { fx, counterCurrency: 'MYR', counterAmountMinor: myr });
   }
   return null;

@@ -1,4 +1,4 @@
-import { baselineFor } from '../data/economic-baseline';
+import { baselineFor, trendFor } from '../data/economic-baseline';
 // Satisfaction, approval and campaign score. All weights/thresholds are transparent constants.
 import { EVENT_BY_ID } from '../data/events';
 import type { GameState, MonthlyReport, ScoreBreakdown } from '../types/game';
@@ -12,6 +12,8 @@ import { clamp } from './util';
 export const SCORE_WEIGHTS = { growth: 0.3, wealth: 0.3, satisfaction: 0.25, stability: 0.15 };
 export const VICTORY = { score: 75, approval: 60 }; // recalibrated from seeded replays (docs/game-balance.md)
 export const GROWTH_TARGET = 0.035;
+/** Growth benchmark before external adjustment: potential growth, so an economy merely on trend scores 50. */
+export const growthTarget = (s: GameState): number => trendFor(s).potentialGrowth;
 export const MAX_EXTERNAL_ADJUSTMENT = 0.01;
 
 /** A duration-weighted run rate, so February and a 31-day month measure the same steady output. */
@@ -56,10 +58,17 @@ export function scoreDrivers(s: GameState) {
     ? (scoreNetWorth(s) + liabilities) / (s.indicators.cpi / 100) - liabilities - s.baseline.publicNetWorth
     : scoreNetWorth(s) / (s.indicators.cpi / 100) - s.baseline.publicNetWorth;
   const income = reports.at(-1)?.realDisposablePerCapita ?? s.baseline.realDisposablePerCapita;
-  const wealthCreditFactor = clamp(Math.min(income / s.baseline.realDisposablePerCapita,
-    realOutput / s.baseline.realGdpAnnual, s.government.serviceQuality / BASELINE.serviceQuality), 0, 1);
-  const rawWealthScore = clamp(50 + 400 * realWealthChange / s.baseline.nominalGdpAnnual, 0, 100);
-  return { realGrowth, growthTarget: GROWTH_TARGET + externalAdjustment, externalAdjustment, realWealthChange,
+  const TREND = trendFor(s);
+  // Model 3 (D-057): living standards are judged against the trend path, and each 1% shortfall costs 4% of the credit,
+  // so wealth bought with stagnation is not rewarded. Earlier models compare with opening levels.
+  const elapsed = Math.max(0, (reports.length - 1) / 12);
+  const outputPath = TREND.trendWealthCredit ? Math.pow(1 + TREND.potentialGrowth, elapsed) : 1;
+  const incomePath = TREND.trendWealthCredit ? Math.pow(1 + TREND.productivity, elapsed) : 1;
+  const sustained = Math.min(income / (s.baseline.realDisposablePerCapita * incomePath),
+    realOutput / (s.baseline.realGdpAnnual * outputPath), s.government.serviceQuality / BASELINE.serviceQuality);
+  const wealthCreditFactor = clamp(TREND.trendWealthCredit ? 1 - 4 * (1 - sustained) : sustained, 0, 1);
+  const rawWealthScore = clamp(50 + TREND.wealthSlope * realWealthChange / s.baseline.nominalGdpAnnual, 0, 100);
+  return { realGrowth, growthTarget: growthTarget(s) + externalAdjustment, externalAdjustment, realWealthChange,
     wealthCreditFactor, rawWealthScore };
 }
 

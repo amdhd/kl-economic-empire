@@ -22,7 +22,9 @@ test('all four economic controls can be reviewed, applied and observed in simula
   await page.getByTestId('confirm-btn').click();
   const before=await page.evaluate(()=>(window as unknown as Dev).__klDev.state());
   expect(before.controls.incentives[0].cut).toBe(.05);
-  expect(before.controls.plans).toHaveLength(1);
+  // The player's annual plan replaces that category's inherited monthly indexation (D-055).
+  expect(before.controls.plans.filter(p=>p.everyMonths!==1)).toHaveLength(1);
+  expect(before.controls.plans).toHaveLength(6);
   expect(before.controls.debt.newTermMonths).toBe(36);
   expect(before.controls.fxBand.enabled).toBe(true);
   await runHours(page,16);
@@ -38,13 +40,24 @@ test('queuing a manual budget for a planned ministry warns, then replaces the pl
   await page.getByRole('button',{name:'Review ministry plan',exact:true}).click();
   await page.getByTestId('confirm-btn').click();
   const s=await page.evaluate(()=>(window as unknown as Dev).__klDev.state());
-  const cat=s.controls.plans[0].category;
+  const cat=s.controls.plans.find(p=>p.everyMonths!==1)!.category;
   await page.getByTestId('nav-policies').click();
   await page.getByTestId(`budget-${cat}`).fill(String(Math.round(s.government.policies.budget[cat]*0.9/10e6)*10e6));
   await page.getByTestId('queue-budget').click();
   await expect(page.getByTestId(`plan-replaced-${cat}`)).toBeVisible();
   await page.getByTestId('confirm-btn').click();
   const after=await page.evaluate(()=>(window as unknown as Dev).__klDev.state());
-  expect(after.controls.plans).toHaveLength(0);
+  expect(after.controls.plans.some(p=>p.category===cat)).toBe(false);
   expect(after.government.pending.at(-1)?.label).toContain('ministry plan');
+});
+
+test('inherited monthly budget steps never show up as player edits in an open budget panel',async({page})=>{
+  await startCampaign(page);
+  await page.getByTestId('nav-policies').click();
+  await expect(page.getByTestId('queue-budget')).toBeDisabled();
+  const before=await page.evaluate(()=>(window as unknown as Dev).__klDev.state().government.policies.budget.health);
+  await runHours(page,24*33);
+  const after=await page.evaluate(()=>(window as unknown as Dev).__klDev.state().government.policies.budget.health);
+  expect(after).toBeGreaterThan(before);
+  await expect(page.getByTestId('queue-budget')).toBeDisabled();
 });

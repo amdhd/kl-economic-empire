@@ -1,6 +1,6 @@
 // External (rest-of-Malaysia, US, global) economy. Seeded mean-reverting cycles around trends,
 // plus event modifiers. KL policy has (almost) no influence here by design.
-import { LEGACY_BASELINE, baselineFor } from '../data/economic-baseline';
+import { LEGACY_BASELINE, baselineFor, demandFor } from '../data/economic-baseline';
 import { BASELINE as nationalBase } from '../data/economic-baseline';
 import { EVENT_BY_ID, type EventMods } from '../data/events';
 import type { ExternalState, GameState, GlobalDriver } from '../types/game';
@@ -102,7 +102,7 @@ export function updateExternal(s: GameState, mods: AggregatedMods, klInflation: 
   if (dayOfMonth === 1 && month % 2 === 1) {
     e.myInflation = clamp(0.85 * (0.02 + 0.03 * (e.oil - 1) + 0.2 * (e.myrPerUsd / BASELINE.myrPerUsd - 1)) + 0.15 * klInflation, -0.02, 0.12);
     // KL is a large share of the national economy, so its output gap enters the (fictional) rule.
-    const oprTarget = BASELINE.opr + 1.3 * (e.myInflation - 0.02) + 0.5 * Math.log(e.myDemand / Math.exp(TREND.my * t)) + 0.2 * klOutputGap;
+    const oprTarget = BASELINE.opr + 1.3 * (e.myInflation - 0.02) + 0.5 * Math.log(e.myDemand / Math.exp(TREND.my * t)) + demandFor(s).oprGapWeight * klOutputGap;
     if (Math.abs(oprTarget - e.opr) > 0.00125) e.opr = clamp(e.opr + Math.sign(oprTarget - e.opr) * 0.0025, 0.0125, 0.06);
     const fedTarget = 0.0375 + mods.usRate + 1.2 * (Math.log(e.usDemand / Math.exp(TREND.us * t))) + 0.4 * (e.oil - 1) * 0.03;
     if (Math.abs(fedTarget - e.fedRate) > 0.00125) e.fedRate = clamp(e.fedRate + Math.sign(fedTarget - e.fedRate) * 0.0025, 0.005, 0.08);

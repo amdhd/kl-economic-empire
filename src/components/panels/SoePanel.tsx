@@ -38,7 +38,7 @@ export function SoePanel() {
         <Stat label="Cash" value={money(p.cash)} sub={`floor ${money(PETRONAS.cashFloor)}`} tone={p.cash >= PETRONAS.cashFloor ? 'up' : 'down'} />
         <Stat label="Borrowings" value={money(p.debt)} />
         <Stat label="Production index" value={p.production.toFixed(3)} sub="1 = opening" tone={p.production >= 1 ? 'up' : 'down'} />
-        <Stat label="Capex now" value={`${money(petronasCapex(p))}/yr`} sub={petronasCapex(p) < p.capexAnnual ? 'cut: cash below floor' : 'per policy'} />
+        <Stat label="Capex now" value={`${money(petronasCapex(p, g))}/yr`} sub={p.cash < PETRONAS.cashFloor ? 'cut: cash below floor' : Math.abs(petronasCapex(p, g) / p.capexAnnual - 1) > 0.005 ? 'policy × lagged oil price' : 'per policy'} />
       </div>
       {last && <p className="mt-2 text-[12px] text-slate-400">{monthKeyLabel(last.monthKey)}: upstream revenue {money(last.revenue)}, petroleum income tax {money(last.pita)}, profit after tax {money(last.profitAfterTax)}, dividend to government {money(last.dividend)}.</p>}
       <div className="mt-3 grid grid-cols-2 gap-4 text-[12px]">

@@ -144,7 +144,62 @@ export const BASELINE = {
   myrPerUsd: 538_759_540_269 / 132.1e9,
 };
 export const baselineFor = (s: { baseline: { profile: 'malaysia' | 'legacy-kl' } }) => s.baseline.profile === 'legacy-kl' ? LEGACY_BASELINE : BASELINE;
-export const budgetFor = (s: { baseline: { profile: 'malaysia' | 'legacy-kl'; model?: 1 | 2 } }) =>
+export const budgetFor = (s: { baseline: { profile: 'malaysia' | 'legacy-kl'; model?: 1 | 2 | 3 } }) =>
   s.baseline.profile === 'legacy-kl' ? LEGACY_BUDGET : s.baseline.model === 1 ? BASE_BUDGET_V1 : BASE_BUDGET;
 /** Model-2 national campaigns carry the resource sector, development budget, SOEs, commodities and partners. */
-export const nationalV2 = (s: { baseline: { profile: 'malaysia' | 'legacy-kl'; model?: 1 | 2 } }) => s.baseline.profile === 'malaysia' && s.baseline.model !== 1;
+export const nationalV2 = (s: { baseline: { profile: 'malaysia' | 'legacy-kl'; model?: 1 | 2 | 3 } }) => s.baseline.profile === 'malaysia' && s.baseline.model !== 1;
+
+/** Long-run growth path of an untouched economy. Model 1/2 saves keep the original KL-era trend so they replay
+ * unchanged; model 3 (new national campaigns, D-055) makes supply, investment and policy-rate trends agree. */
+export interface TrendParams {
+  productivity: number; // labour productivity, per year
+  laborForce: number; // workforce trend, per year (before the pull toward labour demand)
+  capitalGrowth: number; // desired net capital growth at baseline returns, per year
+  naturalUnemployment: number;
+  potentialGrowth: number; // real potential growth used by the OPR output gap and the growth score
+  /** Index the derived "other public receipts" to nominal GDP instead of fixing them in ringgit. */
+  buoyantReceipts: boolean;
+  /** Wealth score points per unit of real public net-wealth change ÷ opening nominal GDP. */
+  wealthSlope: number;
+  /** Judge wealth sustainability against the trend path (output, income per head) instead of opening levels. */
+  trendWealthCredit: boolean;
+  /** Annual escalation of the opening ministry plans that new campaigns inherit (0 = no opening plans). */
+  budgetEscalation: number;
+}
+export const LEGACY_TREND: TrendParams = {
+  productivity: 0.015, laborForce: 0.01, capitalGrowth: 0.035, naturalUnemployment: 0.035, potentialGrowth: 0.035, buoyantReceipts: false, wealthSlope: 400, trendWealthCredit: false, budgetEscalation: 0,
+};
+export const NATIONAL_TREND: TrendParams = {
+  productivity: 0.023, laborForce: 0.016, capitalGrowth: 0.04, naturalUnemployment: 0.03, potentialGrowth: 0.036, buoyantReceipts: true, wealthSlope: 300, trendWealthCredit: true, budgetEscalation: 0.06,
+};
+export const trendFor = (s: { baseline: { profile: 'malaysia' | 'legacy-kl'; model?: 1 | 2 | 3 } }): TrendParams =>
+  s.baseline.profile === 'malaysia' && s.baseline.model === 3 ? NATIONAL_TREND : LEGACY_TREND;
+
+/** How strongly household, hiring and investment decisions propagate shocks. Model 1/2 keep the original values;
+ * model 3 is recalibrated against published-range multipliers (D-056, `npm run multipliers`). */
+export interface DemandParams {
+  currentIncomeWeight: number; // share of desired spending based on current (vs permanent) disposable income
+  permanentSpeed: number; // daily correction of permanent income toward current income
+  permanentDrift: number; // annual nominal growth households expect in permanent income
+  importedConsumption: number; // share of household cash spending on finished imports (direct leakage)
+  hiringSpeed: number; // weekly adjustment of employment toward output-implied labour demand
+  investmentRate: number; // desired capital growth per unit lending-rate change
+  creditRate: number; // household net-credit demand per unit lending-rate change
+  laborForcePull: number; // monthly pull of the workforce toward labour demand (migrant workers, participation)
+  oprGapWeight: number; // OPR rule response to the modelled output gap
+  visitorLevyElasticity: number; // tourism demand response per point of consumption levy above its opening rate
+  upstreamOilElasticity: number; // PETRONAS capex response to the lagged (~6-month) oil/gas price index
+  fundFxPressure: number; // FX pressure (log) per US$1bn the sovereign fund converts out of ringgit (Task 3, D-058)
+  fundImpactPersistence: number; // share of a fund fill's price impact that persists in company sentiment
+  tobinQ: number; // desired capital growth per log point of the smoothed listed-equity index
+  /** Producers index non-labour margins to consumer prices excluding the consumption levy and pump prices. */
+  taxFreePriceAnchor: boolean;
+}
+export const LEGACY_DEMAND: DemandParams = {
+  currentIncomeWeight: 0.5, permanentSpeed: 0.012, permanentDrift: 0, importedConsumption: 0, hiringSpeed: 0.12, investmentRate: 0.6, creditRate: 8, laborForcePull: 0.06, oprGapWeight: 0.2, visitorLevyElasticity: 1.5, upstreamOilElasticity: 0, fundFxPressure: 0, fundImpactPersistence: 0, tobinQ: 0, taxFreePriceAnchor: false,
+};
+export const NATIONAL_DEMAND: DemandParams = {
+  currentIncomeWeight: 0.2, permanentSpeed: 0.002, permanentDrift: 0.059, importedConsumption: 0.12, hiringSpeed: 0.02, investmentRate: 0.2, creditRate: 4, laborForcePull: 0.15, oprGapWeight: 0.75, visitorLevyElasticity: 0.75, upstreamOilElasticity: 0.5, fundFxPressure: 0.003, fundImpactPersistence: 0.5, tobinQ: 0.008, taxFreePriceAnchor: true,
+};
+export const demandFor = (s: { baseline: { profile: 'malaysia' | 'legacy-kl'; model?: 1 | 2 | 3 } }): DemandParams =>
+  s.baseline.profile === 'malaysia' && s.baseline.model === 3 ? NATIONAL_DEMAND : LEGACY_DEMAND;

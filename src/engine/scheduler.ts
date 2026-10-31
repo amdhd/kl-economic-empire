@@ -1,6 +1,6 @@
 import { applyPlans, automaticFx } from './policy-controls';
 import { recentIncomeTrend } from './household-behavior';
-import { baselineFor, budgetFor, nationalV2 } from '../data/economic-baseline';
+import { baselineFor, budgetFor, nationalV2, trendFor } from '../data/economic-baseline';
 import { updateFiscal } from './fiscal-rules';
 import { dailyResources, monthCloseSoe } from './soe';
 import { coreCpiOf, updateWorld, weeklyWorld } from './world';
@@ -62,12 +62,12 @@ export function runHourTick(s: GameState): void {
   if (s.clock.hour >= s.clock.endHour) endCampaign(s);
 }
 
-/** KL output gap vs a 3.5%/yr potential path from the baseline (last closed month). */
+/** Output gap vs the potential path from the baseline (last closed month): 3.5%/yr, or the model-3 trend. */
 export function outputGap(s: GameState): number {
   const r = s.reports[s.reports.length - 1];
   if (!r) return 0;
   const days = daysInMonth(Math.floor(r.monthKey / 12), (r.monthKey % 12) + 1);
-  const potential = (s.baseline.realGdpAnnual / 365) * Math.pow(1.035, s.reports.length / 12);
+  const potential = (s.baseline.realGdpAnnual / 365) * Math.pow(1 + trendFor(s).potentialGrowth, s.reports.length / 12);
   return r.realGdp / days / potential - 1;
 }
 

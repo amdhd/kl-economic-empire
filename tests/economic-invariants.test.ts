@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BASE_BUDGET, NATIONAL_GDP, IO, SECTOR_IDS, SECTORS } from '../src/data/economic-baseline';
+import { BASE_BUDGET, NATIONAL_DEMAND, NATIONAL_GDP, IO, SECTOR_IDS, SECTORS } from '../src/data/economic-baseline';
 import { bankIdentityGap } from '../src/engine/banks';
 import { CAL } from '../src/engine/calibration';
 import { KL_ECONOMY_SHARE, RESOURCE_VA0 } from '../src/data/world';
@@ -92,6 +92,10 @@ describe('accounting identities', () => {
 
 describe('GDP measurement', () => {
   it('is value added: SWF share trading does not change GDP', () => {
+    // D-058 lets fund trades move sentiment, the index and so the wealth effect and Tobin's q. With those
+    // channels off, the trade's own accounting must leave GDP, sector value added and taxes exactly unchanged.
+    const saved = { ...NATIONAL_DEMAND };
+    Object.assign(NATIONAL_DEMAND, { fundImpactPersistence: 0, tobinQ: 0 });
     const run = (trade: boolean) =>
       withoutEvents(() => {
         const s = createGame(21);
@@ -107,7 +111,11 @@ describe('GDP measurement', () => {
         const r = s.reports.at(-1)!;
         return { nominal: r.nominalGdp, real: r.realGdp, sectors: r.gdpBySector, taxes: r.gov.taxCorporate };
       });
-    expect(run(true)).toEqual(run(false));
+    try {
+      expect(run(true)).toEqual(run(false));
+    } finally {
+      Object.assign(NATIONAL_DEMAND, saved);
+    }
   });
 
   it('nets intermediate production out of GDP rather than adding it to final demand', () => {
@@ -116,7 +124,8 @@ describe('GDP measurement', () => {
     const finalDemand = SECTOR_IDS.reduce((sum, j) => sum + CAL.f0[j], 0);
     const imports = SECTOR_IDS.reduce((sum, j) => sum + SECTORS[j].importShare * s.sectors[j].output, 0);
     const grossOutput = SECTOR_IDS.reduce((sum, j) => sum + s.sectors[j].mtd.nominalOutput, 0);
-    expect((e.gdpNominal - e.levy) / (finalDemand - imports)).toBeCloseTo(1, 10);
+    // Model-3 permanent income already drifts with expected trend income on day one (D-056), adding ~0.005%.
+    expect((e.gdpNominal - e.levy) / (finalDemand - imports)).toBeCloseTo(1, 3);
     expect(grossOutput).toBeGreaterThan(e.gdpNominal * 1.5);
   });
 

@@ -53,8 +53,9 @@ describe('Phase 6 score calibration', () => {
     const s = createGame(604);
     s.government.treasury += 1e12;
     const healthy = computeScore(s).wealth;
-    s.government.serviceQuality = BASELINE.serviceQuality * 0.5;
-    expect(computeScore(s).wealth - 50).toBeCloseTo((healthy - 50) * 0.5, 10);
+    // Model 3 (D-057): each 1% shortfall removes 4% of the credit, so a 5% service decline leaves 80%.
+    s.government.serviceQuality = BASELINE.serviceQuality * 0.95;
+    expect(computeScore(s).wealth - 50).toBeCloseTo((healthy - 50) * 0.8, 10);
     s.government.treasury = 0;
     s.government.publicAssets = 0;
     expect(computeScore(s).wealth).toBe(scoreDrivers(s).rawWealthScore);

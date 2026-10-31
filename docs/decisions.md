@@ -342,3 +342,53 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   Both retain normal later event probabilities. The Recession card now discloses its existing persistent 3× adverse /
   0.6× other hazard weights and 180-day, 1.3× opening shocks. Scenarios reuse deterministic registered events without
   additional random draws; no new economic equations or saved fields. Saved scenario strings remain in schema 7.
+- **D-055 National growth trend for an untouched economy (model 3, schema 8).** Diagnosis with a monthly probe (events
+  off): the opening is steady (month-1 output, jobs and investment equal the calibration), but the trends disagree.
+  (1) The natural rate was the KL-era 3.5% against a 3.0% national opening, so the workforce pull and Phillips curve
+  dragged unemployment up. (2) Output is demand-determined; autonomous demand grew ~2.6%: exports ~4.4%, government
+  purchases flat in ringgit (≈ −1.2%/yr real), resources flat, investment following utilisation. (3) Supply (workforce
+  1% + productivity 1.5%), capital growth and the OPR/score potential (3.5%) were KL-era values. (4) The omitted-receipts
+  residual was fixed in ringgit, so revenue/GDP fell with nominal growth. Raising supply alone made unemployment worse,
+  confirming demand as the binding constraint. New campaigns use **model 3**: natural rate 3.0%, workforce trend 1.6%,
+  productivity 2.6%, opening capital growth 4.0% (higher turns property's residual exports negative), potential 3.8%
+  (seven sectors ≈ 4.2%, resources flat) for both the OPR output gap and the growth-score benchmark, other receipts
+  indexed to last month's nominal GDP, and inherited ministry plans indexing each operating budget at 6%/yr (trend real
+  growth + 2% target) in monthly steps for five years. Monthly steps avoid a year of falling real purchases followed by a
+  January jump. Development capex stays at its 2027 level. Plans are ordinary, visible, cancellable controls; manual
+  budgets replace them as in D-030. Plans gain optional `everyMonths` (1 or 12; absent = annual), hence schema 8 with
+  a no-op migration. Model 1/2 saves keep their trend, calibration, fixed receipts and no plans, so they replay unchanged.
+  Unchanged policy now leaves the deficit near its opening ~3.8–3.9% (spending tracks the economy), so consolidation
+  remains the player's choice. CPI still settles ~1.3%/yr because world commodity prices are flat in nominal USD;
+  this is recorded as an open calibration issue.
+- **D-056 Demand multiplier recalibration (model 3).** Harness first: `tools/multipliers.ts` (`npm run multipliers`,
+  `tests/multipliers.test.ts`) runs paired same-seed campaigns with events/episodes off and one shock from 1 Feb 2027:
+  +1% of GDP government purchases, OPR +25/+100bp held above the baseline path, oil +10%/+50%, consumption levy +1pp,
+  RON95 eligibility removal. Benchmarks: spending multiplier 0.3–0.8 (Rafiq, IMF WP/13/149, finds Malaysian multipliers
+  declined after 1998), OPR 25bp ≈ 0.1–0.16pp of GDP (Bank Muamalat SVAR, 2025), Okun 0.1–0.45 and sacrifice ratio
+  0.5–4 (typical EM ranges; no Malaysia-specific Okun estimate was found, so these are labelled assumptions).
+  Model-3 changes (`NATIONAL_DEMAND`; model 1/2 keep `LEGACY_DEMAND`): 12% of household cash spending buys finished
+  imports (in calibration too); desired spending weights current income 0.2 (was 0.5); permanent income corrects
+  0.2%/day (was 1.2%) and drifts with expected trend nominal income (5.9%/yr); hiring adjusts 2%/week (was 12%);
+  investment −0.2 and household credit −4 per unit lending-rate change (were −0.6, −8); workforce pull 15%/month (was
+  6%, migrant/participation flows); OPR gap weight 0.75 (was 0.2); producers anchor non-labour margins to prices
+  excluding the levy and pump prices; visitor levy elasticity 0.75 (was 1.5); PETRONAS capex scales with the lagged
+  oil/gas index (elasticity 0.5). Productivity is lowered to 2.3% and potential to 3.6% (revising D-055) so supply
+  matches the ~3.5% demand path and unemployment holds near 3%. Results and remaining gaps (4-quarter spending 0.81,
+  oil +10% −0.38%, levy multiplier 0.9: an unrecycled oil windfall and full levy incidence) are in economy-model.md.
+- **D-057 Wealth credit against trend (model 3).** After D-056, tax rises cost much less output, and the tax-maximiser
+  bot scored best (61.2 vs hands-off 57.1) on 93 wealth points despite 0.7% real growth: the D-051 credit compared
+  living standards with *opening* levels. Model 3 compares output with the potential path and real income per head
+  with the productivity path, removes 4% of the credit per 1% shortfall (`1 − 4·(1 − min(ratios, services))`), and
+  lowers the wealth slope from 400 to 300 points per unit of real net-wealth change ÷ opening GDP. Losses keep their
+  full penalty. Model 1/2 saves keep the D-051 rule. The counter-cyclical bot in `tools/campaigns.ts` now measures
+  "neutral" against the inherited budget path, not the 2027 level (it had been cancelling indexation). Its campaign test
+  now checks recession unemployment and a bounded score cost instead of a score gain.
+- **D-058 Sovereign fund macro effects (user-requested trade-off, model 3).** (a) Fund MYR→USD conversions are capital
+  outflows: `pressure += 0.003 × US$bn` through the central bank's bounded (±0.08) pressure, decaying over 30 days from
+  the next fixing; USD→MYR reverses it. Converting the fund's whole ~RM25bn (≈US$6bn) gives ≈1.8% weaker ringgit at
+  peak. (b) Half of each fill's price impact becomes company sentiment, decaying 5%/day, so domestic buying lifts
+  the price and KL index (and, through the existing equity index, household spending). The fill price still pays the
+  full impact, so buy-and-sell round trips lose value (tested). (c) Tobin's q: desired capital growth `+ 0.008 ×
+  ln(equityIndex)` for all share-price moves, using the lagged equity index. 0.02 nearly doubled OPR transmission, so
+  0.008 keeps OPR +25bp at −0.17% after 8 quarters. Model 1/2 saves keep trades macro-neutral. The FX desk discloses
+  the expected pressure before conversion.
