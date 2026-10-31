@@ -1,3 +1,4 @@
+import type { DealsState } from './deals';
 // Core game-state contract. Everything here is plain JSON-serialisable data.
 // Monetary *ledger balances* are integer minor units (sen / US cents) held in JS numbers
 // (safe up to ±9e15 minor units = RM 90 trillion); macro *flows* are MYR floats.
@@ -176,7 +177,7 @@ export interface Order {
   reason?: string;
 }
 
-export type FundTxType = 'buy' | 'sell' | 'dividend' | 'fx' | 'injection' | 'withdrawal' | 'fee';
+export type FundTxType = 'private' | 'buy' | 'sell' | 'dividend' | 'fx' | 'injection' | 'withdrawal' | 'fee';
 export interface FundTx {
   id: number;
   atMin: number;
@@ -245,6 +246,7 @@ export interface PendingPolicy {
 
 export type ProjectKind = 'transport' | 'connectivity' | 'housing' | 'resilience' | 'health';
 export interface ProjectState {
+  concessionDealId?: number;
   id: number;
   templateId: string;
   name: string;
@@ -274,6 +276,8 @@ export type LedgerKind =
   | 'emergency';
 
 export interface GovMonthFlows {
+  dealEscrowOut: number;
+  dealEscrowIn: number;
   taxCorporate: number;
   taxProperty: number;
   taxConsumption: number;
@@ -511,6 +515,7 @@ export interface PlayerAction {
 }
 
 export interface GameState {
+  deals: DealsState;
   controls: {
     lastTaxReliefMYR: number;
     incentives: { sector: SectorId; cut: number; startMin: number; endMin: number }[];

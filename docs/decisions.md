@@ -416,3 +416,45 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   close). Its trend is the change vs the previous close in signed billions ("+1.2B", millions below 0.1B), green/red.
   Hovering (or focusing) the chip shows a card with the balance, the change vs the close seven days earlier (or the oldest
   close), and a sparkline of the last 30 daily closes coloured by that weekly trend. The live balance stays in the Economy window.
+- **D-063 Deals expansion planning (user request, 31 Oct 2026).** Scope ideas 2–7: negotiated investment, takeovers,
+  concessions, rescues, startup rounds and supply contracts. See `docs/deals-expansion-plan.md` for the proposed
+  phased design. Extend schema-9 FDI rather than duplicate it; plan a shared Deal Room and explicit contract/ownership
+  accounting. Fictional private targets and a separate SOE strategic mandate avoid silently changing listed-security
+  concentration rules. Budgets/caps and migration details are provisional until implementation; no runtime rules,
+  saved fields or economic effects are changed by this planning entry.
+- **D-064 Deal foundations.** Implement plan phases sequentially on codex/deals-power-expansion. Schema 10 adds a
+  segregated escrow reservation ledger, using treasury financing lines or actual fund/SOE cash transfers. Escrow
+  remains an asset until payment; no borrowing on signature. An optional fictional advisory offer exercises the
+  shared lifecycle. Existing saves receive empty disabled deals; signed FDI is untouched. No new randomness is drawn.
+- **D-065 Negotiated FDI.** Preserve existing standard approvals; opt into delivery/sourcing/training negotiation by
+  reviewing the linked offer in Deal Room. Deterministic bounded counteroffers (three rounds), fully reserved grants,
+  quarterly build milestones and deadline clawbacks extend the original pledge instead of creating another project.
+  Training changes the funded purchasing mix, not an arbitrary employment counter. Claims earn no wealth until collected.
+- **D-066 Private concessions.** Reuse project completion effects and reject duplicate funding routes. Private assets
+  are excluded from public assets; public support is an expense. Contribution/charges/term/guarantee alter the service
+  quote. Record capped contingent calls and unpaid contractual arrears separately from essential fiscal obligations.
+  No automatic discretionary bridge financing. User revenue is a slice of existing service activity, not extra GDP.
+- **D-067 Physical supply agreements.** Reprice the fleet's existing nominal envelope and only a voluntary 20% industry
+  cohort. Keep household pump subsidies separate. Collateral is an asset until refunded or impaired; operating bills
+  remain ordinary operating/input costs. Explicit quantities, indexation, duration premium and capped exit/default
+  loss make fixed prices a trade-off, not a guaranteed subsidy. Industry quantities are activity-equivalent units.
+- **D-068 Startup equity.** Private firms remain outside the listed stock universe. Primary equity, 1% fees, capped
+  SWF private exposure, conservative net-asset marks, ownership dilution and cash-backed exits share one enterprise
+  ledger. Operating sales sample the existing sector; only funded incremental capex adds demand/capacity. Persist
+  venture quality on deals.rng. No public wealth is created by signing, moving money or marking future profits.
+- **D-069 Rescues.** Distinguish illiquidity from insolvency, validate creditor recovery and require positive post-
+  recap assets. Khazanah cash funds staged equity/secured loans, with actual monthly cash repayments and matching
+  enterprise liabilities. Failed milestones withhold funding; recovery is bounded by estate/buyer cash. Public
+  distributions require earned profits and reduce equity claims, preventing cash-extraction wealth exploits.
+- **D-070 Private takeovers.** Cash-backed rival bids, shareholder acceptance, control premiums, one-time ownership
+  closing and delayed persisted integration outcomes operate on fictional private firms only. Sellers receive the
+  acquisition payment; company capital is not conjured by a share sale. Khazanah mandate exposure is capped; fees,
+  impairments, actual earnings, distributions and exits all reconcile through the enterprise ownership ledger.
+- **D-071 Deal integration.** Preserve sampled-firm versus aggregate production boundaries; rescue rehabilitation
+  uses funded capex and the existing six-month capacity pipeline. Repay supplier arrears when cash returns and
+  require shareholder consent to recap dilution. Record actual retained earnings in book claims so distributions
+  cannot generate public wealth. Concession cancellation from Projects routes through the contract; a supplier
+  default restores spot pricing for unfulfilled volume. Guarantee provisions use capped current-utilisation stress
+  projections, separate from maximum exposure and unpaid calls. Add opt-in deal alerts and unfinished-contract
+  reporting. Later fictional cohorts arrive every 90 days without touching existing random streams. Schema-9 model-3
+  saves may enable new agreements prospectively; older models retain their disabled rules.

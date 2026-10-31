@@ -27,6 +27,8 @@ export function SoePanel() {
   const [review, setReview] = useState<{ cmd: Command; title: string; body: string } | null>(null);
   if (!p.enabled) {
     return <PanelShell title="State enterprises" subtitle="PETRONAS and Khazanah">
+      {!!g.deals?.items.some(d=>d.payer==='strategic'&&(d.valueMinor>0||d.escrowMinor>0)) && <Section title="Khazanah strategic mandate · 10% capital limit">{g.deals.items.filter(d=>d.payer==='strategic'&&(d.valueMinor>0||d.escrowMinor>0)).map(d=><p key={d.id} className="text-[12px]">{d.name}: {money(d.valueMinor/100)} claim · {money(d.escrowMinor/100)} escrow</p>)}<button className="btn mt-2" onClick={()=>useGame.getState().setPanel('deals')}>Inspect strategic agreements</button></Section>}
+
       <p className="text-[12px] text-amber-200">State enterprises are modelled in new Malaysia campaigns. This save keeps its original calibration.</p>
     </PanelShell>;
   }

@@ -1,3 +1,5 @@
+import { privateValue } from './private-enterprises';
+import { escrowValue } from './deals';
 // Government sovereign wealth fund. Cash is integer minor units (sen / US cents).
 // Trades exchange cash for shares at the execution price; only fees, spread and impact reduce NAV.
 // Closed-market rule (D-008): orders placed while the exchange is closed are QUEUED as market
@@ -56,7 +58,7 @@ export function navMYR(s: GameState): number {
   for (const [id, p] of Object.entries(f.positions) as [TickerId, Position][]) {
     nav += p.units * s.market.quotes[id].price * (id.startsWith('US:') ? fx : 1);
   }
-  return nav;
+  return nav + (escrowValue(s, 'fund')+privateValue(s,'fund')) / 100;
 }
 
 export function positionValueMYR(s: GameState, id: TickerId): number {

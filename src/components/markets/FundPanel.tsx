@@ -42,6 +42,7 @@ export function FundPanel() {
         <Stat label="Realised, all in MYR" value={money(f.realizedMYR / 100)} sub="at sale FX vs purchase FX" tone={f.realizedMYR >= 0 ? 'up' : 'down'} />
         <Stat label="Dividends received (net)" value={money(f.dividends.MYR / 100)} sub={`+ ${money(f.dividends.USD / 100, 'USD')}`} />
       </div>
+      {!!g.deals?.items.some(d=>d.payer==='fund' && (d.valueMinor>0||d.escrowMinor>0)) && <Section title="Private investment mandate · 10% NAV limit"><div className="space-y-2 text-[12px]">{g.deals.items.filter(d=>d.payer==='fund'&&(d.valueMinor>0||d.escrowMinor>0)).map(d=><p key={d.id}>{d.name}: {money(d.valueMinor/100)} carrying value · {money(d.escrowMinor/100)} reserved · {((d.enterprise?.publicShare??0)*100).toFixed(1)}% ownership</p>)}</div><button className="btn mt-2" onClick={()=>useGame.getState().setPanel('deals')}>Manage private agreements</button></Section>}
       <Section title="Allocation">
         {[['Malaysian equities', myEq, '#34d399'], ['US equities', usEq, '#60a5fa'], ['Cash (MYR + USD)', cash, '#94a3b8']].map(([k, v, c]) => (
           <div key={k as string} className="mb-1.5 flex items-center gap-2 text-[12px]">

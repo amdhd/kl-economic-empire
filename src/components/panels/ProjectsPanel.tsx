@@ -19,7 +19,7 @@ export function ProjectsPanel() {
   const gov = g.government;
   const constructionPrice = g.sectors.prop.price;
   const building = gov.projects.filter((p) => p.status === 'building');
-  const monthlyCapex = building.reduce((a, p) => a + Math.min(p.cost - p.work, (p.cost / p.durationDays) * 365 / 12) * constructionPrice, 0);
+  const monthlyCapex = building.filter(p=>p.concessionDealId===undefined).reduce((a, p) => a + Math.min(p.cost - p.work, (p.cost / p.durationDays) * 365 / 12) * constructionPrice, 0);
   return (
     <PanelShell title="Infrastructure projects" subtitle="Money is disbursed over the build; benefits start only on completion." width={680}>
       <div className="rounded-xl bg-slate-900/40 p-3 text-[12.5px] text-slate-300">
@@ -32,7 +32,7 @@ export function ProjectsPanel() {
             return (
               <div key={p.id} className="mb-2 rounded-lg bg-slate-800/40 p-2">
                 <div className="mb-1 flex items-center justify-between text-[12.5px]">
-                  <span className="font-semibold">{p.name}</span>
+                  <span className="font-semibold">{p.name}{p.concessionDealId!==undefined?' · private concession':''}</span>
                   <span className={p.status === 'complete' ? 'up' : p.status === 'cancelled' ? 'down' : 'text-amber-300'}>
                     {p.status === 'complete' ? `Complete ${klDayLabel(p.completedDay!)}` : p.status === 'cancelled' ? 'Cancelled' : `ETA ${klDayLabel(p.startDay + p.durationDays)}`}
                   </span>

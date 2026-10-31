@@ -767,3 +767,108 @@ ranges, not estimated Malaysian parameters. `tests/multipliers.test.ts` locks th
   after ~200 days, RON95 removal −0.30%. The equity channel strengthens rate and oil transmission slightly.
 `tests/fund-macro.test.ts` covers pressure size, reversal and decay, the RM25bn bound, sentiment lift and fade,
 round-trip losses, the q effect and model-2 neutrality.
+
+## Deal Room phase A (schema 10)
+Cash reservations are segregated escrow: treasury uses financing lines dealEscrowOut/dealEscrowIn; SWF/Khazanah
+reservations debit their cash and retain equal escrow assets in public wealth/NAV. Signing cannot borrow or spend
+reserved cash twice. Cancellation returns escrow. The optional RM250k fictional advisory agreement pays once after
+its next-day settlement date, books policyGrant expenditure and purchases finance output. Unaccepted offers expire
+at their deadline. A daily settlement cursor prevents repeated payments; histories are bounded. Existing schema-9
+saves migrate with empty disabled deals, zero new financing flows and unchanged clocks, balances and RNG.
+
+## Deal Room phase B: negotiated FDI
+Existing standard approvals and signed projects retain schema-9 behaviour. Reviewing an eligible data-centre, hub
+or renewable pledge in Deal Room activates negotiated terms. Three counteroffer rounds price additional domestic
+sourcing/training and faster delivery into the requested grant. Signing reserves the full grant without borrowing;
+funds release at 25/50/75/100% build milestones. The external investor prefunds its project; grants reimburse costs
+and do not add a second construction purchase. Domestic sourcing reallocates the existing project spend, and up to
+2% of domestic costs fund training services. Jobs remain demand/capacity-driven. Power-price pressure can slow daily
+build rates (floor 40%); missing the nominal delivery term plus 90 days cancels unused grant and creates a 25% paid-grant
+claim. Claims have zero public value until collection from remaining counterparty cash; collections reverse grant
+expense. The original FDI pipeline owns all imports, construction and exports, preventing duplicate projects.
+
+## Deal Room phase C: concessions
+Fibre/clinic concessions use the existing project work and completion effects but exclude that project from public
+capex and maintenance loops. Private consortium capital plus segregated public contribution buys actual construction
+output. Private assets never enter public wealth. The negotiated public share (10–40%), user-price index (0.5–1.5),
+12–60 month operating term and capped guarantee (0–30% of base capital) reprice availability payments. Annual payment
+is max(1% of cost, [private capital / term-years + 6% cost − 4% cost × user-price index] × guarantee-risk adjustment).
+Payments start only after physical completion. User receipts are an allocated slice of existing sector activity,
+not extra GDP/public revenue; capacity utilisation drives a minimum-revenue guarantee call. Calls reduce the remaining
+cap and unpaid calls become explicit arrears, deducted from public wealth. Service payments buy sector services.
+Active termination costs 10% of base capital and leaves unpaid claims recorded; pre-start cancellation returns escrow.
+Overruns can exhaust private/public funding and fail delivery after a 90-day buffer. The public can still choose the
+original direct-funded project instead, but cannot commission the same project twice.
+
+## Deal Room phase D: physical supply contracts
+Government fleet fuel replaces up to 50,000 litres/day of an existing RM150k/day fleet envelope. Delivered quantity
+is capped by that envelope divided by spot price (fictional RM3/litre × oil index). Admin operating outlays change
+only by delivered quantity × (contract price − spot); other public programmes and household fuel subsidies do not
+receive a second saving. The indexed share blends locked signing price with current spot × negotiated markup.
+Industry contracts are voluntary aggregate cohorts covering 20% of industrial steel imports, repricing only that
+share through the existing import-cost function. Firms pay production input costs normally; no extra government
+input purchase is added to GDP. Reported industry volumes are activity-equivalent units, not verified tonnes.
+A treasury/Khazanah collateral deposit stays an asset and returns on expiry; cancellation after activation costs
+20% of collateral. A >2.5× spot/locked-price squeeze defaults the supplier, loses 20% of collateral and restores spot
+purchasing. Longer fully fixed terms require a visible premium (0.2% per month). No cash-settled derivatives or leverage.
+
+## Deal Room phase E: private startup equity
+Awan Grid is a fictional private enterprise sampled within technology-sector operating sales. Primary investment
+uses the displayed RM80m pre-money net assets; public ownership 10–40% determines new capital at pre-money × stake /
+(1−stake). A 1% closing fee is a real loss. SWF private holdings plus escrow cannot exceed 10% NAV. Escrow becomes
+company cash and an equity claim on closing; neither transaction is GDP. Mark equity at the public share of book net assets, including actual retained earnings but no forecast profits.
+This preserves cash/equity conservation when public holdings distribute earned profits. Secured loans are limited
+to outstanding principal or recoverable cash plus 40% capital, whichever is lower. Actual sale proceeds may
+realise gains/losses, limited by a cash-backed outside buyer budget. Ownership always sums to 100%.
+60% of initial funding is scheduled for capex over 183 days, with 80% capitalised; purchases enter existing sector
+investment demand and capacity matures through the six-slot pipeline. Operating earnings are a sample of existing
+sector output, not extra GDP; maturity, persisted venture quality, wages and sector conditions determine runway.
+Unpaid supplier bills become explicit payables. Sixty unpaid days writes equity off. A six-month RM20m follow-on
+round prices pre-money at 70% of book equity: joining maintains ownership, declining dilutes it. After 30 days the
+outside round proceeds automatically. Reopening/saving cannot reroll venture quality or repeat a financing round.
+
+## Deal Room phase F: rescues
+Fictional Cahaya Clinics is solvent but illiquid; Lestari Textiles opens with negative net assets. Loans are rejected
+if net assets are nonpositive or the principal exceeds 40% capital liquidation value. Equity recaps require positive
+net assets after the first tranche and creditor consent: retained claims must cover their liquidation alternative.
+Khazanah funds the mandate from actual cash, not treasury borrowing. A 1% fee is lost; half of principal is released
+at closing and half after a 90-day liquidity review, otherwise returned. Loan releases have matching enterprise debt;
+equity releases have matching ownership and can entail immediate impairment. Interest is 8%/year, accrued daily and
+paid from company cash with principal on calendar-month anniversaries. Unpaid interest earns no immediate public
+wealth; two missed payments or 60 unpaid supplier days trigger liquidation. Liquidation sells capital at 40%, capped
+by outside buyer cash, pays senior public loans, other creditors, then shareholders; losses are written off. Equity
+can distribute only half of earned cash profits, revaluing ownership at the same time. Operating sales remain sector
+samples; cash injections, principal repayments and distributions are not GDP.
+
+## Deal Room phase G: private takeovers
+Nusa Logistics is a fictional existing company with RM140m opening net assets. Control requires 51–100% ownership.
+A cash-backed fictional rival offers a persisted 1.08–1.25× net-asset valuation. Shareholders reject lower valuations;
+counteroffers add a 1% certainty premium. Purchase cash goes to sellers, not company cash; 1% fees and control premiums
+reduce public wealth relative to book equity. Khazanah strategic holdings plus reservations are limited to 10% of
+its capital including deal assets. No listed-stock concentration rule is bypassed and public-to-public purchases
+are rejected. Integration takes 3–12 negotiated months with 5% temporary operating-cost overhead. Persisted quality
+then produces either company costs −6%/sales +3% or costs +8%/sales −5%/capital impairment 10%, once. These affect the
+sample company's earned cash flow, not economy-wide productivity. Earned dividends reduce the equity claim; exits
+require outside buyer cash. Private ownership plus public ownership remains exactly one.
+
+## Deal Room integration and campaign safeguards
+20% of rescue principal funds a scheduled equipment/rehabilitation programme; it enters the existing investment
+pipeline and demand model. Noncapitalised development costs reduce retained profit. Supplier arrears are paid when
+cash returns; an old unpaid invoice cannot cause permanent false distress. Equity recap ownership cannot exceed the
+public cash share of post-restructuring book interest: solvent shareholders reject underpriced control grabs.
+
+New private opportunity cohorts arrive every 90 in-game days (at most seven subsequent cohorts per 24-month term).
+They use distinct fictional companies; procurement renewals cannot overlap an active envelope. The deal RNG is
+persisted and does not consume main/world/FDI random streams. Unaccepted opportunities have no macro effects.
+
+Current-utilisation guarantee reserve projects the daily minimum-revenue shortfall over the remaining concession
+term, capped by remaining guarantees. It is a conservative scenario provision, not an empirical probability forecast.
+Both that reserve and called unpaid claims reduce public wealth; scoring treats them as nominal obligations when
+adjusting for inflation. Remaining service/purchasing commitments, escrow, guarantees, claims and holdings remain
+visible in the 24-month report. Indexed supply costs are signing-price estimates, not guaranteed maxima.
+
+Deal alerts reuse device settings and critical pause preferences: approaching deadlines, financing rounds, short
+cash runway, failed agreements and unpaid contracts notify on entry/escalation. Existing preferences remain valid.
+Save validation checks cash units, ownership totals, financial amounts, terms and project links. Old model-3 saves
+can explicitly enable new opportunities from today; existing signed FDI is not rewritten. Earlier economic models
+remain disabled. All money claims are simulated, and no legal/real-market equivalence is claimed.

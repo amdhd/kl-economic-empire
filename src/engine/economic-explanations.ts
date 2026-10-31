@@ -80,7 +80,7 @@ export function explainEconomy(s: GameState, metric: ExplainMetric) {
     period = 'This month so far: cash movements';
     parts.push({ label: 'Public receipts', value: revenueOf(f), unit: 'MYR' }, { label: 'Paid outlays', value: -outlaysOf(f), unit: 'MYR' },
       { label: 'New borrowing', value: f.borrowing, unit: 'MYR' }, { label: 'Principal repayments', value: -f.principal, unit: 'MYR' },
-      { label: 'Net sovereign-fund transfers', value: f.swfTransferIn - f.swfContribution, unit: 'MYR' });
+      { label: 'Net fund and deal-escrow transfers', value: f.swfTransferIn - f.swfContribution + f.dealEscrowIn - f.dealEscrowOut, unit: 'MYR' });
     mechanisms.push('Corporate and property taxes settle at month-end; daily spending can reduce cash before those receipts arrive.',
       'Borrowing provides cash and an equal liability. Fund transfers move existing public money; they are not new wealth.');
     caveat = 'Cash movements include financing. The budget deficit excludes borrowing, principal repayments and sovereign-fund transfers.';
