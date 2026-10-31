@@ -5,6 +5,7 @@ import { SECTOR_IDS, SECTORS } from '../data/economic-baseline';
 import type { GameState, TaxPolicy } from '../types/game';
 import { CREDIT_SPEND, PROPERTY_LEVY_BASE, SURCHARGE_BASE_SHARE } from './calibration';
 import { exportIndex, householdDemand, PER_DAY } from './economy';
+import { incomeTaxDaily } from './income-tax';
 import { daysInMonth, klParts, klToEpochMin } from './time';
 
 /** Freeze current demand/prices and the last closed corporate-profit base. No RNG or postings. */
@@ -26,5 +27,6 @@ export function estimateTaxChange(s: GameState, proposed: TaxPolicy): Record<key
     property: (proposed.property - current.property) * PROPERTY_LEVY_BASE * s.sectors.prop.output * s.sectors.prop.price / PER_DAY,
     consumption: (levy(proposed.consumption) - levy(current.consumption)) / PER_DAY,
     household: (proposed.household - current.household) * hh.wages * SURCHARGE_BASE_SHARE / PER_DAY,
+    incomeTax: (incomeTaxDaily(s, hh.wages, proposed.incomeTax) - incomeTaxDaily(s, hh.wages, current.incomeTax)) / PER_DAY,
   };
 }

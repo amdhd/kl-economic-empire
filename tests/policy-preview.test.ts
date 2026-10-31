@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BASE_TAX, NATIONAL_DEMAND, SECTOR_IDS, SECTORS } from '../src/data/economic-baseline';
+import { NATIONAL_DEMAND, SECTOR_IDS, SECTORS } from '../src/data/economic-baseline';
 import { CAL } from '../src/engine/calibration';
 import { PER_DAY } from '../src/engine/economy';
 import { createGame } from '../src/engine/game';
@@ -10,7 +10,7 @@ describe('static policy forecasts', () => {
   it('uses tax-inclusive resident spending and tax-exclusive visitor spending without mutating state or RNG', () => {
     const s = createGame(50);
     const before = clone(s);
-    const forecast = estimateTaxChange(s, { ...BASE_TAX, consumption: 0.08 });
+    const forecast = estimateTaxChange(s, { ...s.government.policies.tax, consumption: 0.08 });
     // Model 3: a share of the cash basket buys finished imports directly and carries no domestic levy (D-056).
     const residents = CAL.hh.consumption * (1 - NATIONAL_DEMAND.importedConsumption) * SECTORS.cons.consumption + CAL.hh.credit * 0.65;
     const visitors = CAL.X0.cons * 0.5;

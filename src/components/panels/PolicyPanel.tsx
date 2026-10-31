@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { budgetFor, BUDGET_LABELS, TAX_LABELS } from '../../data/economic-baseline';
 import { treasuryMYR } from '../../engine/government';
+import { activeTaxKeys } from '../../engine/income-tax';
 import { estimateTaxChange } from '../../engine/policy-preview';
 import { formatKL } from '../../engine/time';
 import { useGame, useGameState } from '../../store/game-store';
@@ -10,12 +11,12 @@ import { ConfirmDialog } from './ConfirmDialog';
 import { PanelShell } from './PanelShell';
 import { Section, Stat } from '../ui';
 
-const TAX_KEYS = Object.keys(TAX_LABELS) as (keyof TaxPolicy)[];
 const CATS = Object.keys(BUDGET_LABELS) as BudgetCategory[];
 
 export function PolicyPanel() {
   const g = useGameState();
   const BASE_BUDGET = budgetFor(g);
+  const TAX_KEYS = activeTaxKeys(g);
   const command = useGame.getState().command;
   const pol = g.government.policies;
   const pendingTax = (k: keyof TaxPolicy) => g.government.pending.filter((p) => p.kind === 'tax' && k in p.patch).map((p) => (p.patch as TaxPolicy)[k]).at(-1);
@@ -74,16 +75,16 @@ export function PolicyPanel() {
       </Section>
 
       {g.baseline.profile === 'malaysia' && <div className="rounded-lg bg-cyan-500/10 p-3 text-[12px] text-cyan-100">
-        2027 MOF operating estimates ÷ 12. Public services = education + higher education; safety = defence + home affairs; development = works + transport operations; transfers = pensions; administration = all remaining operations. Debt service is paid separately. <button className="underline" onClick={() => useGame.getState().setPanel('sources')}>View annual figures & sources</button>
+        2027 MOF annual operating estimates. Public services = education + higher education; safety = defence + home affairs; development = works + transport operations; transfers = pensions; administration = all remaining operations. Debt service is paid separately. <button className="underline" onClick={() => useGame.getState().setPanel('sources')}>View annual figures & sources</button>
       </div>}
-      <Section title="Operating budget · per month · effective tomorrow">
+      <Section title="Operating budget · per year · effective tomorrow">
         <div className="grid grid-cols-2 gap-x-5 gap-y-2">
           {CATS.map((k) => (
             <div key={k}>
               <div className="mb-0.5 flex items-center justify-between text-[12px]">
                 <span className="text-slate-300">{BUDGET_LABELS[k]}</span>
                 <span className="num">
-                  {budget[k] !== pol.budget[k] && <span className="text-slate-500 line-through">{money(pol.budget[k], 'MYR', 2)}</span>} <b>{money(budget[k], 'MYR', 2)}</b>
+                  {budget[k] !== pol.budget[k] && <span className="text-slate-500 line-through">{money(pol.budget[k] * 12, 'MYR', 2)}</span>} <b>{money(budget[k] * 12, 'MYR', 2)}</b>
                 </span>
               </div>
               <input type="range" min={0} max={BASE_BUDGET[k] * 2.5} step={10e6} value={budget[k]} onChange={(e) => setEdits({ ...edits, [k]: Number(e.target.value) })} aria-label={BUDGET_LABELS[k]} data-testid={`budget-${k}`} />
@@ -91,7 +92,7 @@ export function PolicyPanel() {
           ))}
         </div>
         <div className="mt-2 rounded-lg bg-slate-950/40 p-2 text-[12px] text-slate-300">
-          Change: <b className={budgetDelta > 0 ? 'text-amber-300' : 'text-cyan-300'}>{budgetDelta >= 0 ? '+' : ''}{money(budgetDelta)}/month</b>. Health, services and safety raise service quality over ~3–6 months; transfers lift household income; spending buys domestic sector output (with import leakage). Cuts to services and transfers cost trust.
+          Change: <b className={budgetDelta > 0 ? 'text-amber-300' : 'text-cyan-300'}>{budgetDelta >= 0 ? '+' : ''}{money(budgetDelta * 12)}/year</b>. Health, services and safety raise service quality over ~3–6 months; transfers lift household income; spending buys domestic sector output (with import leakage). Cuts to services and transfers cost trust.
         </div>
         <div className="mt-2 flex gap-2">
           <button className="btn btn-primary" disabled={!budgetChanged} onClick={() => setConfirm('budget')} data-testid="queue-budget">Queue budget</button>
@@ -135,7 +136,7 @@ export function PolicyPanel() {
             </ul>
           ) : (
             <ul className="list-disc space-y-1 pl-4">
-              {CATS.filter((k) => budget[k] !== pol.budget[k]).map((k) => <li key={k}>{BUDGET_LABELS[k]}: {money(pol.budget[k], 'MYR', 2)} → {money(budget[k], 'MYR', 2)} / month</li>)}
+              {CATS.filter((k) => budget[k] !== pol.budget[k]).map((k) => <li key={k}>{BUDGET_LABELS[k]}: {money(pol.budget[k] * 12, 'MYR', 2)} → {money(budget[k] * 12, 'MYR', 2)} / year</li>)}
               <li>Effective from tomorrow 00:00.</li>
               {g.controls.plans.filter((p) => budget[p.category] !== (pendingBudget(p.category) ?? pol.budget[p.category])).map((p) => (
                 <li key={p.category} className="text-amber-300" data-testid={`plan-replaced-${p.category}`}>Replaces the {BUDGET_LABELS[p.category]} ministry plan; its future scheduled appropriations are cancelled.</li>

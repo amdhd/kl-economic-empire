@@ -242,3 +242,9 @@ Logos are trademarks of their owners, used only to identify the real listed comp
 5690837 (MRT Kajang), 11313577 (MRT Putrajaya) and 8394085 (Shah Alam), fetched via the Overpass API on 31 Oct 2026.
 © OpenStreetMap contributors, ODbL. Track ways are chained in route order and simplified; trains are illustrative and
 do not follow timetables. Construction and investment sites on the map are fictional locations.
+
+## Income tax bands, non-tax revenue and federal debt history (D-073)
+- Resident income tax YA2025 bands: LHDN schedule as summarised by the [PwC Malaysian Tax Booklet 2025/2026](https://www.pwc.com/my/en/publications/mtb/personal-income-tax.html) and [PwC tax summaries](https://taxsummaries.pwc.com/malaysia/individual/taxes-on-personal-income). Reliefs simplified to RM9,000 personal + RM4,000 EPF.
+- Non-tax revenue 2027: *Summary of Federal Government Revenue Estimates 2027*, Fiscal Outlook 2027 pp. 234-237 (`ringkasan.pdf`), codes 71000-78000 excluding 75000 investment returns. Total revenue estimate RM380,816,996,000.
+- Federal Government debt, year-end RM bn: 2022 RM1,079.6bn and Jun 2026 RM1,378.9bn from MOF Fiscal Outlook tables; 2017 RM686.8bn, 2018 RM741.05bn (2015-base GDP), 2019 RM793bn, 2020 RM879.6bn, 2021 RM979.8bn, 2023 RM1.172tn, 2024 RM1,247.6bn, 2025 RM1.32tn as reported by [The Edge](https://www.theedgemarkets.com/article/debt-held-federal-govt-rose-rm741b-end2018), [Malay Mail](https://www.malaymail.com/news/malaysia/2026/10/05/govts-debt-to-gdp-ratio-rises-to-652pc-but-statutory-debt-stays-within-the-limit-says-audit-dept/237774) and other press citing MOF/Auditor General. 2023 and 2025 are rounded; 2016 and federal cash history were not found in a citable form.
+
