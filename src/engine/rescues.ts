@@ -1,6 +1,6 @@
 import type { GameState } from '../types/game';
 import type { Deal, PrivateEnterprise } from '../types/deals';
-import { addDeal, dealLog, releaseDeal } from './deals';
+import { addDeal, dealLog, releaseDeal, DEAL_ROUNDS } from './deals';
 import { signEnterprise, markValue } from './private-enterprises';
 import { toMinor, assertSafeMinor, pushBounded } from './util';
 import { klDay, klDayStartMin, klParts, klToEpochMin, daysInMonth } from './time';
@@ -55,7 +55,7 @@ export function rescueOffers(s: GameState): void {
   }
 }
 export function offerRescue(s: GameState, d: Deal, terms: Partial<Deal['terms']>): string | null {
-  if (d.status !== 'negotiating' || d.rounds >= 3 || s.scheduler.lastDay >= d.deadline)
+  if (d.status !== 'negotiating' || d.rounds >= DEAL_ROUNDS || s.scheduler.lastDay >= d.deadline)
     return 'Negotiation is closed.';
   const t = { ...d.terms, ...terms };
   if (!(

@@ -1,7 +1,7 @@
 import type { GameState, SectorId } from '../types/game';
 import type { Deal } from '../types/deals';
 import { PROJECT_BY_ID } from '../data/projects';
-import { addDeal, dealLog, releaseDeal, reserveDeal, spendDeal } from './deals';
+import { addDeal, dealLog, releaseDeal, reserveDeal, spendDeal, DEAL_ROUNDS } from './deals';
 import { completeProject, post } from './government';
 import { toMinor } from './util';
 
@@ -43,7 +43,7 @@ export function concessionQuote(d: Deal) {
   };
 }
 export function offerConcession(s: GameState, d: Deal, terms: Partial<Deal['terms']>): string | null {
-  if (d.status !== 'negotiating' || s.scheduler.lastDay >= d.deadline || d.rounds >= 3)
+  if (d.status !== 'negotiating' || s.scheduler.lastDay >= d.deadline || d.rounds >= DEAL_ROUNDS)
     return 'Negotiation is closed.';
   const t = { ...d.terms, ...terms };
   if (!(

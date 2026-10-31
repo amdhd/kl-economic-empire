@@ -1,6 +1,8 @@
 import { EXPLAIN_LABELS, explainEconomy, type ExplainMetric } from '../../engine/economic-explanations';
 import { useGame, useGameState } from '../../store/game-store';
-import { money } from '../../utils/format';
+import { gdpHistory } from '../../engine/gdp-history';
+import { bnTick, money } from '../../utils/format';
+import { TimeChart } from '../charts/TimeChart';
 import { Section } from '../ui';
 import { PanelShell } from './PanelShell';
 
@@ -14,6 +16,9 @@ export function ExplanationPanel() {
       {(Object.keys(EXPLAIN_LABELS) as ExplainMetric[]).map(id => <button className={`btn ${metric === id ? 'btn-primary' : ''}`} key={id} aria-pressed={metric === id} onClick={() => useGame.getState().explain(id)} data-testid={`explain-${id}`}>{EXPLAIN_LABELS[id]}</button>)}
     </div>
     <p className="text-[14px] font-semibold text-white">{view.summary}</p>
+    {metric === 'gdp' && <Section title="Monthly GDP in US dollars" right={<button className="btn" onClick={() => useGame.getState().setPanel('gdphistory')} data-testid="open-gdp-history">Why each month moved</button>}>
+      <TimeChart data={gdpHistory(s).map((m) => ({ t: m.label, gdp: m.usd }))} xKey="t" series={[{ key: 'gdp', name: 'GDP (US$)', color: '#60a5fa' }]} yFormat={(v) => bnTick(v, 'US$')} unit="US$ per year, at each month's ringgit rate" height={130} area />
+    </Section>}
     <Section title="Measured contributions">
       <p className="mb-2 text-[12px] text-cyan-200">{view.period}</p>
       <dl className="metric-rows" data-testid="explanation-contributions">{view.parts.map(p => <div key={p.label}><dt>{p.label}</dt><dd className="num">{p.value >= 0 ? '+' : '−'}{p.unit.startsWith('MYR') || p.unit.startsWith('USD') ? `${money(Math.abs(p.value), p.unit.startsWith('USD') ? 'USD' : 'MYR')}${p.unit.endsWith('/year') ? '/yr' : ''}` : `${Math.abs(p.value).toFixed(3)} ${p.unit}`}</dd></div>)}</dl>

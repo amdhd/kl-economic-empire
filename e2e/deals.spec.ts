@@ -20,7 +20,7 @@ test('FDI counteroffers revise the signed version and reserve its milestone gran
   await offer.getByRole('button', { name: 'Review offer', exact: true }).click();
   await page.getByTestId('deals-tab-negotiations').click();
   await page.getByLabel('Government grant for deal 2').fill('0');
-  await page.getByRole('button', { name: 'Send terms (0/3 rounds)' }).click();
+  await page.getByRole('button', { name: 'Send terms (0/6 rounds)' }).click();
   await expect(offer).toContainText('Counteroffer');
   await offer.getByRole('button', { name: 'Review signature' }).click();
   await page.getByTestId('confirm-btn').click();
@@ -36,7 +36,7 @@ test('concessions disclose future payments and block duplicate public constructi
   await d.getByRole('button', { name: 'Review offer', exact: true }).click();
   await page.getByTestId('deals-tab-negotiations').click();
   await page.getByLabel('What users pay for deal 3').fill('1.5');
-  await page.getByRole('button', { name: 'Send terms (0/3 rounds)' }).click();
+  await page.getByRole('button', { name: 'Send terms (0/6 rounds)' }).click();
   await d.getByRole('button', { name: 'Review signature' }).click();
   await page.getByTestId('confirm-btn').click();
   await page.getByTestId('deals-tab-active').click();
@@ -49,7 +49,7 @@ test('supply contracts show indexation terms and delivered volumes', async ({ pa
   await d.getByRole('button', { name: 'Review offer', exact: true }).click();
   await page.getByTestId('deals-tab-negotiations').click();
   await page.getByLabel('Price moves with market for deal 5').fill('0.5');
-  await page.getByRole('button', { name: 'Send terms (0/3 rounds)' }).click();
+  await page.getByRole('button', { name: 'Send terms (0/6 rounds)' }).click();
   await d.getByRole('button', { name: 'Review signature' }).click();
   await page.getByTestId('confirm-btn').click();
   await runHours(page, 24 * 4);
@@ -91,7 +91,7 @@ test('takeover bidding discloses rival valuations and closes controlling ownersh
   await d.getByRole('button', { name: 'Review offer', exact: true }).click();
   await page.getByTestId('deals-tab-negotiations').click();
   await page.getByLabel('Price vs market value for deal 10').fill('1.5');
-  await page.getByRole('button', { name: 'Send terms (0/3 rounds)' }).click();
+  await page.getByRole('button', { name: 'Send terms (0/6 rounds)' }).click();
   await expect(d).toContainText('Rival offer');
   await d.getByRole('button', { name: 'Review signature' }).click();
   await page.getByTestId('confirm-btn').click();
@@ -109,10 +109,25 @@ test('exposure fits a laptop viewport and clearly shows future obligations', asy
   await d.getByRole('button', { name: 'Review offer', exact: true }).click();
   await page.getByTestId('deals-tab-negotiations').click();
   await d.getByRole('button', { name: 'Review signature' }).click();
-  await expect(page.getByRole('dialog')).toContainText('Remaining commitments');
+  await expect(page.getByRole('dialog')).toContainText('You will also owe');
   await page.getByTestId('confirm-btn').click();
   await page.getByTestId('deals-tab-exposure').click();
   await expect(page.getByTestId('panel')).toContainText('guarantee provision');
   await page.screenshot({ path: testInfo.outputPath('deal-room.png') });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('offers show their type and deadline at the top right, an outlook, and a plain-language signing summary', async ({ page }) => {
+  await startCampaign(page);
+  await page.getByTestId('nav-deals').click();
+  await expect(page.getByTestId('deal-tag-1')).toContainText(/\d+ days? left/);
+  await expect(page.getByTestId('deal-outlook-1')).toContainText('You pay:');
+  await expect(page.getByTestId('deal-profit-2')).toContainText(/profit/i);
+  await page.getByRole('button', { name: 'Review offer', exact: true }).first().click();
+  await page.getByTestId('deals-tab-negotiations').click();
+  await page.getByRole('button', { name: 'Review signature' }).first().click();
+  const summary = page.getByTestId('sign-summary');
+  await expect(summary).toContainText('You pay now:');
+  await expect(summary).toContainText('You get:');
+  await expect(summary).not.toContainText('Concession service payments');
 });

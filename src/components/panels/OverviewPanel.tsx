@@ -1,7 +1,7 @@
 import { debtMYR, treasuryMYR } from '../../engine/government';
 import { formatKL, klDayLabel } from '../../engine/time';
 import { useGame, useGameState } from '../../store/game-store';
-import { money, pct } from '../../utils/format';
+import { bnTick, money, pct } from '../../utils/format';
 import { TimeChart } from '../charts/TimeChart';
 import { PanelShell } from './PanelShell';
 import { Section } from '../ui';
@@ -26,10 +26,10 @@ export function OverviewPanel() {
       )}
       <div className="grid grid-cols-2 gap-3">
         <Section title="GDP run-rate">
-          <TimeChart data={d} xKey="t" xFormat={(v) => klDayLabel(Number(v))} series={[{ key: 'gdp', name: 'GDP', color: '#60a5fa' }]} yFormat={(v) => v.toFixed(0)} unit="US$ bn/yr from daily value added" height={110} area />
+          <TimeChart data={d} xKey="t" xFormat={(v) => klDayLabel(Number(v))} series={[{ key: 'gdp', name: 'GDP', color: '#60a5fa' }]} yFormat={(v) => bnTick(v, 'US$')} unit="US$ per year from daily value added" height={110} area />
         </Section>
         <Section title="Public balance sheet">
-          <TimeChart data={d} xKey="t" xFormat={(v) => klDayLabel(Number(v))} series={[{ key: 'tre', name: 'Treasury', color: '#34d399' }, { key: 'nav', name: 'SWF NAV', color: '#a78bfa' }]} yFormat={(v) => v.toFixed(1)} unit="RM bn · daily" height={110} />
+          <TimeChart data={d} xKey="t" xFormat={(v) => klDayLabel(Number(v))} series={[{ key: 'tre', name: 'Treasury', color: '#34d399' }, { key: 'nav', name: 'SWF NAV', color: '#a78bfa' }]} yFormat={bnTick} unit="RM · daily" height={110} />
         </Section>
       </div>
       <div className="grid grid-cols-3 gap-3 text-[12.5px]">

@@ -1,4 +1,6 @@
 import { dealExposure, quoteDealCommitment } from '../../engine/deal-report';
+import { dealOutlook } from '../../engine/deal-outlook';
+import { DEAL_ROUNDS } from '../../engine/deals';
 import { supplyUnitPrice } from '../../engine/supply-contracts';
 import { buyerMaxPrice, deliveryShare, exportSpot, exportUnitPrice } from '../../engine/export-contracts';
 import { concessionQuote } from '../../engine/concessions';
@@ -106,13 +108,24 @@ export function DealsPanel() {
           No agreements in this view. New FDI opportunities appear through the existing investment pipeline.
         </p>
       )}
-      {items.map((d) => (
-        <Section key={d.id} title={d.name}>
+      {items.map((d) => {
+        const open = ['opportunity', 'negotiating'].includes(d.status);
+        const daysLeft = d.deadline - g.scheduler.lastDay;
+        const urgency = daysLeft <= 3 ? 'bg-rose-500/25 text-rose-200' : daysLeft <= 7 ? 'bg-amber-500/25 text-amber-200' : 'bg-slate-600/40 text-slate-200';
+        const outlook = open ? dealOutlook(g, d) : null;
+        return (
+        <Section key={d.id} title={d.name} right={<span className="flex flex-wrap items-center justify-end gap-1.5" data-testid={`deal-tag-${d.id}`}>
+          <span className="rounded-full bg-cyan-500/25 px-2.5 py-1 text-[11.5px] font-bold uppercase tracking-wider text-cyan-100">{DEAL_TAGS[d.kind]?.tag ?? d.kind}</span>
+          {open && <span className={`rounded-full px-2.5 py-1 text-[11.5px] font-bold ${urgency}`} data-testid={`deal-deadline-${d.id}`}>⏰ {daysLeft > 0 ? `${daysLeft} day${daysLeft === 1 ? '' : 's'} left` : 'closes today'} · {klDayLabel(d.deadline)}</span>}
+        </span>}>
           <div data-testid={`deal-${d.id}`} className="space-y-2 text-[12.5px]">
-            <p className="flex flex-wrap items-center gap-2" data-testid={`deal-tag-${d.id}`}>
-              <span className="rounded-full bg-cyan-500/20 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-cyan-200">{DEAL_TAGS[d.kind]?.tag ?? d.kind}</span>
-              <span className="text-slate-300">{DEAL_TAGS[d.kind]?.plain}</span>
-            </p>
+            <p className="text-slate-300">{DEAL_TAGS[d.kind]?.plain}</p>
+            {outlook && <div className="space-y-1.5 rounded-lg bg-slate-900/50 p-2.5" data-testid={`deal-outlook-${d.id}`}>
+              {outlook.profit && <p className={`text-[13px] font-semibold ${outlook.profit.tone === 'good' ? 'text-emerald-300' : outlook.profit.tone === 'bad' ? 'text-rose-300' : 'text-slate-100'}`} data-testid={`deal-profit-${d.id}`}>{outlook.profit.text}</p>}
+              {!!outlook.gets.length && <p><b className="text-emerald-300">You get:</b> {outlook.gets.join(' ')}</p>}
+              {!!outlook.pays.length && <p><b className="text-amber-300">You pay:</b> {outlook.pays.join(' ')}</p>}
+              {!!outlook.risks.length && <p><b className="text-rose-300">Watch out:</b> {outlook.risks.join(' ')}</p>}
+            </div>}
             <p>
               {d.counterparty} · {d.kind} · <b>{d.status}</b> · version {d.version}
             </p>
@@ -172,9 +185,7 @@ export function DealsPanel() {
                 wages and business maturity.
               </p>
             )}
-            <p className="text-slate-400">
-              Decision deadline {klDayLabel(d.deadline)} · {d.note}
-            </p>
+            <p className="text-slate-400">{d.note}</p>
             {['investment', 'concession', 'supply', 'startup', 'rescue', 'takeover', 'export'].includes(d.kind) &&
               d.status === 'negotiating' && (
                 <div className="grid grid-cols-2 gap-2">
@@ -183,12 +194,12 @@ export function DealsPanel() {
                         ['incentive', 'Government grant', 0, 0.3, 0.01, 'Share of their project cost we pay. More grant keeps the investor happy but costs us cash.', '%'],
                         ['localShare', 'Local suppliers', 0.2, 0.8, 0.05, 'Share of spending that goes to Malaysian suppliers. Higher means more local business, but the investor may push back.', '%'],
                         ['jobsShare', 'Worker training', 0.8, 1.2, 0.1, '1.0 is normal. Higher means more local staff get trained, which costs the investor.', ''],
-                        ['months', 'Months to build', 6, 36, 1, 'Longer is easier for them, but we wait longer for jobs and output.', ''],
+                        ['months', 'Months to build', g.mode?.boom ? 1 : 6, 36, 1, 'Longer is easier for them, but we wait longer for jobs and output.', ''],
                       ] as const)
                     : d.kind === 'takeover'
                       ? ([
                           ['stake', 'Share of company we buy', 0.51, 1, 0.01, 'Above 51% means we control it.', '%'],
-                          ['priceFactor', 'Price vs market value', 1.05, 1.5, 0.01, '1.10 means we pay 10% above market. A higher price makes sellers agree more easily.', ''],
+                          ['priceFactor', 'Price vs market value', 0.9, 1.5, 0.01, '1.00 is market value. Sellers accept anything at or above the rival bid, so you rarely need to overpay.', ''],
                           ['months', 'Months to take over', 3, 12, 1, 'Time to merge it into our portfolio.', ''],
                         ] as const)
                       : d.kind === 'rescue'
@@ -203,13 +214,13 @@ export function DealsPanel() {
                           : d.kind === 'export'
                             ? ([
                                 ['months', 'Contract length (months)', 12, 60, 1, 'How long the buyer keeps buying. Longer fixed contracts make the buyer ask for a discount.', ''],
-                                ['priceFactor', 'Price vs today', 0.9, 1.15, 0.01, '1.00 is today\'s market price. Higher earns more, but the buyer may counter.', ''],
+                                ['priceFactor', 'Price vs today', 0.9, 1.3, 0.01, '1.00 is today\'s market price. Higher earns more; the buyer pays up to about 1.10–1.15× for most contracts.', ''],
                                 ['protection', 'Price moves with market', 0, 1, 0.1, '0 means a fixed price. 1 means the price follows the market, up or down.', '%'],
                               ] as const)
                           : d.kind === 'supply'
                             ? ([
                                 ['months', 'Contract length (months)', 3, 24, 1, 'How long the supplier must keep delivering.', ''],
-                                ['priceFactor', 'Price vs today', 0.95, 1.2, 0.01, '1.00 is today\'s price. Lower is cheaper for us; the supplier may refuse.', ''],
+                                ['priceFactor', 'Price vs today', 0.85, 1.2, 0.01, '1.00 is today\'s price. Lower is cheaper for us; the supplier may refuse.', ''],
                                 ['protection', 'Price moves with market', 0, 1, 0.1, '0 means a fixed price. 1 means the price follows the market, up or down.', '%'],
                               ] as const)
                             : ([
@@ -258,13 +269,13 @@ export function DealsPanel() {
                   ))}
                   <button
                     className="btn"
-                    disabled={d.rounds >= 3}
+                    disabled={d.rounds >= DEAL_ROUNDS}
                     onClick={() => {
                       command({ type: 'dealOffer', id: d.id, terms: drafts[d.id] ?? d.terms });
                       setDrafts({ ...drafts, [d.id]: {} });
                     }}
                   >
-                    Send terms ({d.rounds}/3 rounds)
+                    Send terms ({d.rounds}/{DEAL_ROUNDS} rounds)
                   </button>
                 </div>
               )}
@@ -362,7 +373,8 @@ export function DealsPanel() {
             )}
           </div>
         </Section>
-      ))}
+        );
+      })}
       <button className="btn" onClick={() => useGame.getState().setPanel('fdi')}>
         Investment & FDI
       </button>
@@ -386,11 +398,25 @@ export function DealsPanel() {
             setReview(null);
           }}
         >
+          {reviewAction === 'sign' ? (() => {
+            const o = dealOutlook(g, review);
+            const later = quoteDealCommitment(g, review);
+            const cap = review.kind === 'concession' ? concessionQuote(review).guarantee : review.guaranteeMinor;
+            return (
+              <div className="space-y-2 text-[13px]" data-testid="sign-summary">
+                <p className="font-semibold text-white">{review.name}</p>
+                {o.profit && <p className={`font-semibold ${o.profit.tone === 'good' ? 'text-emerald-300' : o.profit.tone === 'bad' ? 'text-rose-300' : 'text-slate-100'}`}>{o.profit.text}</p>}
+                <p><b className="text-amber-300">You pay now:</b> {money(review.priceMinor / 100)} from {review.payer === 'strategic' ? 'Khazanah' : review.payer === 'fund' ? 'sovereign fund' : 'treasury'} cash. It is set aside and can't be used for anything else until the deal settles or is cancelled.</p>
+                {later > review.priceMinor && <p><b className="text-amber-300">You will also owe:</b> about {money((later - review.priceMinor) / 100)} more over the life of the deal. Keep operating cash for it; the game will not borrow automatically.</p>}
+                {cap > 0 && <p><b className="text-rose-300">Worst case:</b> you may have to cover up to {money(cap / 100)} if things go wrong.</p>}
+                {!!o.gets.length && <p><b className="text-emerald-300">You get:</b> {o.gets.join(' ')}</p>}
+                {!!o.risks.length && <p><b className="text-rose-300">Watch out:</b> {o.risks.join(' ')}</p>}
+              </div>
+            );
+          })() : (
           <p>
             {review.name}.{' '}
-            {reviewAction === 'sign'
-              ? `Reserve ${money(review.priceMinor / 100)} from ${review.payer === 'strategic' ? 'Khazanah cash' : review.payer === 'fund' ? 'sovereign fund cash' : 'treasury cash'}.`
-              : reviewAction === 'followOn'
+            {reviewAction === 'followOn'
                 ? `Follow-on cash needed ${money(20e6 * (review.enterprise?.publicShare ?? 0))}.`
                 : reviewAction === 'cancel'
                   ? `Cancellation can charge ${money(review.kind === 'concession' && review.status === 'active' ? ((review.assetCostMinor ?? 0) * 0.1) / 100 : review.kind === 'supply' && review.status === 'active' ? (review.escrowMinor * 0.2) / 100 : review.kind === 'export' && review.status === 'active' ? Math.min(review.escrowMinor, review.priceMinor * 0.5) / 100 : 0)}. Existing arrears remain payable.`
@@ -402,7 +428,7 @@ export function DealsPanel() {
                         ? 'Outside investors finance the down round at 70% of book pre-money value. Your percentage ownership falls.'
                         : 'The outside buyer pays a cash-backed bid based on current net assets. The six-month holding review must be satisfied.'}{' '}
             Cash is unavailable to other purchases until settlement or cancellation. Remaining commitments{' '}
-            {money((reviewAction === 'sign' ? quoteDealCommitment(g, review) : review.committedMinor) / 100)};
+            {money(review.committedMinor / 100)};
             guarantee cap{' '}
             {money(
               (review.kind === 'concession' ? concessionQuote(review).guarantee : review.guaranteeMinor) /
@@ -411,6 +437,7 @@ export function DealsPanel() {
             . Concession service payments continue beyond construction; collateral contracts also need
             operating cash. No automatic borrowing.
           </p>
+          )}
         </ConfirmDialog>
       )}
     </PanelShell>

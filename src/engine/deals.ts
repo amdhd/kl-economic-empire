@@ -240,6 +240,8 @@ export function dailyDeals(
     }
   }
 }
+/** Negotiation rounds per deal (was 3). Looser terms: sellers, buyers and investors settle for less (D-086). */
+export const DEAL_ROUNDS = 6;
 export function offerDeal(s: GameState, id: number, terms: Partial<Deal['terms']>): string | null {
   if (
     !s.deals.enabled ||

@@ -72,3 +72,23 @@ test('warnings do not pause and the energy scenario explains its opening shock',
   await expect(page.getByTestId('btn-pause')).toHaveAttribute('aria-pressed', 'false');
   await page.getByTestId('btn-pause').click();
 });
+
+test('GDP explanation has a monthly US$ chart and a window with reasons for each month', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await startCampaign(page);
+  await runHours(page, 24 * 80);
+  await page.getByTestId('bottom-treasury').click();
+  await page.getByTestId('stat-unemployment').click();
+  await page.getByRole('button', { name: 'GDP', exact: true }).click();
+  await expect(page.getByTestId('panel')).toContainText('Monthly GDP in US dollars');
+  await page.getByTestId('open-gdp-history').click();
+  const panel = page.getByTestId('panel');
+  await expect(panel).toContainText('Monthly GDP history');
+  const months = await page.evaluate(() => (window as unknown as Dev).__klDev.state().reports.length);
+  expect(months).toBeGreaterThanOrEqual(2);
+  const key = await page.evaluate(() => { const s = (window as unknown as Dev).__klDev.state(); return s.reports.at(-1)!.monthKey; });
+  const reasons = page.getByTestId(`gdp-reasons-${key}`);
+  await expect(reasons.locator('li')).toHaveCount(3);
+  await expect(reasons).toContainText('US$ GDP');
+  await expect(reasons).toContainText('ringgit');
+});

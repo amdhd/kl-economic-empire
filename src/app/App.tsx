@@ -12,6 +12,7 @@ import { ControlsPanel } from '../components/panels/ControlsPanel';
 import { CommoditiesPanel } from '../components/panels/CommoditiesPanel';
 import { FiscalPanel } from '../components/panels/FiscalPanel';
 import { PartnersPanel } from '../components/panels/PartnersPanel';
+import { GdpHistoryPanel } from '../components/panels/GdpHistoryPanel';
 import { SoePanel } from '../components/panels/SoePanel';
 import { Component, useEffect, useState, type ReactNode } from 'react';
 import { BottomBar } from '../components/hud/BottomBar';
@@ -52,6 +53,7 @@ const PANELS: Record<PanelId, () => ReactNode> = {
   commodities: () => <CommoditiesPanel />,
   partners: () => <PartnersPanel />,
   soe: () => <SoePanel />,
+  gdphistory: () => <GdpHistoryPanel />,
   trade: () => <TradePanel />,
   ministry: () => <TradeMinistryPanel />,
   central: () => <CentralBankPanel />,

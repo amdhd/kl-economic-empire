@@ -965,3 +965,5 @@ Skip 15 days and Skip to month close are timing controls, not economic rules. Th
 number of game hours at normal speed. They need a paused clock, never touch the sub-hour clock accumulator, and do not turn
 real time into game time. Stops: fresh critical alert, steered MPC meeting, deal/FDI offer closing within 3 days (once
 per offer), term end. Tested in `tests/skip.test.ts`.
+
+**Boom FDI (D-087).** Boom pledges build in 1 month (`BOOM.fdiBuildMonths`), every kind gets +10 climate points (`BOOM.fdiAttractiveness`) and the weekly hazard is capped at 0.9. Realistic mode keeps the 9–30 month builds.

@@ -7,7 +7,7 @@ import { FX_SPREAD, navMYR, planRebalance, positionValueMYR } from '../../engine
 import { formatKL, klDayLabel } from '../../engine/time';
 import { useGame, useGameState } from '../../store/game-store';
 import type { Currency, Position, TickerId } from '../../types/game';
-import { fx, money, num, pct } from '../../utils/format';
+import { bnTick, fx, money, num, pct } from '../../utils/format';
 import { TimeChart } from '../charts/TimeChart';
 import { ConfirmDialog } from '../panels/ConfirmDialog';
 import { PanelShell } from '../panels/PanelShell';
@@ -54,7 +54,7 @@ export function FundPanel() {
       </Section>
       <TargetAllocation myPct={myEq / nav} usPct={usEq / nav} />
       <Section title="NAV history">
-        <TimeChart data={navData} xKey="t" xFormat={(v) => klDayLabel(Number(v))} series={[{ key: 'v', name: 'NAV', color: '#34d399' }]} yFormat={(v) => `${v.toFixed(2)}`} unit="RM billion · daily" height={120} area />
+        <TimeChart data={navData} xKey="t" xFormat={(v) => klDayLabel(Number(v))} series={[{ key: 'v', name: 'NAV', color: '#34d399' }]} yFormat={bnTick} unit="RM · daily" height={120} area />
       </Section>
       <div className="grid grid-cols-2 gap-3">
         <FxBox />

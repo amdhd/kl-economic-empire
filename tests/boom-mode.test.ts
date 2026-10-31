@@ -43,7 +43,7 @@ describe('campaign length and Boom mode (D-079)', () => {
     expect(s.reports.every((r) => r.reconciliation!.cashResidualMinor === 0 && r.reconciliation!.debtResidualMinor === 0)).toBe(true);
     expect(Math.abs(bankIdentityGap(s))).toBeLessThan(1);
     expect(findNonFinite(s)).toBeNull();
-    expect(s.reports.slice(12).every((r) => r.inflationYoY > -0.06 && r.inflationYoY < 0.1)).toBe(true); // a year-two overheating hump peaks near 8%
+    expect(s.reports.slice(12).every((r) => r.inflationYoY > -0.06 && r.inflationYoY < 0.15)).toBe(true); // near-instant FDI builds (D-087) push the year-two overheating hump to about 14%
     expect(deserialize(serialize(s))).toEqual(s);
   }), 120_000);
 
