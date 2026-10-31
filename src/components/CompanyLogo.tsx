@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { COMPANY_BY_ID } from '../data/companies';
 import { SECTORS } from '../data/economic-baseline';
 import { LOGOS } from '../data/logos';
@@ -15,6 +16,8 @@ export const logoUrl = (id: TickerId) => (LOGOS[id] ? `${import.meta.env.BASE_UR
 export function CompanyLogo({ id, size = 22 }: { id: TickerId; size?: number }) {
   const url = logoUrl(id);
   const c = COMPANY_BY_ID[id];
-  if (url) return <img src={url} alt={`${c?.displayName ?? id} logo`} width={size} height={size} className="inline-block shrink-0 rounded bg-white object-contain p-[2px] align-middle" style={{ width: size, height: size }} loading="lazy" />;
+  // A file that fails to load (missing from public/, an older server or build) falls back to the monogram.
+  const [failed, setFailed] = useState(false);
+  if (url && !failed) return <img onError={() => setFailed(true)} src={url} alt={`${c?.displayName ?? id} logo`} width={size} height={size} className="inline-block shrink-0 rounded bg-white object-contain p-[2px] align-middle" style={{ width: size, height: size }} loading="lazy" />;
   return <span className="inline-grid shrink-0 place-items-center rounded align-middle text-[9px] font-bold text-white" style={{ width: size, height: size, background: c?.exchange === 'US' ? '#1e3a8a' : c ? SECTORS[c.sector].color : '#475569' }} aria-hidden="true">{monogram(id)}</span>;
 }

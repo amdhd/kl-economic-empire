@@ -122,7 +122,7 @@ export function MapView() {
         pill.dataset.testid = `marker-${c.id}`;
         const logo = logoUrl(c.id);
         pill.innerHTML = logo
-          ? `<img class="co-logo" src="${logo}" alt="" width="18" height="18" style="width:18px;height:18px;object-fit:contain;background:#fff;border-radius:4px;padding:1px"><span>${c.displayName}</span><span class="co-chg">—</span>`
+          ? `<img class="co-logo" src="${logo}" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'co-badge',textContent:'${monogram(c)}'}))" alt="" width="18" height="18" style="width:18px;height:18px;object-fit:contain;background:#fff;border-radius:4px;padding:1px"><span>${c.displayName}</span><span class="co-chg">—</span>`
           : `<span class="co-badge" style="background:${c.exchange === 'US' ? '#1e3a8a' : SECTORS[c.sector].color}">${monogram(c)}</span><span>${c.displayName}</span><span class="co-chg">—</span>`;
         pill.addEventListener('click', (ev) => {
           ev.stopPropagation();
