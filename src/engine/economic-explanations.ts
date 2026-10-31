@@ -75,7 +75,7 @@ export function explainEconomy(s: GameState, metric: ExplainMetric) {
     caveat = 'Contributions reconcile nominal value-added changes, normalised for month length. They are not contributions to real growth or policy-effect forecasts.';
   } else {
     const f = s.government.mtd;
-    const opening = last?.treasury ?? s.baseline.openingTreasury / 100;
+    const opening = last?.treasury ?? s.baseline.openingTreasury; // MYR, not sen
     summary = `Treasury RM${(treasuryMYR(s.government) / 1e9).toFixed(3)}bn; change RM${((treasuryMYR(s.government) - opening) / 1e9).toFixed(3)}bn.`;
     period = 'This month so far: cash movements';
     parts.push({ label: 'Public receipts', value: revenueOf(f), unit: 'MYR' }, { label: 'Paid outlays', value: -outlaysOf(f), unit: 'MYR' },

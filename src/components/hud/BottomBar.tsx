@@ -8,7 +8,8 @@ import { useGame, useGameState } from '../../store/game-store';
 export function BottomBar() {
   const g = useGameState();
   const setPanel = useGame.getState().setPanel;
-  const items = useMemo(() => g.news.slice(-14).reverse(), [g.news.length, g.news]); // eslint-disable-line react-hooks/exhaustive-deps
+  // News is a bounded array mutated in place, so key on the id counter: length stops changing at the cap.
+  const items = useMemo(() => g.news.slice(-14).reverse(), [g.nextNewsId]); // eslint-disable-line react-hooks/exhaustive-deps
   const p = klParts(g.clock.hour * 60);
   const daysLeft = daysInMonth(p.year, p.month) - p.day + 1;
   const text = items.map((n) => ({ ...n, when: formatKL(n.atMin) }));

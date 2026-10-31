@@ -36,3 +36,12 @@ describe('treasury trend (bottom-bar chip)', () => {
     expect(t.weekPct).toBeCloseTo(-0.15);
   });
 });
+
+describe('treasury explanation', () => {
+  it('measures month-one cash change from the opening balance in ringgit', async () => {
+    const { createGame } = await import('../src/engine/game');
+    const { explainEconomy } = await import('../src/engine/economic-explanations');
+    const s = createGame(20270101, 'balanced');
+    expect(explainEconomy(s, 'treasury').summary).toContain('change RM0.000bn');
+  });
+});
