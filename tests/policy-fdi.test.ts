@@ -22,16 +22,16 @@ const pair = (seed: number, setup: (s: GameState) => void, until: [number, numbe
 };
 
 describe('policy lever cycle', () => {
-  it('announces now, takes effect on the 1st of next month and phases in over the ramp', () => withoutEvents(() => {
+  it('announces now, takes effect tomorrow and phases in over the ramp', () => withoutEvents(() => {
     const s = createGame(1101);
     runUntil(s, 2027, 1, 4, 10);
     lever(s, 'minimumWage', 2200);
     expect(leverPhase(s, 'minimumWage').phase).toBe('announced');
     expect(leverValue(s, 'minimumWage')).toBe(MIN_WAGE0);
-    runUntil(s, 2027, 2, 1, 1);
+    runUntil(s, 2027, 1, 5, 1);
     expect(leverPhase(s, 'minimumWage').phase).toBe('phasing');
     expect(leverValue(s, 'minimumWage')).toBeGreaterThan(MIN_WAGE0);
-    expect(leverValue(s, 'minimumWage')).toBeLessThan(1720);
+    expect(leverValue(s, 'minimumWage')).toBeLessThan(2200);
     runUntil(s, 2027, 5, 2, 1);
     expect(leverPhase(s, 'minimumWage').phase).toBe('full');
     expect(leverValue(s, 'minimumWage')).toBe(2200);

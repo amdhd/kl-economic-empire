@@ -41,14 +41,14 @@ describe('read-only economic explanations', () => {
     expect(applyCommand(s, { type: 'queueTax', patch: { corporate: 0.25 } }, s.clock.hour * 60).ok).toBe(true);
     expect(applyCommand(s, { type: 'startProject', templateId: 'fibre' }, s.clock.hour * 60).ok).toBe(true);
     const view = explainEconomy(s, 'gdp');
-    expect(view.pending.some(p => p.includes('01 Feb 2027'))).toBe(true);
+    expect(view.pending.some(p => p.includes('02 Jan 2027'))).toBe(true);
     expect(view.pending.some(p => p.includes('Benefits require completion'))).toBe(true);
   });
 
   it('reconciles published CPI while a newly effective tax awaits daily settlement', () => withoutEvents(() => {
     const s = createGame(1204);
     applyCommand(s, { type: 'queueTax', patch: { consumption: 0.1 } }, s.clock.hour * 60);
-    runHeadless(s, 31 * 24 - 8); // 1 February 00:00: January prices closed before new tax applied
+    runHeadless(s, 16); // 2 January 00:00: the day just closed was priced before the new tax applied
     expect(s.government.policies.tax.consumption).toBe(0.1);
     expect(explainEconomy(s, 'inflation').parts.some(p => p.label === 'Awaiting daily price settlement')).toBe(true);
     expect(sum(s, 'inflation')).toBeCloseTo(s.indicators.cpi - 100, 9);

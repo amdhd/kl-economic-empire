@@ -2,7 +2,7 @@
 const DB = 'kl-economic-empire';
 const STORE = 'saves';
 
-export type SlotId = 'autosave' | 'slot1' | 'slot2' | 'slot3';
+export type SlotId = 'recovery' | 'autosave' | 'slot1' | 'slot2' | 'slot3';
 export const SLOTS: SlotId[] = ['autosave', 'slot1', 'slot2', 'slot3'];
 
 function openDb(): Promise<IDBDatabase> {
@@ -39,6 +39,9 @@ export async function writeSlot(slot: SlotId, json: string): Promise<void> {
 }
 
 export async function readSlot(slot: SlotId): Promise<string | null> {
+  if (slot === 'recovery') {
+    try { return sessionStorage.getItem('kl-session-recovery'); } catch { return null; }
+  }
   if (hasIdb()) {
     try {
       const v = await idb<string | undefined>('readonly', (s) => s.get(slot));

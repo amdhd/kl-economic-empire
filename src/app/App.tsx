@@ -125,8 +125,10 @@ function NewGameModal() {
   const [scenario, setScenario] = useState<ScenarioId>('balanced');
   const [seed, setSeed] = useState(20270101);
   const [hasAutosave, setHasAutosave] = useState(false);
+  const [hasRecovery, setHasRecovery] = useState(false);
   useEffect(() => {
     void readSlot('autosave').then((j) => setHasAutosave(!!j));
+    void readSlot('recovery').then((j) => setHasRecovery(!!j));
   }, []);
   return (
     <div className="fixed inset-0 z-[70] grid place-items-center bg-slate-950/70 backdrop-blur-sm" role="dialog" aria-modal="true" data-testid="new-game">
@@ -152,8 +154,9 @@ function NewGameModal() {
           <input className="input num !w-36" type="number" value={seed} onChange={(e) => setSeed(Math.floor(Number(e.target.value)) || 1)} />
           <span>Same seed + same decisions = same history.</span>
         </label>
-        <div className="mt-5 flex items-center justify-end gap-2">
+        <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
           {started && <button className="btn" onClick={() => setShowNewGame(false)}>Back to game</button>}
+          {hasRecovery && <button className="btn btn-primary" onClick={() => void load('recovery')} data-testid="restore-session">Restore previous session</button>}
           {hasAutosave && <button className="btn" onClick={() => void load('autosave')} data-testid="continue">Continue autosave</button>}
           <button className="btn btn-primary !px-5 !py-2 !text-[14px]" onClick={() => newGame(seed, scenario)} data-testid="start-campaign">Begin presidency</button>
         </div>

@@ -1,5 +1,6 @@
 import { useId } from 'react';
-import { fullMoneyMinor, pct } from '../../utils/format';
+import { outlaysOf } from '../../engine/government';
+import { fullMoneyMinor, money, pct } from '../../utils/format';
 import { compactBillions, signedBillions, treasuryTrend } from '../../utils/treasury-trend';
 import { useGame, useGameState } from '../../store/game-store';
 
@@ -42,6 +43,10 @@ export function TreasuryChip() {
   const minor = t.close === null ? g.government.treasury : Math.round(t.close * 100);
   const dir = (v: number) => (v > 0 ? 'up' : v < 0 ? 'down' : '');
   const weekUp = t.weekChange >= 0;
+  // Cash on hand is a working float, not income: how many days of outlays it covers is the number to watch.
+  const last = g.reports.at(-1);
+  const dailyOutlays = (last ? outlaysOf(last.gov) : Object.values(g.government.policies.budget).reduce((a, b) => a + b, 0)) / 30;
+  const runwayDays = dailyOutlays > 0 ? minor / 100 / dailyOutlays : Infinity;
   return (
     <div className="cs-money-wrap">
       <button className={`cs-money ${panel === 'finance' ? 'is-active' : ''}`} onClick={() => setPanel(panel === 'finance' ? null : 'finance')} aria-pressed={panel === 'finance'}
@@ -54,6 +59,9 @@ export function TreasuryChip() {
         <div className="tp-label">Treasury balance</div>
         <div className="tp-value num">{compactBillions(minor / 100)}</div>
         <div className="tp-change num">{weekUp ? '▲' : '▼'} {signedBillions(t.weekChange)} ({pct(t.weekPct, 2, true)}) <span>past week</span></div>
+        <div className="tp-sub">Spendable government cash, not income. Receipts arrive daily and at month close; the state borrows to refill it.</div>
+        <div className="tp-sub num" data-testid="treasury-runway">Covers ~{Number.isFinite(runwayDays) ? Math.floor(runwayDays) : '∞'} days of outlays</div>
+        <div className="tp-sub num" data-testid="treasury-bnm">BNM FX reserves {money(g.centralBank.usdReserves / 100, 'USD')} · not spendable</div>
         <div className="tp-label mt">Treasury history</div>
         <div className="tp-sub">Daily closes · last {Math.max(t.history.length, 1)} days · simulated</div>
         {t.history.length >= 2 ? <Sparkline values={t.history} up={weekUp} /> : <div className="tp-empty">History starts after the first daily close.</div>}

@@ -123,12 +123,24 @@ function otherPublicReceiptsBase(s: GameState): number {
   return Math.max(0, (380_816_996_000 - modeledTaxes * 365 - resources) / 12);
 }
 
+/** Companies pay corporate tax in monthly instalments (D-072): each day they remit a share of the last closed
+ * month's bill (the opening modelled bill in month one), and month close settles only the difference. This
+ * smooths the treasury; total tax collected is unchanged. */
+const INSTALMENT_SHARE = 0.8;
+function corporateInstalmentDaily(s: GameState): number {
+  const last = s.reports.at(-1);
+  if (last) return (INSTALMENT_SHARE * last.gov.taxCorporate) / 30;
+  const c = calibrationFor(s);
+  return INSTALMENT_SHARE * SECTOR_IDS.reduce((a, j) => a + Math.max(0, c.profit0[j]), 0) * BASE_TAX.corporate;
+}
+
 /** Daily: grant receipts, interest accrual, opex/transfers/capex/emergency outlays with financing. */
 export function dailyGovernment(s: GameState, today: number): GovDay {
   const PER_DAY = 12 / 365;
   const gov = s.government;
   const pol = gov.policies;
   post(gov, 'federalGrant', otherPublicReceiptsMonthly(s) * PER_DAY);
+  post(gov, 'taxCorporate', corporateInstalmentDaily(s));
   gov.accruedInterest += (debtMYR(gov) * gov.avgDebtRate) / 365;
 
   const cats = Object.keys(BUDGET_PURCHASES) as Exclude<BudgetCategory, 'transfers'>[];
@@ -247,8 +259,10 @@ export function monthCloseGovernment(s: GameState): GovMonthClose {
   const BASE_BUDGET = budgetFor(s);
   const gov = s.government;
   const pol = gov.policies;
-  const corporateTax = post(gov, 'taxCorporate', SECTOR_IDS.reduce((sum,j) => sum + Math.max(0,s.sectors[j].mtd.taxableProfit)*sectorTax(s,j),0));
-  s.controls.lastTaxReliefMYR = Math.max(0,(toMinor(SECTOR_IDS.reduce((sum,j)=>sum+Math.max(0,s.sectors[j].mtd.taxableProfit)*pol.tax.corporate,0))-toMinor(corporateTax))/100);
+  const corporateDue = SECTOR_IDS.reduce((sum,j) => sum + Math.max(0,s.sectors[j].mtd.taxableProfit)*sectorTax(s,j),0);
+  // Instalments already remitted this month count towards the bill; any overpayment simply stays with the treasury.
+  const corporateTax = gov.mtd.taxCorporate + post(gov, 'taxCorporate', Math.max(0, corporateDue - gov.mtd.taxCorporate));
+  s.controls.lastTaxReliefMYR = Math.max(0,(toMinor(SECTOR_IDS.reduce((sum,j)=>sum+Math.max(0,s.sectors[j].mtd.taxableProfit)*pol.tax.corporate,0))-toMinor(corporateDue))/100);
   const propertyLevy = post(gov, 'taxProperty', pol.tax.property * PROPERTY_LEVY_BASE * s.sectors.prop.mtd.nominalOutput);
 
   // Interest: pay the accrued amount; refinance if short.

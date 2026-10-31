@@ -281,6 +281,29 @@ export function startGameLoop(): () => void {
   };
 }
 
+/** Synchronous tab-local checkpoint: async IndexedDB writes may be lost during a reload. */
+function checkpointSession() {
+  const st = useGame.getState();
+  if (st.showNewGame && st.game.scheduler.ticks === 0 && st.game.actions.length === 0) return;
+  try {
+    if (import.meta.env.DEV && sessionStorage.getItem('klDevNoSave')) return;
+    sessionStorage.setItem('kl-session-recovery', serialize(st.game, 'Session recovery'));
+  } catch {
+    // A full/unavailable session store must not interrupt play. Daily/manual saves remain available.
+    void st.save('autosave', 'Autosave', 'throttle');
+  }
+}
+window.addEventListener('beforeunload', checkpointSession);
+window.addEventListener('pagehide', checkpointSession);
+if (import.meta.hot) {
+  import.meta.hot.on('vite:beforeFullReload', checkpointSession);
+  import.meta.hot.dispose(() => {
+    checkpointSession();
+    window.removeEventListener('beforeunload', checkpointSession);
+    window.removeEventListener('pagehide', checkpointSession);
+  });
+}
+
 /** Subscribe a component to economic changes; returns the (mutable) game state. */
 export function useGameState(): GameState {
   useGame((s) => s.rev);
