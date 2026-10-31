@@ -235,3 +235,10 @@ Logos are trademarks of their owners, used only to identify the real listed comp
 | US:V | [Visa Inc. logo (1992–1999).svg](https://commons.wikimedia.org/wiki/File:Visa_Inc._logo_(1992%E2%80%931999).svg) | Public domain |
 | US:WMT | [Walmart logo (2025).svg](https://commons.wikimedia.org/wiki/File:Walmart_logo_(2025).svg) | Public domain |
 | US:XOM | [Exxon Mobil Logo.svg](https://commons.wikimedia.org/wiki/File:Exxon_Mobil_Logo.svg) | Public domain |
+
+## Rail lines on the map (D-061)
+
+`src/data/rail.ts`: OSM route relations 1895592 (Kelana Jaya), 4466552 (Ampang), 3374384 (Sri Petaling), 2546881 (KL Monorail),
+5690837 (MRT Kajang), 11313577 (MRT Putrajaya) and 8394085 (Shah Alam), fetched via the Overpass API on 31 Oct 2026.
+© OpenStreetMap contributors, ODbL. Track ways are chained in route order and simplified; trains are illustrative and
+do not follow timetables. Construction and investment sites on the map are fictional locations.

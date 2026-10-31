@@ -464,3 +464,19 @@ button:focus-visible, summary:focus-visible, a:focus-visible { outline: 2px soli
 .econ-slider input[type='range']::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #f4f8fb; border: 2px solid #8fa7b8; }
 .econ-slider.reverse input[type='range'] { background: linear-gradient(90deg, #5fcf6f, #e8b04a 55%, #e2574c); }
 .econ-section { border-top: 1px solid rgba(160, 210, 235, .12); padding-top: 10px; }
+
+/* ---- Living map: construction sites, price flashes, event bubbles (display only) ---- */
+.site-marker { display: flex; align-items: center; gap: 4px; max-width: 220px; padding: 2px 7px 2px 3px; border-radius: 999px; font-size: 10.5px; font-weight: 600; color: #3b2a07; background: rgba(254, 243, 199, .94); box-shadow: 0 2px 8px rgba(15, 23, 42, .25); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: auto; }
+.site-marker.is-done { color: #053b35; background: rgba(204, 251, 241, .94); }
+.site-icon { display: inline-block; font-size: 13px; }
+.site-icon.crane { transform-origin: 30% 90%; animation: crane-swing 2.4s ease-in-out infinite; }
+@keyframes crane-swing { 0%, 100% { transform: rotate(-7deg); } 50% { transform: rotate(7deg); } }
+.co-marker { position: relative; }
+.co-flash-up { animation: co-flash-up 1.4s ease-out; }
+.co-flash-down { animation: co-flash-down 1.4s ease-out; }
+@keyframes co-flash-up { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, .9); background: #d1fae5; } 100% { box-shadow: 0 0 0 12px rgba(16, 185, 129, 0); } }
+@keyframes co-flash-down { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, .9); background: #fee2e2; } 100% { box-shadow: 0 0 0 12px rgba(239, 68, 68, 0); } }
+.co-bubble { position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); max-width: 220px; padding: 4px 8px; border-radius: 8px; font-size: 10.5px; font-weight: 600; line-height: 1.25; color: #0f172a; background: #fff; box-shadow: 0 4px 14px rgba(15, 23, 42, .3); white-space: normal; width: max-content; animation: co-bubble 8s ease-in-out forwards; pointer-events: none; }
+.co-bubble::after { content: ''; position: absolute; top: 100%; left: 50%; margin-left: -5px; border: 5px solid transparent; border-top-color: #fff; }
+@keyframes co-bubble { 0% { opacity: 0; transform: translate(-50%, 6px); } 8%, 85% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .site-icon.crane, .co-flash-up, .co-flash-down, .co-bubble { animation: none; } }

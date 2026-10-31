@@ -403,3 +403,11 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   the simulated cycles. Standing (US$ GDP 50%, exports 25%, ringgit 25%) is 15% of the model-3 score; weights 25/25/22/13/15.
   All defaults are neutral (existing tests and calibration hold). Schema-8 saves migrate with these systems off.
 - **D-060 Real company logos (user-directed spec amendment).** See PROJECT_SPEC §20 and docs/data-sources.md.
+- **D-061 Living map (user request: trains, construction, market cues).** Display-only; reads state, never changes it.
+  Seven KL rail lines (Kelana Jaya, Ampang, Sri Petaling, Monorail, MRT Kajang, MRT Putrajaya, Shah Alam) are pinned from
+  OpenStreetMap route relations (ODbL, fetched via Overpass on 31 Oct 2026, simplified to ~4 m). Train counts follow service
+  hours (none 00:00–06:00, ×1.35 at peaks), employment (elastic, so recessions visibly thin service), tourism and a completed
+  LRT project; motion is real-time, scaled by game speed and stopped while paused. Projects and approved FDI show a crane
+  marker and a rising extrusion at illustrative **fictional** sites (the game has no real addresses), then a lit "operating"
+  block. Company markers flash on hourly moves ≥1% and show an 8-second bubble when a company event starts.
+  Automated browsers (navigator.webdriver) update trains every 500 ms to keep tests light.
