@@ -8,6 +8,7 @@ import { COMMODITY_IMPORT, UTILITY_FUEL_PASSTHROUGH, FUEL_CPI_WEIGHT, HOUSEHOLD_
 import { publicCapitalFactor } from './fiscal-rules';
 import { aiMismatch, aiProductivity, carbonCost, EMISSION_INTENSITY, greenFuelSaving, hiringBoost, labourCostMultiplier, wageMultiplier, abatement } from './policy';
 import { fdiExports } from './fdi';
+import { infraCapacityMult } from './infrastructure';
 import { palmHouseholdDelta } from './soe';
 import { foodUserPrice, fuelPriceIndex, householdFuelBillDelta } from './world';
 // Aggregate KL economy: households, 7 input–output sectors, labour, prices and investment.
@@ -251,7 +252,7 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
   SECTOR_IDS.forEach((j, idx) => {
     const sec = s.sectors[j];
     const boost = productivityBoost(s, j);
-    const cap = sec.capacity * boost * (mods.capacity[j] ?? 1);
+    const cap = sec.capacity * boost * (mods.capacity[j] ?? 1) * infraCapacityMult(s, j);
     // Labour also limits output: staff can stretch ~8% above their normal productivity.
     const laborCap = sec.employment * CAL.laborProd0[j] * sec.productivity * boost * LABOR_STRETCH;
     const demand = Math.max(0, Y[idx]);

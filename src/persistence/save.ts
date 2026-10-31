@@ -15,6 +15,7 @@ import { initialWorld, validateCommodityPolicy, validateWorld } from '../engine/
 import { initialPolicy, validatePolicy } from '../engine/policy';
 import { initialFdi, validateFdi } from '../engine/fdi';
 import { initialTradeBook, validateTradeBook } from '../engine/trade-book';
+import { validateInfra } from '../engine/infrastructure';
 import { addMissingListings } from '../engine/stock-market';
 import { CAMPAIGN_LENGTHS } from '../data/boom';
 import type { GameState } from '../types/game';
@@ -254,6 +255,7 @@ export function deserialize(json: string): GameState {
   validatePolicy(s.policy);
   validateFdi(s.fdi);
   validateTradeBook(s.tradeBook);
+  validateInfra(s.infra);
   if (!s.mode || typeof s.mode.boom !== 'boolean' || !CAMPAIGN_LENGTHS.includes(s.mode.months)) throw new Error('Corrupt save: campaign mode');
   if (s.policy.enabled !== s.fdi.enabled || (s.policy.enabled && s.baseline.model !== 3)) throw new Error('Corrupt save: inconsistent policy generation');
   if (![1, 2, 3].includes(s.baseline.model) || !(s.households.equityIndex > 0)

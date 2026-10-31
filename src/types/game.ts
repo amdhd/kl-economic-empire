@@ -556,6 +556,8 @@ export interface GameState {
   mode: { boom: boolean; months: import('../data/boom').CampaignMonths };
   /** Schema 13 (model 3): trade-ministry ledger at official 2025 levels, promotion programmes and product deals (D-077). */
   tradeBook: TradeBookState;
+  /** Boom-mode infrastructure limits (D-084). Absent in realistic campaigns and in saves made before it. */
+  infra?: InfraState;
   events: { active: ActiveEvent[]; nextId: number; log: ActiveEvent[] };
   indicators: Indicators;
   baseline: BaselineSnapshot;
@@ -639,6 +641,28 @@ export interface CentralBankState {
   remitShare: number; // share of monthly reserve income paid to the treasury
   lastIncome: number; // sen, net reserve income of the last closed month
   mpc: { day: number; from: number; to: number; rule: number }[];
+}
+/** A capacity order in progress (Boom-mode infrastructure, D-084). */
+export interface InfraBuild { id: number; network: import('../data/infrastructure').NetworkId; steps: number; cost: number; paid: number; startDay: number; durationDays: number }
+export interface InfraNetwork {
+  /** Capacity index; 1.00 = the opening load. */
+  capacity: number;
+  /** Current and slow-average load index (1.00 = opening). */
+  load: number;
+  loadSlow: number;
+  congested: boolean;
+}
+export interface InfraState {
+  nextId: number;
+  openingGdpReal: number;
+  openingLabour: number;
+  /** Smoothed daily real GDP (annualised), fast and slow. */
+  gdpFast: number;
+  gdpSlow: number;
+  nets: Record<import('../data/infrastructure').NetworkId, InfraNetwork>;
+  builds: InfraBuild[];
+  /** Sector capacity multipliers from today's overload; the next day's economy reads them. */
+  mult: Record<SectorId, number>;
 }
 export interface BaselineSnapshot {
   profile: 'malaysia' | 'legacy-kl';
