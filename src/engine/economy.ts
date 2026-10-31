@@ -1,3 +1,4 @@
+import { contractedSteel } from './supply-contracts';
 import { sectorTax } from './policy-controls';
 import { confidenceChannels, householdBehaviour, householdSpending } from './household-behavior';
 import { calibrationFor } from './calibration';
@@ -60,7 +61,7 @@ export function importCost(s: GameState, j: SectorId) {
   const sub = STEEL_SUBSTITUTION * w.policy.steelSafeguard;
   let user = 0, cifCommodities = 0, steelDuty = 0;
   for (const [c, share] of Object.entries(shares) as [CommodityId, number][]) {
-    const p = w.prices[c];
+    const p = c==='steel' && j==='ind' ? contractedSteel(s,w.prices[c]) : w.prices[c];
     if (c === 'steel') {
       // Domestic steel sells at import parity, so users pay the duty-inclusive price on all steel.
       const imported = share * p * (1 - sub);

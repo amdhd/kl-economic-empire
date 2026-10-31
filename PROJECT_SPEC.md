@@ -1028,3 +1028,19 @@ The user chose to show real company logos (amending §5/§16's monogram default)
 `docs/data-sources.md`, beside fictional simulated data. New campaigns add fictional FDI pledges from real companies,
 toggle-and-slider policy levers with explicit phase cycles, AI adoption effects and a scored global-standing board
 against the ten largest economies (IMF WEO data). See D-059–D-060.
+
+## 21. User amendment — Deals & Power (31 October 2026)
+
+The user requested implementation of negotiated investment deals, private takeovers, infrastructure concessions,
+distressed-company rescues, startup rounds and long-term supply contracts, with staged validation on a new branch.
+See `docs/deals-expansion-plan.md` and D-063–D-071. These extend the existing FDI/project/public-fund systems with a
+Deal Room, explicit money reservations, obligations and ownership. Private startups, rescue targets, acquisition
+targets and consortium counterparties are fictional. Negotiated real-name FDI remains clearly simulated.
+
+SWF minority private investments use a 10% NAV budget; controlling acquisitions and rescue loans use an explicit
+Khazanah strategic mandate, capped at 10% of its capital including deal assets. This expands available public
+investment instruments without permitting leverage, short selling or bypassing listed-equity concentration rules.
+Share purchases and loans exchange assets; only funded production contributes to GDP. Contracts can fail and leave
+unpaid obligations. Public-to-public transfers/distributions cannot manufacture public wealth. Keep the existing
+continuous clock, 24-month boundary, pause/1×/2×/3× and no offline catch-up. Migration preserves prior accounts and
+signed contracts; new agreement rules activate prospectively. Build/test/browser gates apply to each milestone.

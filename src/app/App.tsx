@@ -1,3 +1,4 @@
+import { DealsPanel } from '../components/panels/DealsPanel';
 import { PopulationPanel } from '../components/panels/PopulationPanel';
 import { ExplanationPanel } from '../components/panels/ExplanationPanel';
 import { DecisionsPanel } from '../components/panels/DecisionsPanel';
@@ -34,6 +35,7 @@ import { startGameLoop, useGame, type PanelId } from '../store/game-store';
 import type { ScenarioId } from '../types/game';
 
 const PANELS: Record<PanelId, () => ReactNode> = {
+  deals: () => <DealsPanel />,
   explain: () => <ExplanationPanel />,
   decisions: () => <DecisionsPanel />,
   fdi: () => <FdiPanel />,

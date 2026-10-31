@@ -20,7 +20,7 @@ export function EconomyPanel() {
   const daily = g.daily.slice(-400).map((d) => ({ t: d.t, fx: d.fx, cpi: d.cpi }));
   if (!monthly.length) monthly.push({ t: Math.floor((new Date(g.clock.startHour * 3600000 + 8 * 3600000)).getUTCFullYear()) * 12, gdp: g.baseline.realGdpAnnual / 1e9, nom: g.baseline.nominalGdpAnnual / 1e9, infl: g.indicators.inflationYoY * 100, u: g.indicators.unemployment * 100, inv: 0 });
   if (!daily.length) daily.push({ t: klDay(g.clock.startHour * 60), fx: g.external.myrPerUsd, cpi: g.indicators.cpi });
-  const deficit = (f: typeof g.government.mtd) => Object.entries(f).reduce((sum, [k, v]) => ['borrowing', 'principal', 'swfContribution', 'swfTransferIn'].includes(k) ? sum : sum + (isInflow(k as keyof typeof f) ? -v : v), 0);
+  const deficit = (f: typeof g.government.mtd) => Object.entries(f).reduce((sum, [k, v]) => ['borrowing', 'principal', 'swfContribution', 'swfTransferIn', 'dealEscrowOut', 'dealEscrowIn'].includes(k) ? sum : sum + (isInflow(k as keyof typeof f) ? -v : v), 0);
   const deficits = R.map(r => ({ t: r.monthKey, deficit: deficit(r.gov) / 1e9 }));
   const hh = g.households;
   const b = g.bank;

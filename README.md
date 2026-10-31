@@ -93,3 +93,19 @@ Thresholds, notification detail, confirmation pause and optional critical-alert 
 Critical alerts pause only when enabled; resume manually after reviewing them. History covers the current session,
 and loading a save does not repeat existing warnings. Time remains Pause / 1× / 2× / 3×, with no offline catch-up.
 New campaigns also offer **Export downturn** and **Energy squeeze**, with starting shocks explained on their cards.
+
+### Deal Room
+
+Open **Info views → Deal Room** for fictional public investment and contracts:
+
+- Negotiate FDI grants, sourcing, training and delivery; grants release at build milestones.
+- Compare private infrastructure concessions with direct public project funding.
+- Lock fleet fuel or participating manufacturers' steel prices, with indexation and default risks.
+- Invest minority SWF equity in startups, handle follow-on rounds/dilution and seek exits.
+- Rescue fictional employers through staged Khazanah loans or equity restructuring.
+- Bid for controlling private-company stakes and manage integration, dividends and exits.
+
+Review an opportunity, send terms, inspect the counteroffer and sign. Signatures reserve real cash; future service
+payments and guarantees can extend beyond the presidency. **Exposure** and the campaign report show those obligations.
+Later fictional cohorts arrive during the campaign. Existing model-3 saves can enable agreements prospectively from
+the Deal Room; existing signed FDI keeps its original rules. All counterparties, terms and outcomes are simulated.

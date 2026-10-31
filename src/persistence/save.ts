@@ -1,3 +1,4 @@
+import { initialDeals, validateDeals } from '../engine/deals';
 import { appearanceSnapshot, type MapAppearance } from '../map/appearance';
 import { initialControls, validateControls } from '../engine/policy-controls';
 // Versioned save format. Saving never mutates game state or advances the clock.
@@ -50,6 +51,12 @@ export function findNonFinite(v: unknown, path = 'state'): string | null {
 type Migration = (s: Record<string, unknown>) => Record<string, unknown>;
 /** migrations[n] upgrades a state from schema n to n+1. */
 const MIGRATIONS: Record<number, Migration> = {
+  9: state => {
+    const s = state as unknown as GameState;
+    s.deals ??= initialDeals(s.seed, false, s.scheduler.lastDay);
+    for (const f of [s.government.mtd, ...s.reports.map(r => r.gov)]) { f.dealEscrowOut = 0; f.dealEscrowIn = 0; }
+    return state;
+  },
   // v8 → v9: policy levers, AI adoption and FDI. Existing saves keep them switched off (neutral, no new draws) and gain
   // zero policy treasury lines, so balances, replays and scores are unchanged.
   8: state => {
@@ -173,6 +180,7 @@ export function deserialize(json: string): GameState {
   }
   const s = st as unknown as GameState;
   validateControls(s.controls);
+  validateDeals(s);
   const bad = findNonFinite(s);
   if (bad) throw new Error(`Corrupt save: non-finite number at ${bad}`);
   for (const key of ['clock', 'scheduler', 'rng', 'government', 'fund', 'market', 'sectors', 'households', 'bank', 'external', 'trade', 'centralBank', 'world', 'soe', 'fiscal'] as const) {
