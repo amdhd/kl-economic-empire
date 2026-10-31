@@ -1,4 +1,5 @@
 import { applyPlans, automaticFx } from './policy-controls';
+import { recentIncomeTrend } from './household-behavior';
 import { baselineFor, budgetFor, nationalV2 } from '../data/economic-baseline';
 import { updateFiscal } from './fiscal-rules';
 import { dailyResources, monthCloseSoe } from './soe';
@@ -153,10 +154,10 @@ function closeMonth(s: GameState, key: number, mods: AggregatedMods): void {
   const cpiF = ind.cpi / 100;
   const realDispPerCap = ((hh.mtd.disposable / cpiF) * (365 / days)) / hh.population;
   const rentBurden = hh.mtd.rent / Math.max(hh.mtd.disposable, 1);
-  const realIncomeGrowth = realDispPerCap / s.baseline.realDisposablePerCapita - 1;
+  const incomeTrend = recentIncomeTrend(s, realDispPerCap);
 
   monthCloseBank(s, mods, u);
-  economyMonthClose(s, ind.inflationYoY, u, realIncomeGrowth, days, coreInflation);
+  economyMonthClose(s, ind.inflationYoY, u, incomeTrend, days, coreInflation);
   updateSatisfaction(s, realDispPerCap, rentBurden, ind.inflationYoY);
 
   ind.debtToGdp = debtMYR(s.government) / ind.nominalGdpAnnual;

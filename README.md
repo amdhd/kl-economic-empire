@@ -80,3 +80,15 @@ Open **Economic controls** in the Government rail for sector tax relief, multi-y
 new-debt term/refinancing strategy and automatic reserve-limited FX bands. Review dialogs show fiscal costs and
 tradeoffs. Ministry outcomes are synthetic coverage/readiness indices; debt uses an amortising pool, not bullet bonds.
 Schema5 saves preserve these settings; older saves receive neutral controls without changing money or RNG.
+
+### Economic explanations and alerts
+
+Click GDP, unemployment, inflation, approval or treasury in the Economy summary to inspect the measured changes,
+current mechanisms and policy/project delays. The bottom approval indicator also opens its explanation.
+Accounting contributions and current conditions are separated; the game does not claim exact causal policy forecasts.
+
+Open **Alerts & settings** for treasury coverage, unemployment, housing-cost pressure and project-cost warnings.
+Thresholds, notification detail, confirmation pause and optional critical-alert pause are saved on this device.
+Critical alerts pause only when enabled; resume manually after reviewing them. History covers the current session,
+and loading a save does not repeat existing warnings. Time remains Pause / 1× / 2× / 3×, with no offline catch-up.
+New campaigns also offer **Export downturn** and **Energy squeeze**, with starting shocks explained on their cards.

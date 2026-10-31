@@ -35,7 +35,7 @@ export function BottomBar() {
           ))}
         </div>
       </button>
-      <button className="cs-chip" onClick={() => setPanel('objectives')} title={`Approval ${approval.toFixed(0)}% · victory needs 60%`} data-testid="bottom-approval">
+      <button className="cs-chip" onClick={() => useGame.getState().explain('approval')} title={`Approval ${approval.toFixed(0)}% · victory needs 60%`} data-testid="bottom-approval">
         <span aria-hidden>{mood}</span><b className="num">{approval.toFixed(0)}%</b>
       </button>
       <button className={`cs-money ${panel === 'finance' ? 'is-active' : ''}`} onClick={() => setPanel(panel === 'finance' ? null : 'finance')} aria-pressed={panel === 'finance'}

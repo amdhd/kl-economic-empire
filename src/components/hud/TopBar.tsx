@@ -72,6 +72,7 @@ export function TopBar({ menuOpen, onToggleMenu }: { menuOpen: boolean; onToggle
         <Districts />
         <div className="exchange-chips flex gap-1"><MarketChip ex="MY" /><MarketChip ex="US" /></div>
         <SaveMenu />
+        <button className="btn" onClick={() => useGame.getState().setPanel('settings')} data-testid="btn-settings">Alerts & settings</button>
         <button className="btn" onClick={() => setShowNewGame(true)} data-testid="btn-new-game">New</button>
         <button className="btn" onClick={() => setShowHelp(true)} aria-label="Help & shortcuts" title="Help & shortcuts (?)">?</button>
       </div>
