@@ -5,7 +5,7 @@ import { debtMYR, outlaysOf, ratingLabel, revenueOf, treasuryMYR } from '../../e
 import { estimateTaxChange } from '../../engine/policy-preview';
 import { useGame, useGameState, type PanelId } from '../../store/game-store';
 import type { BudgetCategory, GameState, SectorId, TaxPolicy } from '../../types/game';
-import { fullMoneyMinor, money, num as numFmt, pct } from '../../utils/format';
+import { fullMoneyMinor, gdpUsd, money, num as numFmt, pct } from '../../utils/format';
 import { NON_TAX_REVENUE_2027 } from '../../data/non-tax-revenue';
 import { householdDemand } from '../../engine/economy';
 import { activeTaxKeys, effectiveIncomeTaxRate, employmentOf, INCOME_TAX_BANDS } from '../../engine/income-tax';
@@ -312,14 +312,14 @@ function Production({ g, balance, label }: { g: GameState; balance: number; labe
   return (
     <div className="econ-columns">
       <div className="econ-list">
-        {SECTOR_IDS.map((j) => <Row key={j} icon="economy" label={SECTORS[j].name} amount={last ? money(last.gdpBySector[j]) : '—'} tone="neutral" active={sel === j} onClick={() => setSel(j)} testid={`econ-sector-${j}`} />)}
-        {g.world.enabled && <Row icon="commodities" label="Oil, gas, palm & rubber" amount={last?.resourceGdp ? money(last.resourceGdp) : '—'} tone="neutral" onClick={go('commodities')} />}
+        {SECTOR_IDS.map((j) => <Row key={j} icon="economy" label={SECTORS[j].name} amount={last ? gdpUsd(last.gdpBySector[j], last.myrPerUsd) : '—'} tone="neutral" active={sel === j} onClick={() => setSel(j)} testid={`econ-sector-${j}`} />)}
+        {g.world.enabled && <Row icon="commodities" label="Oil, gas, palm & rubber" amount={last?.resourceGdp ? gdpUsd(last.resourceGdp, last.myrPerUsd) : '—'} tone="neutral" onClick={go('commodities')} />}
         <Balance balance={balance} label={label} />
       </div>
       <Detail title={SECTORS[sel].name}>
         <div className="econ-section">
           <h4>LAST CLOSED MONTH</h4>
-          <Line label="Value added" value={last ? money(last.gdpBySector[sel]) : '—'} />
+          <Line label="Value added (US$)" value={last ? gdpUsd(last.gdpBySector[sel], last.myrPerUsd) : '—'} />
           <Line label="Pre-tax profit" value={money(s.lastMonthProfit)} tone={s.lastMonthProfit >= 0 ? 'in' : 'out'} />
           <Line label="Investment / month" value={money(s.investmentMonthly)} />
         </div>

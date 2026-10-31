@@ -5,7 +5,7 @@ import { fuelMarketPrice, fuelSubsidyDaily, wheatSubsidyDaily } from '../../engi
 import { formatKL } from '../../engine/time';
 import type { CommodityPolicy } from '../../types/game';
 import { useGame, useGameState } from '../../store/game-store';
-import { money, pct } from '../../utils/format';
+import { gdpUsd, money, pct } from '../../utils/format';
 import { TimeChart } from '../charts/TimeChart';
 import { Section, Stat, Tabs } from '../ui';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -52,7 +52,7 @@ export function CommoditiesPanel() {
         <Stat label="Palm export duty" value={money(w.mtd.palmDuty)} />
         <Stat label="Steel safeguard duty" value={money(w.mtd.steelDuty)} />
       </div>
-      <p className="mt-2 text-[12px] text-slate-400">Oil, LNG, palm oil and rubber are value added outside the seven industries: higher prices raise nominal GDP, PETRONAS profits, petroleum income tax, palm duty and smallholder income. LNG and coal set power costs; steel, aluminium and copper feed construction, industry and chipmakers; wheat and rice feed food prices. Households and firms pay more for fuel and inputs. Resource value added this month {money(w.mtd.resourceVa)}.</p>
+      <p className="mt-2 text-[12px] text-slate-400">Oil, LNG, palm oil and rubber are value added outside the seven industries: higher prices raise nominal GDP, PETRONAS profits, petroleum income tax, palm duty and smallholder income. LNG and coal set power costs; steel, aluminium and copper feed construction, industry and chipmakers; wheat and rice feed food prices. Households and firms pay more for fuel and inputs. Resource value added this month {gdpUsd(w.mtd.resourceVa, g.external.myrPerUsd)}.</p>
     </Section>
     <Section title="Domestic policy · effective tomorrow">
       <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-[12px]">

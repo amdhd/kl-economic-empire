@@ -9,7 +9,7 @@ import { Section } from '../ui';
 export function OverviewPanel() {
   const g = useGameState();
   const setPanel = useGame.getState().setPanel;
-  const d = g.daily.slice(-200).map((x) => ({ t: x.t, nav: x.nav / 1e9, tre: x.treasury / 1e9, debt: x.debt / 1e9, gdp: x.gdpRunRate / 1e9 }));
+  const d = g.daily.slice(-200).map((x) => ({ t: x.t, nav: x.nav / 1e9, tre: x.treasury / 1e9, debt: x.debt / 1e9, gdp: x.gdpRunRate / x.fx / 1e9 }));
   return (
     <PanelShell title="President’s briefing" subtitle="A fictional Malaysian presidency on the KL map. Set fiscal and trade policy, manage the sovereign fund and use central-bank reserves to influence FX. Global shocks remain external." width={640}>
       {g.reports.length === 0 && (
@@ -26,7 +26,7 @@ export function OverviewPanel() {
       )}
       <div className="grid grid-cols-2 gap-3">
         <Section title="GDP run-rate">
-          <TimeChart data={d} xKey="t" xFormat={(v) => klDayLabel(Number(v))} series={[{ key: 'gdp', name: 'GDP', color: '#60a5fa' }]} yFormat={(v) => v.toFixed(0)} unit="RM bn/yr from daily value added" height={110} area />
+          <TimeChart data={d} xKey="t" xFormat={(v) => klDayLabel(Number(v))} series={[{ key: 'gdp', name: 'GDP', color: '#60a5fa' }]} yFormat={(v) => v.toFixed(0)} unit="US$ bn/yr from daily value added" height={110} area />
         </Section>
         <Section title="Public balance sheet">
           <TimeChart data={d} xKey="t" xFormat={(v) => klDayLabel(Number(v))} series={[{ key: 'tre', name: 'Treasury', color: '#34d399' }, { key: 'nav', name: 'SWF NAV', color: '#a78bfa' }]} yFormat={(v) => v.toFixed(1)} unit="RM bn · daily" height={110} />

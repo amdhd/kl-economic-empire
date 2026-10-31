@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { SECTOR_IDS, SECTORS } from '../../data/economic-baseline';
+import { baselineFor, SECTOR_IDS, SECTORS } from '../../data/economic-baseline';
 import { formatKL, klDay } from '../../engine/time';
 import { useGameState } from '../../store/game-store';
 import type { GovMonthFlows } from '../../types/game';
-import { money, pct } from '../../utils/format';
+import { gdpUsd, money, pct } from '../../utils/format';
 import { PanelShell } from './PanelShell';
 import { Section, Stat, Tabs } from '../ui';
 import { EventCard } from '../EventCard';
@@ -35,8 +35,8 @@ export function ReportsPanel() {
           </div>
           <Section title={`${r.label} — Economic report`}>
             <div className="mb-3 grid grid-cols-4 gap-3">
-              <Stat label="Nominal GDP (month)" value={money(r.nominalGdp)} />
-              <Stat label="Real GDP (month)" value={money(r.realGdp)} />
+              <Stat label="Nominal GDP (month)" value={gdpUsd(r.nominalGdp, r.myrPerUsd)} />
+              <Stat label="Real GDP (month)" value={gdpUsd(r.realGdp, baselineFor(g).myrPerUsd)} />
               <Stat label="CPI YoY" value={pct(r.inflationYoY)} />
               <Stat label="Unemployment" value={pct(r.unemployment)} />
               <Stat label="Approval" value={`${r.approval.toFixed(0)}%`} />
@@ -51,7 +51,7 @@ export function ReportsPanel() {
               <div>
                 <div className="label mb-1">GDP by sector (value added)</div>
                 {SECTOR_IDS.map((j) => (
-                  <div key={j} className="num flex justify-between text-[12px]"><span className="text-slate-400">{SECTORS[j].short}</span><span>{money(r.gdpBySector[j])}</span></div>
+                  <div key={j} className="num flex justify-between text-[12px]"><span className="text-slate-400">{SECTORS[j].short}</span><span>{gdpUsd(r.gdpBySector[j], r.myrPerUsd)}</span></div>
                 ))}
                 <div className="num flex justify-between border-t border-slate-700/50 pt-1 text-[12px]"><span className="text-slate-400">+ consumption levy</span><span>{money(r.gov.taxConsumption)}</span></div>
               </div>

@@ -580,6 +580,7 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   clamp still prevents catch-up (at 5× one clamped frame is 25 game minutes, below one tick). No 4× is added. The living
   map's trains run at 3× visual pace at 5×. Engine cost is ~1.7 hourly ticks per real second; the browser sample is in
   `docs/performance.md`. Saves accept speed 5 with no schema change; older builds would reject such a save.
+- **D-082 GDP is displayed in US dollars (user request).** Every GDP amount shown to the player (HUD, economy charts, reports, objectives, sector value added, GDP explanation) is the MYR figure ÷ MYR/USD: nominal at that month's (or today's) rate, real GDP and the official history at the opening rate so real growth is not distorted by the ringgit. The engine, saves and ratios ("0f GDP") are unchanged and still MYR; budget, debt, treasury, FDI and trade stay in ringgit. Helper: `gdpUsd` in `src/utils/format.ts`.
 - **D-083 Safe time skip (user request, PROJECT_SPEC §26).** The user explicitly asked to amend the "no skip" rule
   (AGENTS rule 4, §2/§3/§15, an e2e test). Engine: `src/engine/skip.ts` is pure and React-free and calls the same
   `runHourTick` as the real-time clock; it uses no randomness of its own and never reads or changes `clock.subHourMs`, so

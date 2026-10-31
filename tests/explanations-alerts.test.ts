@@ -18,7 +18,7 @@ describe('read-only economic explanations', () => {
     expect(sum(s, 'approval')).toBeCloseTo(last.approval - prev.approval, 9);
     expect(sum(s, 'unemployment')).toBeCloseTo(100 * (1 - s.households.employed / s.households.laborForce - last.unemployment), 9);
     const rate = (r: typeof last) => r.nominalGdp * 365 / daysInMonth(Math.floor(r.monthKey / 12), r.monthKey % 12 + 1);
-    expect(sum(s, 'gdp')).toBeCloseTo(rate(last) - rate(prev), 2);
+    expect(sum(s, 'gdp') * s.external.myrPerUsd).toBeCloseTo(rate(last) - rate(prev), 2); // contributions are shown in US$ at today's rate
     expect(sum(s, 'treasury')).toBeCloseTo(s.government.treasury / 100 - last.treasury, 3);
     expect(s).toEqual(before); // reads cannot change histories, clocks, RNG or balances
   }));
