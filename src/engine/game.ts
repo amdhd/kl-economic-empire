@@ -42,7 +42,7 @@ import { seedRng } from './rng';
 import { klDay, klParts, klToEpochMin, monthKey } from './time';
 import { clamp, news, pushBounded, toMinor } from './util';
 
-export const SCHEMA_VERSION = 10;
+export const SCHEMA_VERSION = 11;
 export const START = { year: 2027, month: 1, day: 1, hour: 8 };
 export const CAMPAIGN_MONTHS = 24;
 
@@ -114,7 +114,7 @@ function createWithProfile(seed: number, scenario: ScenarioId, profile: 'malaysi
     government: {
       ledger: [], treasury: toMinor(BASELINE.treasury), debt: toMinor(BASELINE.debt), avgDebtRate: BASELINE.debtRate, accruedInterest: 0,
       unpaidObligations: 0, daysInArrears: 0,
-      policies: { tax: { ...BASE_TAX }, budget: { ...BASE_BUDGET }, borrowing: { cashBufferMonths: 1, maxDebtToGdp: profile === 'malaysia' ? 0.8 : 0.45 } },
+      policies: { tax: { ...BASE_TAX, household: profile === 'malaysia' ? 0 : BASE_TAX.household }, budget: { ...BASE_BUDGET }, borrowing: { cashBufferMonths: 1, maxDebtToGdp: profile === 'malaysia' ? 0.8 : 0.45 } },
       pending: [], projects: [], nextId: 1, mtd: emptyFlows(), accruedCorporateTax: 0, publicAssets: BASELINE.publicAssets,
       bondYield: BASELINE.mgs10 + 0.004, creditRating: 9, marketAccess: true, serviceQuality: BASELINE.serviceQuality, insolvent: false,
       resilience: 0, tourismBoost: 0, housingFactor: 1, serviceBoost: 0, mtdArrearsDays: 0, pendingEmergency: 0,
@@ -150,7 +150,7 @@ function createWithProfile(seed: number, scenario: ScenarioId, profile: 'malaysi
       score: { growth: 50, wealth: 50, satisfaction: 62, stability: 80, total: 0, caps: [] },
     },
     baseline: {
-      profile, model: 3, openingTreasury: BASELINE.treasury, openingDebt: BASELINE.debt,
+      profile, model: 3, pit: profile === 'malaysia', nonTax: profile === 'malaysia', openingTreasury: BASELINE.treasury, openingDebt: BASELINE.debt,
       realGdpAnnual: gdpAnnual, nominalGdpAnnual: gdpAnnual, publicNetWorth: 0, employment: employed,
       realDisposablePerCapita: (CAL.hh.disposable * 365) / BASELINE.population,
       rentBurden: (CAL.hh.consumption * SECTORS.prop.consumption) / CAL.hh.disposable,
@@ -366,7 +366,7 @@ function dispatch(s: GameState, cmd: Command, atMin: number): CommandResult {
         if (Math.abs(val - cur) < 1e-9) continue;
         patch[k] = val;
         parts.push(`${meta.label} ${(cur * 100).toFixed(1)}% → ${(val * 100).toFixed(1)}%`);
-        if (val > cur) s.policyChurn += (val - cur) * 100 * 0.8;
+        if (val > cur) s.policyChurn += (val - cur) * 100 * 0.8 * (k === 'incomeTax' ? 0.3 : 1);
         else s.policyChurn += 0.5;
       }
       if (!parts.length) return { ok: false, message: 'No change to queue.' };

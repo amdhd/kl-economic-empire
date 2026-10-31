@@ -19,6 +19,7 @@ import {
 } from './calibration';
 import type { AggregatedMods } from './external';
 import { post, type GovDay } from './government';
+import { incomeTaxDaily } from './income-tax';
 import { clamp, toMinor } from './util';
 
 /** Monthly amounts are 'per average month'; daily flow = monthly × 12/365. */
@@ -135,7 +136,9 @@ export function householdDemand(s: GameState, transfersPaid: number) {
   }
   // Palm smallholder profit and estate wages move with world palm prices (model 2, relative to opening).
   const other = hh.otherIncomeMonthly * PER_DAY + palmHouseholdDelta(s);
-  const householdTax = toMinor(tax.household * wages * SURCHARGE_BASE_SHARE) / 100;
+  const surcharge = toMinor(tax.household * wages * SURCHARGE_BASE_SHARE) / 100;
+  const incomeTax = toMinor(incomeTaxDaily(s, wages)) / 100;
+  const householdTax = surcharge + incomeTax;
   const hhRate = bank.lendingRate + HOUSEHOLD_RATE_PREMIUM;
   const interestH = (bank.loansH * hhRate) / 365;
   const amortH = bank.loansH * HOUSEHOLD_AMORT_MONTHLY * PER_DAY;
@@ -153,7 +156,7 @@ export function householdDemand(s: GameState, transfersPaid: number) {
   const importedConsumption = basket * D.importedConsumption;
   const consumption = basket - importedConsumption;
   const credit = hh.newCreditMonthly * PER_DAY;
-  return { wagesBy, wages, other, householdTax, interestH, amortH, disposable, permanentIncome, consumption, importedConsumption, spending, fuelAdjustment, credit };
+  return { wagesBy, wages, other, householdTax, surcharge, incomeTax, interestH, amortH, disposable, permanentIncome, consumption, importedConsumption, spending, fuelAdjustment, credit };
 }
 
 export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEconomy {
@@ -162,8 +165,9 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
   const hh = s.households;
   const bank = s.bank;
   const tax = s.government.policies.tax;
-  const { wagesBy, wages, other, householdTax, interestH, amortH, disposable, permanentIncome, consumption, spending, credit } = householdDemand(s, gov.transfersPaid);
-  post(s.government, 'taxHousehold', householdTax);
+  const { wagesBy, wages, other, surcharge, incomeTax, householdTax, interestH, amortH, disposable, permanentIncome, consumption, spending, credit } = householdDemand(s, gov.transfersPaid);
+  post(s.government, 'taxHousehold', surcharge);
+  post(s.government, 'taxIncome', incomeTax);
   bank.mtdInterestH += interestH;
   bank.mtdAmortH += amortH;
   hh.permanentIncome = permanentIncome;

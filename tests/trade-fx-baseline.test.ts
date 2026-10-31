@@ -7,6 +7,7 @@ import { applyCommand, createGame, runHeadless, SCHEMA_VERSION } from '../src/en
 import { FUEL_SUBSIDY0 } from '../src/data/world';
 import { modelledResourceRevenue0 } from '../src/engine/soe';
 import { isInflow, otherPublicReceiptsMonthly } from '../src/engine/government';
+import { NON_TAX_ANNUAL_2027 } from '../src/data/non-tax-revenue';
 import { FOREIGN_WORKERS0, WORKER_LEVY0 } from '../src/engine/policy';
 import { publicNetWorth, reserveEquityChange, scoreDrivers, scoreNetWorth } from '../src/engine/indicators';
 import { quoteIntervention } from '../src/engine/trade-fx';
@@ -39,7 +40,7 @@ describe('dated Malaysia opening, with separate legacy calibration', () => {
       + BASE_TAX.property * 0.5 * CAL.Y0.prop + CAL.levyBase + CAL.hh.tax;
     const other = otherPublicReceiptsMonthly(s);
     // Schema 9 posts the opening foreign-worker levy on its own line.
-    expect(taxesDaily * 365 + modelledResourceRevenue0() + other * 12 + WORKER_LEVY0 * FOREIGN_WORKERS0 * 1e6).toBeCloseTo(380_816_996_000, 2);
+    expect(taxesDaily * 365 + modelledResourceRevenue0() + other * 12 + NON_TAX_ANNUAL_2027 + WORKER_LEVY0 * FOREIGN_WORKERS0 * 1e6).toBeCloseTo(380_816_996_000, 2);
     s.government.policies.tax.corporate = 0.35;
     expect(otherPublicReceiptsMonthly(s)).toBe(other);
   });
@@ -127,7 +128,7 @@ describe('import tariffs and funded export services', () => {
     s.trade.policy.exportBudgetMonthly = 2e9;
     s.government.marketAccess = false; s.government.treasury = 0;
     // Disable all public receipts and fiscal taxes for this isolated lack-of-funds case.
-    s.baseline.profile = 'legacy-kl';
+    s.baseline.profile = 'legacy-kl'; s.baseline.pit = false; s.baseline.nonTax = false;
     s.policy.enabled = false; // the foreign-worker levy is a receipt too (schema 9)
     s.government.policies.budget.admin = 20e9;
     s.government.policies.tax.household = 0;

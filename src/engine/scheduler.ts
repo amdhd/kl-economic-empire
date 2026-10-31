@@ -31,6 +31,7 @@ import { expireOrders, monthCloseFund, navMYR, processQueuedOrders, receiveDivid
 import { hourlyMarket } from './stock-market';
 import { reconcileMonth } from './reconciliation';
 import { daysInMonth, klDay, klDayStartMin, klParts, monthKey, monthKeyLabel } from './time';
+import { surchargeEquivalent } from './income-tax';
 import { clamp, news, pushBounded } from './util';
 
 export function runHourTick(s: GameState): void {
@@ -176,7 +177,7 @@ function closeMonth(s: GameState, key: number, mods: AggregatedMods): void {
   ind.deficitToGdp = ((spend - revenue) * (365 / days)) / ind.nominalGdpAnnual;
   ind.publicNetWorth = publicNetWorth(s);
   const tax = s.government.policies.tax;
-  ind.gini = clamp(0.4 + 0.6 * (tax.consumption - 0.04) - 1.0 * (tax.household - 0.02) - 0.03 * (s.government.policies.budget.transfers / budgetFor(s).transfers - 1) + 0.5 * (u - BASELINE.unemployment), 0.25, 0.6);
+  ind.gini = clamp(0.4 + 0.6 * (tax.consumption - 0.04) - 1.0 * (surchargeEquivalent(s) - 0.02) - 0.03 * (s.government.policies.budget.transfers / budgetFor(s).transfers - 1) + 0.5 * (u - BASELINE.unemployment), 0.25, 0.6);
 
   const gdpBySector = {} as Record<SectorId, number>;
   let investment = 0;

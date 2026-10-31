@@ -1,3 +1,4 @@
+import { NON_TAX_ANNUAL_2027 } from '../data/non-tax-revenue';
 import { fleetAdjustment } from './supply-contracts';
 import { sectorTax, ministryOutcomes } from './policy-controls';
 import { baselineFor, budgetFor, nationalV2, trendFor } from '../data/economic-baseline';
@@ -24,16 +25,16 @@ export const BOOST_SATURATION = 0.04;
 
 export const emptyFlows = (): GovMonthFlows => ({
   dealEscrowOut: 0, dealEscrowIn: 0,
-  taxCorporate: 0, taxProperty: 0, taxConsumption: 0, taxHousehold: 0, federalGrant: 0, importTariff: 0, exportSupport: 0,
+  taxCorporate: 0, taxProperty: 0, taxConsumption: 0, taxHousehold: 0, taxIncome: 0, nonTaxRevenue: 0, federalGrant: 0, importTariff: 0, exportSupport: 0,
   soeDividend: 0, petroleumTax: 0, commodityDuty: 0, subsidy: 0, opex: 0, capex: 0,
   interest: 0, borrowing: 0, principal: 0, swfContribution: 0, swfTransferIn: 0, emergency: 0, policyLevy: 0, policyGrant: 0,
 });
 
-const INFLOWS: (keyof GovMonthFlows)[] = ['dealEscrowIn', 'taxCorporate', 'taxProperty', 'taxConsumption', 'taxHousehold', 'federalGrant', 'importTariff', 'soeDividend', 'petroleumTax', 'commodityDuty', 'borrowing', 'swfTransferIn', 'policyLevy'];
+const INFLOWS: (keyof GovMonthFlows)[] = ['dealEscrowIn', 'taxCorporate', 'taxProperty', 'taxConsumption', 'taxHousehold', 'taxIncome', 'nonTaxRevenue', 'federalGrant', 'importTariff', 'soeDividend', 'petroleumTax', 'commodityDuty', 'borrowing', 'swfTransferIn', 'policyLevy'];
 export const isInflow = (k: keyof GovMonthFlows) => INFLOWS.includes(k);
 
 /** Government revenue lines (borrowing and fund transfers are financing, not revenue). */
-export const REVENUE_KINDS: (keyof GovMonthFlows)[] = ['taxCorporate', 'taxProperty', 'taxConsumption', 'taxHousehold', 'federalGrant', 'importTariff', 'soeDividend', 'petroleumTax', 'commodityDuty', 'policyLevy'];
+export const REVENUE_KINDS: (keyof GovMonthFlows)[] = ['taxCorporate', 'taxProperty', 'taxConsumption', 'taxHousehold', 'taxIncome', 'nonTaxRevenue', 'federalGrant', 'importTariff', 'soeDividend', 'petroleumTax', 'commodityDuty', 'policyLevy'];
 /** Government expenditure lines (principal repayment and fund contributions are financing). */
 export const OUTLAY_KINDS: (keyof GovMonthFlows)[] = ['opex', 'capex', 'interest', 'emergency', 'exportSupport', 'subsidy', 'policyGrant'];
 const sumOf = (f: GovMonthFlows, kinds: (keyof GovMonthFlows)[]) => kinds.reduce((a, k) => a + (f[k] ?? 0), 0);
@@ -112,6 +113,12 @@ export function otherPublicReceiptsMonthly(s: GameState): number {
   return (otherPublicReceiptsBase(s) - levy0) * (trendFor(s).buoyantReceipts ? s.indicators.nominalGdpAnnual / s.baseline.nominalGdpAnnual : 1);
 }
 
+/** Fees, licences, fines and rentals (D-073): opening 2027 estimate, indexed like other receipts to nominal GDP. */
+export function nonTaxRevenueMonthly(s: GameState): number {
+  if (!s.baseline.nonTax) return 0;
+  return (NON_TAX_ANNUAL_2027 / 12) * (trendFor(s).buoyantReceipts ? s.indicators.nominalGdpAnnual / s.baseline.nominalGdpAnnual : 1);
+}
+
 function otherPublicReceiptsBase(s: GameState): number {
   const base = baselineFor(s);
   if (s.baseline.profile === 'legacy-kl') return base.federalGrantMonthly;
@@ -120,7 +127,8 @@ function otherPublicReceiptsBase(s: GameState): number {
     + BASE_TAX.property * PROPERTY_LEVY_BASE * c.Y0.prop + c.levyBase + c.hh.tax;
   // Model 2 also models petroleum tax, palm tax and duty, and SOE dividends explicitly.
   const resources = nationalV2(s) ? modelledResourceRevenue0() : 0;
-  return Math.max(0, (380_816_996_000 - modeledTaxes * 365 - resources) / 12);
+  const fees = s.baseline.nonTax ? NON_TAX_ANNUAL_2027 : 0;
+  return Math.max(0, (380_816_996_000 - modeledTaxes * 365 - resources - fees) / 12);
 }
 
 /** Companies pay corporate tax in monthly instalments (D-072): each day they remit a share of the last closed
@@ -140,6 +148,7 @@ export function dailyGovernment(s: GameState, today: number): GovDay {
   const gov = s.government;
   const pol = gov.policies;
   post(gov, 'federalGrant', otherPublicReceiptsMonthly(s) * PER_DAY);
+  post(gov, 'nonTaxRevenue', nonTaxRevenueMonthly(s) * PER_DAY);
   post(gov, 'taxCorporate', corporateInstalmentDaily(s));
   gov.accruedInterest += (debtMYR(gov) * gov.avgDebtRate) / 365;
 

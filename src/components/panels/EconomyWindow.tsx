@@ -5,7 +5,10 @@ import { debtMYR, outlaysOf, ratingLabel, revenueOf, treasuryMYR } from '../../e
 import { estimateTaxChange } from '../../engine/policy-preview';
 import { useGame, useGameState, type PanelId } from '../../store/game-store';
 import type { BudgetCategory, GameState, SectorId, TaxPolicy } from '../../types/game';
-import { fullMoneyMinor, money, pct } from '../../utils/format';
+import { fullMoneyMinor, money, num as numFmt, pct } from '../../utils/format';
+import { NON_TAX_REVENUE_2027 } from '../../data/non-tax-revenue';
+import { householdDemand } from '../../engine/economy';
+import { activeTaxKeys, effectiveIncomeTaxRate, employmentOf, INCOME_TAX_BANDS } from '../../engine/income-tax';
 import { HudIcon } from '../hud/HudIcon';
 import { StatsStrip } from '../hud/StatsStrip';
 
@@ -18,14 +21,13 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'production', label: 'Production' },
 ];
 const CATS = Object.keys(BUDGET_LABELS) as BudgetCategory[];
-const TAX_KEYS = Object.keys(TAX_LABELS) as (keyof TaxPolicy)[];
-const TAX_SHORT: Record<keyof TaxPolicy, string> = { corporate: 'Corporate tax', property: 'Property levy', consumption: 'Consumption levy', household: 'Income surcharge' };
+const TAX_SHORT: Record<keyof TaxPolicy, string> = { corporate: 'Corporate tax', property: 'Property levy', consumption: 'Consumption levy', household: 'Income surcharge', incomeTax: 'Personal income tax' };
 
 /** Per-line icon colours, so the list scans by colour like city-builder budget screens. */
 const LINE_COLOR: Record<string, string> = {
   health: '#f07a6a', services: '#6fb3f2', safety: '#e9c46a', development: '#8fd3c7', admin: '#b6c2cf', transfers: '#7ed99a',
   devex: '#f0a95b', interest: '#a9b8f0', subsidy: '#f2b45a', corporate: '#9ad77d', property: '#e8b06a', consumption: '#7fd0f0',
-  household: '#c9a3ef', tariff: '#e2c778', petroleum: '#f59e0b', soe: '#9fb6e8', duty: '#84cc16', other: '#a2b7cc', debt: '#aebdf1',
+  household: '#c9a3ef', incomeTax: '#c9a3ef', tariff: '#e2c778', petroleum: '#f59e0b', soe: '#9fb6e8', duty: '#84cc16', other: '#a2b7cc', debt: '#aebdf1',
 };
 
 const BUDGET_INFO: Record<BudgetCategory | 'devex', { icon: string; text: string }> = {
@@ -156,8 +158,8 @@ function Budget({ g, balance, label }: { g: GameState; balance: number; label: s
   return (
     <div className="econ-columns">
       <div className="econ-list">
-        {CATS.map((k) => <Row key={k} icon={BUDGET_INFO[k].icon} label={BUDGET_LABELS[k]} amount={money(pending(k) ?? pol[k])} tone="out" active={sel === k} onClick={() => setSel(k)} testid={`econ-budget-${k}`} color={LINE_COLOR[k]} />)}
-        {g.world.enabled && <Row icon="projects" label="Development (capital)" amount={money((devPending ?? g.fiscal.developmentAnnual) / 12)} tone="out" active={isDev} onClick={() => setSel('devex')} testid="econ-budget-devex" color={LINE_COLOR.devex} />}
+        {CATS.map((k) => <Row key={k} icon={BUDGET_INFO[k].icon} label={BUDGET_LABELS[k]} amount={money(12 * (pending(k) ?? pol[k]))} tone="out" active={sel === k} onClick={() => setSel(k)} testid={`econ-budget-${k}`} color={LINE_COLOR[k]} />)}
+        {g.world.enabled && <Row icon="projects" label="Development (capital)" amount={money(devPending ?? g.fiscal.developmentAnnual)} tone="out" active={isDev} onClick={() => setSel('devex')} testid="econ-budget-devex" color={LINE_COLOR.devex} />}
         <Row icon="debt" label="Debt interest" amount={money(flows.interest)} tone="out" onClick={() => undefined} color={LINE_COLOR.interest} />
         {g.world.enabled && <Row icon="commodities" label="Fuel & food subsidies" amount={money(flows.subsidy)} tone="out" onClick={go('commodities')} color={LINE_COLOR.subsidy} />}
         <Balance balance={balance} label={label} />
@@ -168,10 +170,10 @@ function Budget({ g, balance, label }: { g: GameState; balance: number; label: s
           <input type="range" min={0} max={2.5} step={0.01} value={share} onChange={(e) => setDraft({ ...draft, [sel]: Math.round(Number(e.target.value) * opening / 1e6) * 1e6 })} aria-label="Budget share of opening" data-testid="econ-budget-slider" />
         </label>
         <div className="econ-section">
-          <h4>MONTHLY AMOUNTS</h4>
-          <Line label="Proposed" value={money(value)} tone="out" />
-          <Line label="In force" value={money(isDev ? g.fiscal.developmentAnnual / 12 : pol[sel])} tone="out" />
-          <Line label="Opening (Budget 2027)" value={money(opening)} />
+          <h4>ANNUAL AMOUNTS · PER YEAR</h4>
+          <Line label="Proposed" value={money(value * 12)} tone="out" />
+          <Line label="In force" value={money(isDev ? g.fiscal.developmentAnnual : pol[sel] * 12)} tone="out" />
+          <Line label="Opening (Budget 2027)" value={money(opening * 12)} />
         </div>
         <button className="btn btn-primary" disabled={Math.abs(value - current) < 1} onClick={apply} data-testid="econ-budget-apply">Queue from tomorrow</button>
       </Detail>
@@ -199,7 +201,8 @@ function Taxation({ g, balance, label }: { g: GameState; balance: number; label:
   const value = draft[sel] ?? current;
   const meta = TAX_LABELS[sel];
   const { flows } = monthFlows(g);
-  const receipts: Record<keyof TaxPolicy, number> = { corporate: flows.taxCorporate, property: flows.taxProperty, consumption: flows.taxConsumption, household: flows.taxHousehold };
+  const receipts: Record<keyof TaxPolicy, number> = { corporate: flows.taxCorporate, property: flows.taxProperty, consumption: flows.taxConsumption, household: flows.taxHousehold, incomeTax: flows.taxIncome };
+  const TAX_KEYS = activeTaxKeys(g);
   const effect = estimateTaxChange(g, { ...pol, [sel]: value })[sel];
   return (
     <div className="econ-columns">
@@ -209,12 +212,13 @@ function Taxation({ g, balance, label }: { g: GameState; balance: number; label:
         {g.world.enabled && <Row icon="soe" label="Petroleum income tax" amount={money(flows.petroleumTax)} tone="in" onClick={go('soe')} color={LINE_COLOR.petroleum} />}
         {g.world.enabled && <Row icon="soe" label="SOE dividends" amount={money(flows.soeDividend)} tone="in" onClick={go('soe')} color={LINE_COLOR.soe} />}
         {g.world.enabled && <Row icon="commodities" label="Commodity duties" amount={money(flows.commodityDuty)} tone="in" onClick={go('commodities')} color={LINE_COLOR.duty} />}
+        {g.baseline.nonTax && <Row icon="sources" label="Fees, licences & fines" amount={money(flows.nonTaxRevenue)} tone="in" onClick={() => undefined} color={LINE_COLOR.other} testid="econ-nontax" />}
         <Row icon="sources" label="Other public receipts" amount={money(flows.federalGrant)} tone="in" color={LINE_COLOR.other} />
         <Balance balance={balance} label={label} />
       </div>
       <Detail title={meta.label} action={<button className="btn" onClick={() => setDraft({ ...draft, [sel]: pol[sel] })}>RESET</button>}>
         <label className="econ-slider reverse">
-          <span>Rate</span><span className="num">{pct(value, 1)}</span>
+          <span>{sel === 'incomeTax' ? 'Band rates (× statutory)' : 'Rate'}</span><span className="num">{pct(value, 1)}</span>
           <input type="range" min={meta.min} max={meta.max} step={0.0025} value={value} onChange={(e) => setDraft({ ...draft, [sel]: Number(e.target.value) })} aria-label="Tax rate" data-testid="econ-tax-slider" />
         </label>
         <div className="econ-section">
@@ -222,13 +226,39 @@ function Taxation({ g, balance, label }: { g: GameState; balance: number; label:
           <Line label={`Receipts · ${label}`} value={money(receipts[sel])} tone="in" />
           <Line label="Static estimate of change" value={money(Math.abs(effect))} tone={effect >= 0 ? 'in' : 'out'} />
         </div>
-        <button className="btn btn-primary" disabled={Math.abs(value - current) < 1e-9} onClick={() => { command({ type: 'queueTax', patch: { [sel]: value } }); setDraft({}); }} data-testid="econ-tax-apply">Queue from next month</button>
+        <button className="btn btn-primary" disabled={Math.abs(value - current) < 1e-9} onClick={() => { command({ type: 'queueTax', patch: { [sel]: value } }); setDraft({}); }} data-testid="econ-tax-apply">Queue from tomorrow</button>
       </Detail>
       <div className="econ-info">
         <div className="econ-info-head"><span className="econ-info-icon" style={{ color: LINE_COLOR[sel] }}><HudIcon name="policies" size={34} /></span><h3>{meta.label.toUpperCase()}</h3></div>
         <p>{meta.hint}</p>
+        {sel === 'incomeTax' && <IncomeTaxBands g={g} scale={value} />}
+        {g.baseline.nonTax && (
+          <div className="econ-section" data-testid="non-tax-breakdown">
+            <h4>NON-TAX REVENUE · 2027 ESTIMATE · PER YEAR</h4>
+            {NON_TAX_REVENUE_2027.map((r) => <Line key={r.id} label={r.label} value={money(r.annual)} />)}
+            <p className="econ-note">Fees, licences, fines and rentals from the MOF revenue estimates grow with nominal GDP. Investment returns come through SOE dividends.</p>
+          </div>
+        )}
         <p>The estimate holds demand, prices and profits fixed. Real receipts also move as the economy responds, and every change takes effect tomorrow.</p>
       </div>
+    </div>
+  );
+}
+
+/** Statutory bands, scaled by the proposed schedule, and the average rate a typical worker pays. */
+function IncomeTaxBands({ g, scale }: { g: GameState; scale: number }) {
+  const jobs = employmentOf(g);
+  const avg = jobs > 0 ? (householdDemand(g, 0).wages * 365) / jobs : 0;
+  let lower = 0;
+  return (
+    <div className="econ-section" data-testid="income-tax-bands">
+      <h4>CHARGEABLE INCOME · RM / YEAR</h4>
+      {INCOME_TAX_BANDS.map((b) => {
+        const row = <Line key={b.upTo} label={`${numFmt(lower)}–${b.upTo === Infinity ? 'above' : numFmt(b.upTo)}`} value={`${pct(b.rate, 0)} → ${pct(b.rate * scale, 1)}`} />;
+        lower = b.upTo;
+        return row;
+      })}
+      <p className="econ-note">Personal relief RM9,000 and EPF relief RM4,000 apply first. Average earner pays {pct(effectiveIncomeTaxRate(avg, scale), 1)} of earnings{avg > 0 ? ` (average pay RM${numFmt(avg)}/yr)` : ''}.</p>
     </div>
   );
 }

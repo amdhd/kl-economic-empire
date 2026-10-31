@@ -476,3 +476,17 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   always paused with no catch-up. Do not replace manual slots or auto-load over the player's choice. If the
   session quota is unavailable, ordinary autosaves remain the fallback; recovery is best effort, not crash-proof.
   Publish a tested production dist to the configured Firebase Hosting project, separate from development edits.
+
+- **D-073 Income tax, fees and debt history (user request).** New Malaysia campaigns (`baseline.pit`, `baseline.nonTax`,
+  schema 11) replace the flat household surcharge with a progressive resident income tax on the statutory YA2025 bands
+  (0% to RM5k, 1%, 3%, 6%, 11%, 19%, 25%, 26%, 28%, 30% above RM2m; RM9k personal + RM4k EPF relief). The model has no tax
+  returns, so bands apply to a stylised ten-point earnings distribution around average sector pay, giving bracket creep as
+  wages rise; the *level* is normalised so the opening yield equals the old calibrated household tax, leaving the opening
+  economy and receipts residual unchanged. The player lever scales every band rate (0.5x–1.5x, queued like other taxes). It posts
+  to a new `taxIncome` line; the old surcharge stays at 0 and hidden. Non-tax revenue (licences, vehicle/business/individual
+  fees, service fees, fines, rentals, MTJA; RM25.9bn of the RM72.5bn 2027 non-tax estimate, MOF Fiscal Outlook 2027) is its own
+  `nonTaxRevenue` line indexed to nominal GDP and removed from the receipts residual so opening revenue still equals RM380.8bn.
+  Investment returns (code 75000) stay with SOE dividends/other receipts. Old saves keep the surcharge and no fees line
+  (migration 10→11 adds zeroed lines). Budgets are shown per year (stored monthly). The debt chart gains a 10-year official
+  federal-debt reference (2017–Jun 2026; 2023/2025 rounded press figures, 2016 and treasury cash not found citably, so omitted).
+

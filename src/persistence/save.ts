@@ -57,6 +57,14 @@ const MIGRATIONS: Record<number, Migration> = {
     for (const f of [s.government.mtd, ...s.reports.map(r => r.gov)]) { f.dealEscrowOut = 0; f.dealEscrowIn = 0; }
     return state;
   },
+  // v10 → v11: progressive income tax. Existing campaigns keep their flat surcharge (no `pit` flag); the new rate
+  // lever and treasury line exist but stay inert, so balances, replays and scores are unchanged.
+  10: state => {
+    const s = state as unknown as GameState;
+    s.government.policies.tax.incomeTax ??= 1;
+    for (const f of [s.government.mtd, ...s.reports.map((r) => r.gov)]) { f.taxIncome ??= 0; f.nonTaxRevenue ??= 0; }
+    return state;
+  },
   // v8 → v9: policy levers, AI adoption and FDI. Existing saves keep them switched off (neutral, no new draws) and gain
   // zero policy treasury lines, so balances, replays and scores are unchanged.
   8: state => {
