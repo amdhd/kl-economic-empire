@@ -59,11 +59,15 @@ export function attractiveness(s: GameState, kind: FdiKind): number {
 }
 export const overallAttractiveness = (s: GameState) => FDI_KIND_IDS.reduce((a, k) => a + attractiveness(s, k) * FDI_KINDS[k].weeklyHazard, 0) / FDI_KIND_IDS.reduce((a, k) => a + FDI_KINDS[k].weeklyHazard, 0);
 
+/** Investor name as used in pledges (the operating brand rather than a share-class label). */
+const INVESTOR_NAME: Partial<Record<TickerId, string>> = { 'US:GOOGL': 'Google (Alphabet)', 'US:META': 'Meta', 'US:AMZN': 'Amazon (AWS)', 'US:TSM': 'TSMC' };
+export const investorName = (id: TickerId) => INVESTOR_NAME[id] ?? COMPANY_BY_ID[id]?.displayName ?? id;
+
 function offer(s: GameState, kind: FdiKind, investor: TickerId, amount: number, ask: number, today: number): FdiPledge {
   const k = FDI_KINDS[kind];
-  const name = COMPANY_BY_ID[investor]?.displayName ?? investor;
+  const name = investorName(investor);
   const pledge: FdiPledge = {
-    id: s.fdi.nextId++, investor, kind, sector: k.sector, title: `${name} proposes a RM${(amount / 1e9).toFixed(1)}bn ${k.label.toLowerCase()}`,
+    id: s.fdi.nextId++, investor, kind, sector: k.sector, title: `${name} proposes a RM${(amount / 1e9).toFixed(1)}bn ${k.label.replace(/^[A-Z][a-z]/, (m) => m.toLowerCase())}`,
     amount, ask, incentive: 0, jobs: Math.round((amount / 1e9) * k.jobsPerBn), buildMonths: k.buildMonths, offeredDay: today, decideByDay: today + DECIDE_DAYS,
     startDay: -1, spent: 0, status: 'offered',
   };
@@ -83,7 +87,7 @@ export function weeklyFdi(s: GameState, today: number): void {
   if (!s.fdi?.enabled) return;
   for (const p of s.fdi.pledges) if (p.status === 'offered' && today >= p.decideByDay) {
     p.status = 'withdrawn';
-    news(s, { kind: 'fund', tone: 'bad', title: `Pledge lapsed: ${COMPANY_BY_ID[p.investor]?.displayName ?? p.investor}`, body: 'No decision within 30 days; the investor chose another location (simulated).' });
+    news(s, { kind: 'fund', tone: 'bad', title: `Pledge lapsed: ${investorName(p.investor)}`, body: 'No decision within 30 days; the investor chose another location (simulated).' });
   }
   for (const kind of FDI_KIND_IDS) {
     const k = FDI_KINDS[kind];
@@ -101,12 +105,12 @@ export function decidePledge(s: GameState, id: number, approve: boolean, incenti
   if (!s.fdi?.enabled) return 'Investment pledges are modelled in new Malaysia campaigns.';
   const p = s.fdi.pledges.find(x => x.id === id);
   if (!p || p.status !== 'offered') return 'That pledge is no longer awaiting a decision.';
-  if (!approve) { p.status = 'declined'; news(s, { kind: 'fund', tone: 'neutral', title: `Pledge declined: ${COMPANY_BY_ID[p.investor]?.displayName ?? p.investor}`, body: 'The government declined this simulated proposal.' }); return null; }
+  if (!approve) { p.status = 'declined'; news(s, { kind: 'fund', tone: 'neutral', title: `Pledge declined: ${investorName(p.investor)}`, body: 'The government declined this simulated proposal.' }); return null; }
   if (!Number.isFinite(incentive) || incentive < 0 || incentive > 0.3) return 'Incentive must be 0–30% of the investment.';
   const accept = incentive + 1e-9 >= p.ask || rand(s.fdi.rng) < Math.exp(-8 * (p.ask - incentive));
   if (!accept) {
     p.status = 'withdrawn';
-    news(s, { kind: 'fund', tone: 'bad', title: `Investor walked away: ${COMPANY_BY_ID[p.investor]?.displayName ?? p.investor}`, body: `The ${(incentive * 100).toFixed(0)}% offer was below the ${(p.ask * 100).toFixed(0)}% asked (simulated).` });
+    news(s, { kind: 'fund', tone: 'bad', title: `Investor walked away: ${investorName(p.investor)}`, body: `The ${(incentive * 100).toFixed(0)}% offer was below the ${(p.ask * 100).toFixed(0)}% asked (simulated).` });
     return null;
   }
   p.status = 'building';
@@ -141,7 +145,7 @@ export function dailyFdi(s: GameState, purchases: Record<SectorId, number>): { i
     s.policy.mtd.fdiGrants += grant;
     if (p.spent >= p.amount - 1) {
       p.status = 'operating';
-      news(s, { kind: 'fund', tone: 'good', title: `Now operating: ${COMPANY_BY_ID[p.investor]?.displayName ?? p.investor} ${k.label.toLowerCase()}`, body: 'Exports and direct jobs start from the next settlement (simulated).' });
+      news(s, { kind: 'fund', tone: 'good', title: `Now operating: ${investorName(p.investor)} ${k.label.replace(/^[A-Z][a-z]/, (m) => m.toLowerCase())}`, body: 'Exports and direct jobs start from the next settlement (simulated).' });
     }
   }
   return { imports };

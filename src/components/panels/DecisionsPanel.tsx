@@ -33,7 +33,8 @@ export function DecisionsPanel() {
   const decided = (id: LeverId) => g.policy.levers[id].value;
   const shown = (id: LeverId) => draft[id] ?? decided(id);
   const changes = LEVER_IDS.filter(id => draft[id] !== undefined && Math.abs((draft[id] as number) - decided(id)) > 1e-9);
-  const set = (id: LeverId, v: number) => setDraft({ ...draft, [id]: v });
+  // Drafts snap to the slider step so the review shows exactly what the engine will apply.
+  const set = (id: LeverId, v: number) => setDraft({ ...draft, [id]: LEVERS[id].kind === 'toggle' ? v : Math.round(v / LEVERS[id].step) * LEVERS[id].step });
   const p = g.policy;
   const effects: Record<LeverGroup, string> = {
     ai: `AI adoption ${pct(p.aiAdoption)} (in productivity: ${pct(p.aiEffective)}). Mismatch unemployment +${(aiMismatch(g) * 100).toFixed(2)}pp. Programmes last month ${money(p.lastMonth.aiProgramme + p.lastMonth.reskilling)}.`,

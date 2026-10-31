@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { COMPANY_BY_ID } from '../../data/companies';
-import { attractiveness, directJobs, FDI_KIND_IDS, FDI_KINDS, fdiToGdp, operatingStock, overallAttractiveness } from '../../engine/fdi';
+import { investorName, attractiveness, directJobs, FDI_KIND_IDS, FDI_KINDS, fdiToGdp, operatingStock, overallAttractiveness } from '../../engine/fdi';
 import { leverTarget } from '../../engine/policy';
 import { klDayLabel } from '../../engine/time';
 import type { FdiPledge } from '../../types/game';
@@ -53,12 +52,12 @@ export function FdiPanel() {
         {!pipeline.length && <p className="text-[12px] text-slate-400">No approved projects yet.</p>}
         {pipeline.map(p => (
           <div key={p.id} className="mb-1.5 flex items-center gap-2 text-[12px]">
-            <CompanyLogo id={p.investor} /><span className="w-56 truncate">{COMPANY_BY_ID[p.investor]?.displayName} · {FDI_KINDS[p.kind].label}</span>
+            <CompanyLogo id={p.investor} /><span className="w-56 truncate">{investorName(p.investor)} · {FDI_KINDS[p.kind].label}</span>
             <div className="flex-1"><Bar value={p.spent / p.amount} color={p.status === 'operating' ? '#34d399' : '#fbbf24'} /></div>
             <span className="num w-44 text-right">{p.status === 'operating' ? 'Operating' : `Building ${pct(p.spent / p.amount, 0)}`} · {money(p.amount)}</span>
           </div>
         ))}
-        {!!past.length && <p className="mt-2 text-[11px] text-slate-500">Recently lapsed or declined: {past.map(p => `${COMPANY_BY_ID[p.investor]?.displayName} (${p.status})`).join(', ')}</p>}
+        {!!past.length && <p className="mt-2 text-[11px] text-slate-500">Recently lapsed or declined: {past.map(p => `${investorName(p.investor)} (${p.status})`).join(', ')}</p>}
       </Section>
       <Section title="Investment climate by project type">
         {FDI_KIND_IDS.map(k => <div key={k} className="mb-1 flex items-center gap-2 text-[12px]"><span className="w-40">{FDI_KINDS[k].label}</span><div className="flex-1"><Bar value={attractiveness(g, k) / 100} /></div><span className="num w-12 text-right">{attractiveness(g, k).toFixed(0)}</span></div>)}

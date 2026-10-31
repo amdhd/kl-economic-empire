@@ -178,7 +178,7 @@ US$1,700/t, Thai 5% rice US$420/t, aluminium US$2,500/t, copper US$9,500/t; Mala
 
 ## Company logos (D-060, user-directed)
 
-Logos are trademarks of their owners, used only to identify the real listed companies beside clearly fictional simulated data; no endorsement is implied. Files are 256px PNG renderings fetched once from Wikimedia Commons/Wikipedia (31 Oct 2026). Companies without a file use a monogram.
+Logos are trademarks of their owners, used only to identify the real listed companies beside clearly fictional simulated data; no endorsement is implied. Files are 256px PNG/JPEG renderings fetched once from Wikimedia Commons/Wikipedia (31 Oct 2026). Licences are as the source page lists them; several are marked "Fair use" there. Companies without a file use a monogram: MY:0128, MY:0166, MY:0208, MY:3867, MY:5005, MY:8869, US:ADBE.
 
 | Ticker | Source file | Licence (as listed) |
 |---|---|---|
@@ -191,8 +191,10 @@ Logos are trademarks of their owners, used only to identify the real listed comp
 | MY:4677 | [YTL Corporation Berhad Logo (former).svg](https://commons.wikimedia.org/wiki/File:YTL_Corporation_Berhad_Logo_(former).svg) | Public domain |
 | MY:4715 | [Genting Malaysia Berhad logo.png](https://en.wikipedia.org/wiki/File:Genting_Malaysia_Berhad_logo.png) | Fair use |
 | MY:4863 | [Telekom Malaysia logo (2023).svg](https://commons.wikimedia.org/wiki/File:Telekom_Malaysia_logo_(2023).svg) | Public domain |
+| MY:5183 | [PETRONAS Logo (2013).png](https://commons.wikimedia.org/wiki/File:PETRONAS_Logo_(2013).png) | Public domain |
 | MY:5211 | [Sunway logo.png](https://commons.wikimedia.org/wiki/File:Sunway_logo.png) | Public domain |
 | MY:5225 | [IHH Healthcare logo.svg](https://commons.wikimedia.org/wiki/File:IHH_Healthcare_logo.svg) | Public domain |
+| MY:5296 | [MR.DIY logo.png](https://commons.wikimedia.org/wiki/File:MR.DIY_logo.png) | Public domain |
 | MY:5347 | [Tenaga Nasional.svg](https://commons.wikimedia.org/wiki/File:Tenaga_Nasional.svg) | Public domain |
 | MY:5398 | [Gamuda Berhad Logo.png](https://en.wikipedia.org/wiki/File:Gamuda_Berhad_Logo.png) | Fair use |
 | MY:6012 | [Maxis-logo.png](https://commons.wikimedia.org/wiki/File:Maxis-logo.png) | CC BY-SA 4.0 |
