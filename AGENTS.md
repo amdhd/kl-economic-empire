@@ -3,7 +3,7 @@
 1. Read `PROJECT_SPEC.md` in full before editing. It is the source of truth.
 2. Read `docs/decisions.md` — it records every interpretation of an ambiguous spec point. Add to it when you make a new one.
 3. The simulation lives in `src/engine/` and must stay **pure, deterministic and React-free**. All randomness comes from `state.rng` (seeded, persisted).
-4. Never add player-facing time skips, speeds above 5× (Pause/1×/2×/3×/5× only, PROJECT_SPEC §25), or offline catch-up. `runHeadless()` is for tests/dev tooling only.
+4. Never add speeds above 5× (Pause/1×/2×/3×/5× only, PROJECT_SPEC §25) or offline catch-up. The only player time skips are the paused-only **Skip 15 days** / **Skip to month close** (PROJECT_SPEC §26, D-083, `src/engine/skip.ts`): whole hourly ticks through the normal `runHourTick`, one game day per frame, early stops, cancel on Pause, autosave + undo, and never counting real time. No other skip, next-event or fast-forward control. `runHeadless()` is for tests/dev tooling only.
 5. Money: ledger balances are integer minor units (sen / US cents) stored as JS numbers and guarded by `assertSafeMinor`. Macro flows are MYR floats. See `docs/economy-model.md`.
 6. Prices, financials and news are **fictional simulations**. Never present them as real market data.
 

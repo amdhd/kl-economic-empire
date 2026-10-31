@@ -490,7 +490,7 @@ subsequent appropriations apply every12 months. Reject a plan exceeding the budg
 Daily settlement still pays through the normal treasury/financing/arrears path. No funds are reserved or granted upfront.
 Cancelling affects future scheduled changes, retaining the current budget. Plans run after period settlement and before
 manual policies due at the same boundary, so manual overrides win. Queuing a manual budget for a planned category
-cancels that plan's future steps, so a later annual step never overwrites it (D-030). No time skip or offline catch-up is introduced.
+cancels that plan's future steps, so a later annual step never overwrites it (D-030). No offline catch-up is introduced; the only skip is the paused-only safe skip (D-083), which runs the same hourly ticks.
 For health, services and safety, `realFundingRatio = budget / profileOpeningBudget / CPIrelative × clamp(1−arrearsDays/30,0,1)`;
 `outcomeTarget = clamp(62 × realFundingRatio^.6 + serviceBoost×100,0,98)` and `outcome += .25×(target−outcome)` monthly.
 These diagnostic synthetic coverage/readiness indices expose individual budget outcomes; aggregate satisfaction retains
@@ -957,3 +957,11 @@ by up to twelve and fed it to wage expectations, the MPC rule, household confide
 - **Central bank:** the output gap measures against potential growth plus 34% (28% productivity + 6% labour), so the
   central bank does not read the planned expansion as overheating.
 
+
+## Safe time skip (D-083, PROJECT_SPEC §26)
+
+Skip 15 days and Skip to month close are timing controls, not economic rules. They run whole hourly ticks through
+`runHourTick` (`src/engine/skip.ts`) with no extra randomness, so the state after a skip equals the state after the same
+number of game hours at normal speed. They need a paused clock, never touch the sub-hour clock accumulator, and do not turn
+real time into game time. Stops: fresh critical alert, steered MPC meeting, deal/FDI offer closing within 3 days (once
+per offer), term end. Tested in `tests/skip.test.ts`.

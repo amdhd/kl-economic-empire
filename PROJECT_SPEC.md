@@ -54,7 +54,7 @@ These supersede any earlier session suggestions that conflict with them.
 | Fund trader | **Government sovereign wealth fund** only; not a personal player's brokerage account |
 | Economic model | **Advanced interconnected economic simulation**, built progressively and tested |
 | Timeline | Continuous clock displayed as **game minutes and hours**, like a city simulator |
-| Speed controls | **Pause, 1×, 2× and 3× only**; no instant month advances or skip buttons |
+| Speed controls | **Pause, 1×, 2× and 3× only** (5× added in §25); no instant month advances. Two paused-only safe skips were added in §26 |
 | Campaign | **First 24 in-game months**, with an end-of-campaign score and optional continuation later |
 | Win objective | Multiple goals: **public wealth, economic growth, citizen satisfaction and financial stability** |
 | Hosting | Local desktop browser; optional static deployment later |
@@ -1076,3 +1076,26 @@ real second; key 5). It is the same continuous clock run faster, with the same h
 5× match 1× and 3× for the same actions at the same game times. There is still no skip, no next-month or next-event button
 and no offline catch-up; long frames are still clamped, so a slow browser runs slower rather than catching up. A 10-year
 term is about 15 hours of play at 5×. See D-081.
+
+## 26. User amendment — safe time skip (1 November 2026)
+
+The user pasted a skip-button specification and asked for the rules to be changed to allow it. This amends the
+"real-time, replaces turn-based design" principle and the "no skip" rules in §2, §3, §15 and the acceptance tests
+(any wording elsewhere that says "no skip" or "no month skip" is read as *no skip other than this one*). Keeping them,
+the normal clock is unchanged: Pause, 1×, 2×, 3× and 5× only, the 250 ms frame clamp, auto-pause on a hidden tab and
+no offline catch-up. Real time away from the game never counts as game time.
+
+Two buttons, **Skip 15 days** and **Skip to month close**, are enabled **only while the game is paused**:
+
+- **Same ticks, same result.** A skip runs the ordinary whole hourly ticks, so it produces exactly the state a normal
+  run over the same game hours would. There is no second simulation path, no larger step and no interpolation.
+- **Visible and cancellable.** It advances one game day per animation frame so the date visibly moves. Pressing Pause
+  cancels it at the next whole tick and the game stays paused. Starting a command, opening a dialog, hiding the tab
+  or changing speed also cancels it.
+- **Stops early** (before the tick that would cross it) on: a fresh critical alert; a central-bank (MPC) meeting while
+  the player steers the rate (manual mode); a Deal Room offer or FDI pledge closing within 3 days; and the end of
+  the term. Each offer or meeting stops a skip once, so a second skip may let it lapse deliberately.
+- **Undo.** The state is autosaved (and held in memory) before every skip; **Undo skip** restores it, paused, until
+  play resumes.
+
+Skips are an explicit player action, not offline progress. See D-083 and `docs/economy-model.md`.

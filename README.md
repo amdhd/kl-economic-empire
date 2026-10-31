@@ -34,7 +34,7 @@ keeps running offline and the map shows a fallback message).
 ## Controls
 
 - **Space** pause/resume · **1/2/3** speed · **Esc** close panel · **?** help
-- 1× = 20 game minutes per real second, 2× = 40, 3× = 60, 5× = 100. There is no skip: a 24-month term is ~14.6 h at 1×,
+- 1× = 20 game minutes per real second, 2× = 40, 3× = 60, 5× = 100. The only time skips are the paused-only **Skip 15 days** and **Skip to month close** buttons (PROJECT_SPEC §26): they run the same hourly ticks, one game day per frame, stop early on critical alerts, decisions, steered MPC meetings and the term end, and Pause cancels them (autosave before each; **Undo skip** restores it). A 24-month term is ~14.6 h at 1×,
   ~4.9 h at 3× or ~2.9 h at 5×. The game auto-pauses (and autosaves) when the tab is hidden and never catches up offline.
 - Click company pills on the map (only **OSM-verified** KL locations), or open *Stock markets*.
 - Bursa trades 09:00–12:30 & 14:30–17:00 MYT; US stocks trade 09:30–16:00 New York time (overnight in KL).
@@ -59,7 +59,7 @@ The campaign report explains calendar-adjusted growth, a small capped external-s
 public wealth, cumulative fiscal flows and fund gain excluding transfers. Human validation of the 75-point victory
 bar is pending; see `docs/playtesting.md`. Browser profiling includes hosted-map/rendering costs, so results depend
 on the machine and network; measured results are in `docs/performance.md`. Neither developer script adds time-skip
-controls to the player UI.
+controls to the player UI; the only player skips are the safe ones in §26.
 
 ### Malaysia baseline, trade and forex
 
@@ -91,7 +91,7 @@ Accounting contributions and current conditions are separated; the game does not
 Open **Alerts & settings** for treasury coverage, unemployment, housing-cost pressure and project-cost warnings.
 Thresholds, notification detail, confirmation pause and optional critical-alert pause are saved on this device.
 Critical alerts pause only when enabled; resume manually after reviewing them. History covers the current session,
-and loading a save does not repeat existing warnings. Time remains Pause / 1× / 2× / 3× / 5×, with no offline catch-up.
+and loading a save does not repeat existing warnings. Time remains Pause / 1× / 2× / 3× / 5× plus the paused-only safe skips (§26), with no offline catch-up.
 New campaigns also offer **Export downturn** and **Energy squeeze**, with starting shocks explained on their cards.
 
 ### Deal Room

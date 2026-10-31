@@ -6,7 +6,7 @@ export const GAME_MS_PER_REAL_MS = 1200; // 20 min * 60 000 ms / 1000 ms
 export const HOUR_MS = 3_600_000;
 /** Frames longer than this (tab throttling, debugger, GC) are clamped — no catch-up. */
 export const MAX_FRAME_MS = 250;
-/** Pause plus these speeds only (5× added at user request, D-081); there is no skip. */
+/** Pause plus these speeds only (5× added at user request, D-081); the paused-only safe skip (D-083) is separate, in skip.ts, and uses no real time. */
 export const SPEEDS: readonly GameSpeed[] = [1, 2, 3, 5];
 
 export function gameMsForReal(deltaRealMs: number, speed: GameSpeed): number {

@@ -28,8 +28,12 @@ export function SpeedControls() {
   const paused = useGame((s) => s.game.clock.paused);
   const ended = useGame((s) => s.game.scheduler.campaignEnded);
   useGame((s) => s.rev);
-  const { setSpeed, togglePause } = useGame.getState();
+  const skipping = useGame((s) => s.skip !== null);
+  const canUndo = useGame((s) => s.undoSnapshot !== null);
+  const { setSpeed, togglePause, startSkip, undoSkip } = useGame.getState();
+  const canSkip = paused && !ended && !skipping;
   const btn = (active: boolean) => `h-8 min-w-9 rounded-lg px-2 text-[13px] font-bold transition ${active ? 'bg-emerald-500 text-emerald-950 shadow-[0_0_14px_rgba(52,211,153,0.45)]' : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white'}`;
+  const skipBtn = 'h-8 rounded-lg bg-slate-800/80 px-2 text-[12px] font-semibold text-slate-300 transition hover:bg-slate-700 hover:text-white disabled:cursor-not-allowed disabled:opacity-40';
   return (
     <div className="flex items-center gap-1 rounded-xl bg-slate-900/60 p-1 ring-1 ring-slate-600/30" role="group" aria-label="Game speed">
       <button className={btn(paused)} onClick={togglePause} disabled={ended} title="Pause / resume (Space)" data-testid="btn-pause" aria-pressed={paused}>
@@ -40,6 +44,11 @@ export function SpeedControls() {
           {sp}×
         </button>
       ))}
+      <span className="mx-0.5 h-5 w-px bg-slate-600/50" aria-hidden />
+      <button className={skipBtn} onClick={() => startSkip('days15')} disabled={!canSkip} title={canSkip ? 'Run 15 game days, one day per frame. Stops early for critical alerts, decisions and the term end. Press Pause to cancel.' : 'Pause the game to skip time'} data-testid="btn-skip-15">Skip 15 days</button>
+      <button className={skipBtn} onClick={() => startSkip('monthClose')} disabled={!canSkip} title={canSkip ? 'Run to the next month close. Stops early for critical alerts, decisions and the term end. Press Pause to cancel.' : 'Pause the game to skip time'} data-testid="btn-skip-month">Skip to month close</button>
+      {skipping && <span className="px-1 text-[11.5px] font-semibold text-amber-300" role="status" data-testid="skip-running">Skipping… press ⏸ to cancel</span>}
+      {canUndo && paused && !skipping && <button className={skipBtn} onClick={undoSkip} title="Restore the state from just before the last skip" data-testid="btn-skip-undo">Undo skip</button>}
     </div>
   );
 }

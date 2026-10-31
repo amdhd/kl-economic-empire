@@ -32,11 +32,36 @@ test('key 5 runs the clock at 5x (≤100 game minutes per real second, no catch-
   await page.keyboard.press('Space');
 });
 
-test('only Pause/1x/2x/3x/5x exist — no skip or month-advance controls', async ({ page }) => {
+test('speeds stay Pause/1x/2x/3x/5x; the only skips are the paused-only safe ones (§26)', async ({ page }) => {
   await startCampaign(page);
   for (const s of [1, 2, 3, 5]) await expect(page.getByTestId(`btn-speed-${s}`)).toBeVisible();
   await expect(page.getByTestId('btn-speed-4')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: /next month|skip|end turn|fast.?forward/i })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /next month|end turn|fast.?forward/i })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /^skip/i })).toHaveCount(2);
+  // Paused (a new campaign starts paused): enabled. Running: disabled.
+  await expect(page.getByTestId('btn-skip-15')).toBeEnabled();
+  await expect(page.getByTestId('btn-skip-month')).toBeEnabled();
+  await page.getByTestId('btn-speed-1').click();
+  await expect(page.getByTestId('btn-skip-15')).toBeDisabled();
+  await expect(page.getByTestId('btn-skip-month')).toBeDisabled();
+});
+
+test('Skip 15 days moves the date while paused, stays paused, uses no real time, and Undo restores the earlier state', async ({ page }) => {
+  await startCampaign(page);
+  const hour = () => page.evaluate(() => (window as unknown as { __klDev: { state: () => { clock: { hour: number } } } }).__klDev.state().clock.hour);
+  const h0 = await hour();
+  await page.getByTestId('btn-skip-15').click();
+  await expect(page.getByTestId('btn-skip-undo')).toBeVisible();
+  await expect(page.getByTestId('skip-running')).toHaveCount(0, { timeout: 10_000 });
+  const h1 = await hour();
+  expect(h1 - h0).toBeGreaterThan(0);
+  expect(h1 - h0).toBeLessThanOrEqual(15 * 24); // one game day per frame, may stop early for a decision
+  await expect(page.getByTestId('btn-pause')).toHaveAttribute('aria-pressed', 'true');
+  await page.waitForTimeout(400);
+  expect(await hour()).toBe(h1); // paused: real time adds nothing
+  await page.getByTestId('btn-skip-undo').click();
+  expect(await hour()).toBe(h0);
+  await expect(page.getByTestId('btn-skip-undo')).toHaveCount(0);
 });
 
 test('hiding the tab auto-pauses with no catch-up on return', async ({ page }) => {
