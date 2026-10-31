@@ -35,9 +35,6 @@ export const BOOM = {
   fxFloor: 1,
   /** FDI: arrival hazard multiplier and pledge size growth (× (base + perYear × years)). */
   fdiHazard: 4,
-  /** Extra climate points for every kind of pledge (an investment rush), and the build time of any pledge in months. */
-  fdiAttractiveness: 10,
-  fdiBuildMonths: 1,
   fdiSizeBase: 3,
   fdiSizePerYear: 2,
 };
