@@ -5,11 +5,14 @@ import type { GameState, MonthlyReport, ScoreBreakdown } from '../types/game';
 import { debtMYR, revenueOf, treasuryMYR } from './government';
 import { nationalV2 } from '../data/economic-baseline';
 import { soeEquity } from './soe';
+import { standingComponents } from './standing';
 import { navMYR } from './sovereign-fund';
 import { daysInMonth, klDay } from './time';
 import { clamp } from './util';
 
 export const SCORE_WEIGHTS = { growth: 0.3, wealth: 0.3, satisfaction: 0.25, stability: 0.15 };
+/** Model 3 adds global standing against the ten largest economies (D-059). */
+export const SCORE_WEIGHTS_V3 = { growth: 0.25, wealth: 0.25, satisfaction: 0.22, stability: 0.13, standing: 0.15 };
 export const VICTORY = { score: 75, approval: 60 }; // recalibrated from seeded replays (docs/game-balance.md)
 export const GROWTH_TARGET = 0.035;
 /** Growth benchmark before external adjustment: potential growth, so an economy merely on trend scores 50. */
@@ -143,7 +146,9 @@ export function computeScore(s: GameState): ScoreBreakdown {
     // Model 2: abandoning the fiscal rules erodes financial stability.
     - (nationalV2(s) ? 0.3 * Math.max(0, 50 - s.fiscal.credibility) : 0), 0, 100);
 
-  let total = SCORE_WEIGHTS.growth * growth + SCORE_WEIGHTS.wealth * wealth + SCORE_WEIGHTS.satisfaction * satisfaction + SCORE_WEIGHTS.stability * stability;
+  const standing = s.fdi?.enabled ? standingComponents(s).points : undefined;
+  const W = standing === undefined ? { ...SCORE_WEIGHTS, standing: 0 } : SCORE_WEIGHTS_V3;
+  let total = W.growth * growth + W.wealth * wealth + W.satisfaction * satisfaction + W.stability * stability + W.standing * (standing ?? 0);
   if (s.government.insolvent) {
     total = Math.min(total, 30);
     caps.push('Government insolvency caps the score at 30');
@@ -156,7 +161,7 @@ export function computeScore(s: GameState): ScoreBreakdown {
     total = Math.min(total, 40);
     caps.push('Approval below 25 caps the score at 40');
   }
-  return { growth, wealth, satisfaction, stability, total, caps };
+  return { growth, wealth, satisfaction, stability, ...(standing === undefined ? {} : { standing }), total, caps };
 }
 
 export function outcomeLabel(s: GameState): { won: boolean; text: string } {

@@ -18,6 +18,9 @@ const paths: Record<string, string> = {
   commodities: 'M7 3h10M8 3v4l-3 4v9h14v-9l-3-4V3M5 14h14',
   soe: 'M3 21V10l5 3V10l5 3V6l8 4v11H3Zm4-4h2m4 0h2',
   info: 'M12 11v6m0-10h.01M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z',
+  decisions: 'M4 5h3m4 0h9M4 12h9m4 0h3M4 19h5m4 0h7M9 3v4m8 3v4m-6 3v4',
+  fdi: 'M3 21h18M6 21V11l6-4 6 4v10M10 21v-5h4v5M12 3v4m-3-2 3-2 3 2',
+  standing: 'M4 21V13h4v8m4 0V7h4v14m4 0V3h-4M8 9l4-4 4 4',
 };
 export function HudIcon({ name, size = 23 }: { name: string; size?: number }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name] ?? paths.info} /></svg>;

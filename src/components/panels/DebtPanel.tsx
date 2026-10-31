@@ -14,6 +14,7 @@ const FLOW_LABEL: Record<keyof GovMonthFlows, string> = {
   federalGrant: 'Other public receipts', importTariff: 'Import tariffs', exportSupport: 'Export support',
   soeDividend: 'SOE dividends', petroleumTax: 'Petroleum income tax', commodityDuty: 'Commodity duties', subsidy: 'Fuel & food subsidies', borrowing: 'Bond proceeds', swfTransferIn: 'SWF distribution in', opex: 'Operating outlays',
   capex: 'Capital outlays', interest: 'Debt interest', principal: 'Principal repaid', emergency: 'Emergency', swfContribution: 'SWF contribution',
+  policyLevy: 'Carbon tax & worker levy', policyGrant: 'Policy programmes & FDI grants',
 };
 
 export function DebtPanel() {

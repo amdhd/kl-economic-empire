@@ -100,6 +100,7 @@ describe('national trend (model 3)', () => {
     file.state.schemaVersion = 7;
     file.state.baseline.model = 2;
     file.state.controls.plans = [];
+    delete file.state.policy; delete file.state.fdi;
     const t = deserialize(JSON.stringify(file));
     expect(t.baseline.model).toBe(2);
     expect(trendFor(t)).toBe(LEGACY_TREND);

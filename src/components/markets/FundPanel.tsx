@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { COMPANY_BY_ID, currencyOf } from '../../data/companies';
 import { demandFor } from '../../data/economic-baseline';
+import { CompanyLogo } from '../CompanyLogo';
 import { treasuryMYR } from '../../engine/government';
 import { FX_SPREAD, navMYR, planRebalance, positionValueMYR } from '../../engine/sovereign-fund';
 import { formatKL, klDayLabel } from '../../engine/time';
@@ -69,7 +70,7 @@ export function FundPanel() {
                 const myr = v / (p.costMYR / 100) - 1;
                 return (
                   <tr key={id} className="row" onClick={() => select({ kind: 'company', id })}>
-                    <td>{COMPANY_BY_ID[id].displayName} <span className="font-mono text-[10.5px] text-slate-500">{id}</span></td>
+                    <td><CompanyLogo id={id} size={16} /> {COMPANY_BY_ID[id].displayName} <span className="font-mono text-[10.5px] text-slate-500">{id}</span></td>
                     <td className="text-right">{num(p.units)}</td>
                     <td className="text-right">{money(v)}</td>
                     <td className="text-right">{pct(v / nav)}</td>

@@ -1,3 +1,4 @@
+import { CompanyLogo } from '../CompanyLogo';
 import { useState } from 'react';
 import { COMPANY_BY_ID } from '../../data/companies';
 import { SECTORS } from '../../data/economic-baseline';
@@ -49,7 +50,7 @@ export function SecurityDetail({ game, id, nowMin }: { game: GameState; id: Tick
               {EXCHANGES[c.exchange].name} · {status.label} · {status.nextChangeLabel}
             </span>
           </div>
-          <h2 className="mt-1 text-lg font-semibold text-white">{c.displayName}</h2>
+          <h2 className="mt-1 flex items-center gap-2 text-lg font-semibold text-white"><CompanyLogo id={id} size={28} />{c.displayName}</h2>
           <div className="text-xs text-slate-400">
             {c.legalName} · {c.industry} · listed in {cur}
           </div>

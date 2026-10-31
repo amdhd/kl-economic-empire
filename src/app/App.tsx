@@ -1,5 +1,8 @@
 import { PopulationPanel } from '../components/panels/PopulationPanel';
 import { ExplanationPanel } from '../components/panels/ExplanationPanel';
+import { DecisionsPanel } from '../components/panels/DecisionsPanel';
+import { FdiPanel } from '../components/panels/FdiPanel';
+import { StandingPanel } from '../components/panels/StandingPanel';
 import { SettingsPanel } from '../components/panels/SettingsPanel';
 import { SCENARIOS } from '../data/scenarios';
 import { EconomyWindow } from '../components/panels/EconomyWindow';
@@ -32,6 +35,9 @@ import type { ScenarioId } from '../types/game';
 
 const PANELS: Record<PanelId, () => ReactNode> = {
   explain: () => <ExplanationPanel />,
+  decisions: () => <DecisionsPanel />,
+  fdi: () => <FdiPanel />,
+  standing: () => <StandingPanel />,
   settings: () => <SettingsPanel />,
   population: () => <PopulationPanel />,
   // Rendered as a centred window rather than in the inspector slot.

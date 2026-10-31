@@ -1,3 +1,4 @@
+import { logoUrl } from '../components/CompanyLogo';
 import { appearanceSnapshot, useAppearance } from './appearance';
 import { createThemePainter, glassTower, LANDMARK_CENTER } from './glass-theme';
 import { Map as MlMap, Marker, NavigationControl, ScaleControl, setWorkerUrl } from 'maplibre-gl';
@@ -119,7 +120,10 @@ export function MapView() {
         pill.className = 'co-marker';
         pill.title = `${c.legalName}\n${c.geo!.label} (${LOCATION_TYPE_LABEL[g.locationType]}) — ${g.verificationSource}`;
         pill.dataset.testid = `marker-${c.id}`;
-        pill.innerHTML = `<span class="co-badge" style="background:${c.exchange === 'US' ? '#1e3a8a' : SECTORS[c.sector].color}">${monogram(c)}</span><span>${c.displayName}</span><span class="co-chg">—</span>`;
+        const logo = logoUrl(c.id);
+        pill.innerHTML = logo
+          ? `<img class="co-logo" src="${logo}" alt="" width="18" height="18" style="width:18px;height:18px;object-fit:contain;background:#fff;border-radius:4px;padding:1px"><span>${c.displayName}</span><span class="co-chg">—</span>`
+          : `<span class="co-badge" style="background:${c.exchange === 'US' ? '#1e3a8a' : SECTORS[c.sector].color}">${monogram(c)}</span><span>${c.displayName}</span><span class="co-chg">—</span>`;
         pill.addEventListener('click', (ev) => {
           ev.stopPropagation();
           useGame.getState().select({ kind: 'company', id: c.id });

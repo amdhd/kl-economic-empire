@@ -1021,3 +1021,10 @@ on central-bank FX action above. The presidency, simulated securities, economic 
 New campaigns use pinned, dated observations with linked provenance; old KL saves retain their original balances and
 calibration. Treasury cash must be labelled by its reported scope, with reserves and SWF cash shown separately.
 See D-018–D-023, `docs/data-sources.md` and `docs/economy-model.md` for the implemented boundaries and rules.
+
+## 20. User amendment — logos, FDI, policy levers and global standing (31 October 2026)
+
+The user chose to show real company logos (amending §5/§16's monogram default), sourced and recorded in
+`docs/data-sources.md`, beside fictional simulated data. New campaigns add fictional FDI pledges from real companies,
+toggle-and-slider policy levers with explicit phase cycles, AI adoption effects and a scored global-standing board
+against the ten largest economies (IMF WEO data). See D-059–D-060.
