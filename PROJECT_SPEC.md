@@ -1107,3 +1107,11 @@ loads three national networks (power, transport and ports, housing and services)
 throttles the sectors that depend on it, raising prices and slowing growth, and new capacity arrives only years after
 the player commissions and pays for it. The player must build ahead of demand, and each fix raises the next limit.
 Realistic campaigns are unchanged. See D-084 and `docs/economy-model.md`.
+
+## 28. User amendment — peer ladder and always-visible rival board (1 November 2026)
+
+The user found the global board too distant: Malaysia opens 11th of 11 and the nearest rival, Brazil, is five times its
+size. The standing data now also lists the 49 economies ranked 11th to 60th by IMF 2026 US$ GDP (Canada to Slovakia), so
+Malaysia opens near the middle of a 60-economy ladder with rivals a few percent away. A small board in the top right, always
+visible in Malaysia campaigns, shows five rows (two economies above Malaysia, Malaysia, two below) with rank, economy, GDP
+and the gap to Malaysia. The campaign score still compares Malaysia with the top ten only. See D-085.

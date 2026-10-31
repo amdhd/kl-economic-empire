@@ -610,3 +610,13 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   US$1.8tn by Dec 2029 and US$27tn by Dec 2036; one who orders capacity ahead reaches about US$2.4tn and US$54tn, with
   debt near the RM85tn limit. Bottlenecks raise the year-two inflation hump to about 11–12% (was 8%), so the Boom
   inflation test bound is now 14%. The test `infraAutopilot` helper is the reference competent player.
+- **D-085 Peer ladder and rival board (user request, PROJECT_SPEC §28).** `PEERS` in `src/data/countries.ts` holds the
+  49 economies ranked 11th–60th (Canada … Slovakia) by IMF WEO Oct 2026 NGDPD 2026, with the same indicators as `RIVALS`
+  (GDP 2026–28, 2027 growth and inflation, 2026 current account, population), pulled from the IMF DataMapper API on
+  1 Nov 2026 (same vintage as D-059; Malaysia's 547.1 matches). All move with the simulated global cycle. They are
+  deliberately NOT in `RIVALS`, so the standing score, `gapToTopTen` and the 11-row Global standing table are unchanged.
+  `peerBoard` ranks Malaysia among all 60 and `peerWindow` returns five rows, two above and two below (shifted at the
+  ends of the ladder). The HUD board (`RivalsBoard`, top right under the settings row, clicking opens Global standing)
+  shows rank, economy, GDP and the gap to Malaysia, and appears only where the board exists (new Malaysia campaigns).
+  Opening US$497bn puts Malaysia 38th, with the Philippines $5bn ahead and Denmark $3bn. Rivals beyond 2028 keep their
+  2027–28 growth rate, as before. Iran, Iraq and Ukraine appear because the IMF lists them; their paths are the IMF's, not a judgement.
