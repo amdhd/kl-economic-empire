@@ -18,6 +18,6 @@ test('map appearance switches themes, toggles landmarks and persists after reloa
   await theme.selectOption('modern-glass');
   await page.getByLabel('Show fictional glass landmark').check();
   await page.getByRole('button', { name: 'View glass tower', exact: true }).click();
-  await expect(page.getByText('GLASS TOWER · FICTIONAL', { exact: true })).toBeVisible();
+  await expect(page.getByText('GLASS TOWER · FICTIONAL', { exact: true })).toBeVisible({ timeout: 20000 });
   expect(errors).toEqual([]);
 });

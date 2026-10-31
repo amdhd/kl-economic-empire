@@ -1,3 +1,4 @@
+import { negotiatedBuild } from './investment-deals';
 // Foreign direct investment (schema 9, model 3; D-059). Pledges arrive on their own seeded stream (`fdi.rng`), so the
 // engine's main RNG sequence is unchanged. All pledges, amounts and investor decisions are FICTIONAL simulations that
 // use real company names for context only.
@@ -104,6 +105,7 @@ export function weeklyFdi(s: GameState, today: number): void {
 export function decidePledge(s: GameState, id: number, approve: boolean, incentive: number): string | null {
   if (!s.fdi?.enabled) return 'Investment pledges are modelled in new Malaysia campaigns.';
   const p = s.fdi.pledges.find(x => x.id === id);
+  if (s.deals?.items.some(d=>d.pledgeId===id && ['negotiating','agreed','active'].includes(d.status))) return 'Finish the negotiated agreement in the Deal Room.';
   if (!p || p.status !== 'offered') return 'That pledge is no longer awaiting a decision.';
   if (!approve) { p.status = 'declined'; news(s, { kind: 'fund', tone: 'neutral', title: `Pledge declined: ${investorName(p.investor)}`, body: 'The government declined this simulated proposal.' }); return null; }
   if (!Number.isFinite(incentive) || incentive < 0 || incentive > 0.3) return 'Incentive must be 0–30% of the investment.';
@@ -128,6 +130,8 @@ export function dailyFdi(s: GameState, purchases: Record<SectorId, number>): { i
   let imports = 0;
   for (const p of s.fdi.pledges) {
     if (p.status !== 'building') continue;
+    const negotiated=negotiatedBuild(s,p,purchases);
+    if(negotiated!==null){imports+=negotiated;continue;}
     const k = FDI_KINDS[p.kind];
     const day = Math.min(p.amount - p.spent, p.amount / (p.buildMonths * 365 / 12));
     if (day <= 0) continue;

@@ -86,7 +86,7 @@ export function DecisionsPanel() {
           setConfirm(false);
         }}>
           <ul className="list-disc space-y-1 pl-4">
-            {changes.map(id => <li key={id}><b>{LEVERS[id].label}</b>: {formatLever(id, decided(id))} → {formatLever(id, draft[id] as number)}. Effective {LEVERS[id].timing === 'tomorrow' ? 'tomorrow' : 'on the 1st of next month'}, full effect after ~{LEVERS[id].rampDays} days.</li>)}
+            {changes.map(id => <li key={id}><b>{LEVERS[id].label}</b>: {formatLever(id, decided(id))} → {formatLever(id, draft[id] as number)}. Effective tomorrow, full effect after ~{LEVERS[id].rampDays} days.</li>)}
           </ul>
           <p className="mt-2 text-[12px] text-slate-400">Investors react to the announcement at once; economic effects follow the phase-in. Fictional simulated policy.</p>
         </ConfirmDialog>

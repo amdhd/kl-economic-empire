@@ -19,6 +19,7 @@ const paths: Record<string, string> = {
   soe: 'M3 21V10l5 3V10l5 3V6l8 4v11H3Zm4-4h2m4 0h2',
   info: 'M12 11v6m0-10h.01M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z',
   decisions: 'M4 5h3m4 0h9M4 12h9m4 0h3M4 19h5m4 0h7M9 3v4m8 3v4m-6 3v4',
+  deals: 'M3 6h18v14H3V6Zm5 0V3h8v3M3 12h18m-11-2h4v4h-4v-4',
   fdi: 'M3 21h18M6 21V11l6-4 6 4v10M10 21v-5h4v5M12 3v4m-3-2 3-2 3 2',
   standing: 'M4 21V13h4v8m4 0V7h4v14m4 0V3h-4M8 9l4-4 4 4',
 };

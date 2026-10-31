@@ -65,7 +65,7 @@ test('queue a tax change with an effective date and see the policy log', async (
   await page.getByTestId('tax-corporate').fill('0.25');
   await page.getByTestId('queue-tax').click();
   await page.getByTestId('confirm-btn').click();
-  await expect(page.getByTestId('panel')).toContainText('from 01 Feb 2027');
+  await expect(page.getByTestId('panel')).toContainText('from 02 Jan 2027');
 });
 
 test('campaign ends after 24 months with the Economic Presidency Report', async ({ page }) => {

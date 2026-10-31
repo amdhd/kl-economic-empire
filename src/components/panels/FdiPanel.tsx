@@ -32,6 +32,7 @@ export function FdiPanel() {
         <Stat label="Pledged / approved (12m)" value={money(sum('pledged'))} sub={`approved ${money(sum('approved'))}`} />
         <Stat label="Operating stock · jobs" value={money(operatingStock(g))} sub={`${num(directJobs(g))} direct jobs`} />
       </div>
+      {g.deals.enabled && <button className="btn" onClick={()=>useGame.getState().setPanel('deals')}>Negotiate delivery, sourcing and grants in Deal Room</button>}
       <Section title={`Pledges awaiting a decision (${open.length})`}>
         {!open.length && <p className="text-[12px] text-slate-400">No open pledges. A better investment climate brings more of them.</p>}
         {open.map(p => (

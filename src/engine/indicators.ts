@@ -1,3 +1,6 @@
+import { guaranteeReserve } from './deal-report';
+import { privateValue } from './private-enterprises';
+import { escrowValue } from './deals';
 import { baselineFor, trendFor } from '../data/economic-baseline';
 // Satisfaction, approval and campaign score. All weights/thresholds are transparent constants.
 import { EVENT_BY_ID } from '../data/events';
@@ -55,7 +58,7 @@ export function scoreDrivers(s: GameState) {
   const years = Math.max(reports.length / 12, 0.25);
   const realGrowth = Math.pow(realOutput / s.baseline.realGdpAnnual, 1 / years) - 1;
   const externalAdjustment = externalGrowthAdjustment(s);
-  const liabilities = debtMYR(s.government) + s.government.unpaidObligations;
+  const liabilities = debtMYR(s.government) + s.government.unpaidObligations + ((s.deals?.items??[]).reduce((a,d)=>a+d.arrearsMinor,0)+guaranteeReserve(s))/100;
   // A negative opening net worth must not earn score merely by inflating nominal liabilities.
   const realWealthChange = s.baseline.profile === 'malaysia'
     ? (scoreNetWorth(s) + liabilities) / (s.indicators.cpi / 100) - liabilities - s.baseline.publicNetWorth
@@ -87,7 +90,7 @@ export function publicNetWorth(s: GameState): number {
   return treasuryMYR(s.government) + navMYR(s) + s.government.publicAssets - debtMYR(s.government) - s.government.unpaidObligations + reserveEquityChange(s)
     // State enterprises are public wealth: only changes since the start count, so a dividend that moves
     // cash from PETRONAS or Khazanah to the treasury leaves net worth unchanged.
-    + soeEquity(s) - s.soe.openingEquity;
+    + soeEquity(s) - s.soe.openingEquity + (escrowValue(s, 'treasury') + escrowValue(s, 'strategic') + privateValue(s,'strategic')) / 100 - (s.deals?.items??[]).reduce((a,d)=>a+d.arrearsMinor,0)/100 - guaranteeReserve(s)/100;
 }
 
 /** Net worth used by the wealth score. Reserve revaluation is excluded, so neither random FX moves nor

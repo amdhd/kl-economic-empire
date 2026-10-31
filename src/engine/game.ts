@@ -1,3 +1,11 @@
+import { takeoverOffers } from './takeovers';
+import { rescueOffers } from './rescues';
+import { enterpriseOffers } from './private-enterprises';
+import { supplyOffers } from './supply-contracts';
+import { concessionOffers } from './concessions';
+import { syncInvestmentDeals } from './investment-deals';
+import type { Deal } from '../types/deals';
+import { initialDeals, addDeal, dealCommand, offerDeal } from './deals';
 // Game construction, typed player commands, and the real-time driver.
 import { initialControls, controlCommand } from './policy-controls';
 import { COMPANIES } from '../data/companies';
@@ -34,7 +42,7 @@ import { seedRng } from './rng';
 import { klDay, klParts, klToEpochMin, monthKey } from './time';
 import { clamp, news, pushBounded, toMinor } from './util';
 
-export const SCHEMA_VERSION = 9;
+export const SCHEMA_VERSION = 10;
 export const START = { year: 2027, month: 1, day: 1, hour: 8 };
 export const CAMPAIGN_MONTHS = 24;
 
@@ -89,6 +97,7 @@ function createWithProfile(seed: number, scenario: ScenarioId, profile: 'malaysi
       const growth = Math.pow(1 + trend.budgetEscalation, 1 / 12) - 1;
       return { category, monthly: BASE_BUDGET[category] * (1 + growth), growth, remaining: 60, nextMonth: mk + 1, everyMonths: 1 as const };
     }) : [] },
+    deals: initialDeals(seed, profile === 'malaysia', startDay),
     schemaVersion: SCHEMA_VERSION,
     campaignId: `kl-${seed}-${scenario}`,
     seed,
@@ -160,6 +169,7 @@ function createWithProfile(seed: number, scenario: ScenarioId, profile: 'malaysi
   s.indicators.publicNetWorth = s.baseline.publicNetWorth;
   s.indicators.score = computeScore(s);
 
+  if (s.deals.enabled) addDeal(s, 'advisory', 'diligence', 'Independent investment due diligence', 'treasury', 250_000);
   if (scenario === 'recession') {
     for (const id of ['global_slowdown', 'credit_crunch']) {
       startEvent(s, id, startDay, 180, 1.3);
@@ -169,6 +179,12 @@ function createWithProfile(seed: number, scenario: ScenarioId, profile: 'malaysi
     s.external.cycles.risk = -0.15;
   }
   openingPledge(s, startDay);
+  syncInvestmentDeals(s);
+  concessionOffers(s);
+  supplyOffers(s);
+  enterpriseOffers(s);
+  rescueOffers(s);
+  takeoverOffers(s);
   if (scenario === 'export-slump') startEvent(s, 'global_slowdown', startDay, 180, 1);
   if (scenario === 'energy-shock') startEvent(s, 'oil_spike', startDay, 90, 1);
   if (s.controls.plans.length) news(s, { kind: 'policy', tone: 'neutral', title: 'Inherited budget path', body: `Operating appropriations are indexed at ${(trend.budgetEscalation * 100).toFixed(0)}% a year, in monthly steps, roughly in line with trend nominal GDP. Development spending stays at its 2027 level. Review or cancel each ministry plan under Economic controls.` });
@@ -178,6 +194,9 @@ function createWithProfile(seed: number, scenario: ScenarioId, profile: 'malaysi
 
 // ------------------------------------------------------------------ commands
 export type Command =
+  | { type: 'enableDeals' }
+  | { type: 'dealOffer'; id: number; terms: Partial<Deal['terms']> }
+  | { type: 'deal'; id: number; action: 'review' | 'sign' | 'reject' | 'cancel' | 'collect' | 'followOn' | 'dilute' | 'exit' | 'liquidate' | 'dividend' }
   | { type: 'sectorIncentive'; sector: import('../types/game').SectorId; cut: number; months: number }
   | { type: 'ministryPlan'; category: BudgetCategory; monthly: number; growth: number; years: number }
   | { type: 'cancelMinistryPlan'; category: BudgetCategory }
@@ -227,14 +246,18 @@ export function applyCommand(s: GameState, cmd: Command, atMin: number): Command
   return res;
 }
 
-function firstOfNextMonth(atMin: number): number {
+/** Policy decisions take effect at the start of the next KL day (D-072). */
+function tomorrowStart(atMin: number): number {
   const p = klParts(atMin);
-  return p.month === 12 ? klToEpochMin(p.year + 1, 1, 1) : klToEpochMin(p.year, p.month + 1, 1);
+  return klToEpochMin(p.year, p.month, p.day) + 1440;
 }
 
 function dispatch(s: GameState, cmd: Command, atMin: number): CommandResult {
   const gov = s.government;
   switch (cmd.type) {
+    case 'enableDeals': { if(s.deals.enabled||!s.fdi.enabled)return {ok:false,message:'Deals are already enabled or this save uses an earlier economic model.'}; s.deals.enabled=true;s.deals.startDay=s.scheduler.lastDay;s.deals.lastOfferDay=s.scheduler.lastDay;addDeal(s,'advisory','diligence','Independent investment due diligence','treasury',250_000);syncInvestmentDeals(s);concessionOffers(s);supplyOffers(s);enterpriseOffers(s);rescueOffers(s);takeoverOffers(s);return {ok:true,message:'Deal Room enabled prospectively. Existing contracts keep their original terms.'}; }
+    case 'dealOffer': { const err=offerDeal(s,cmd.id,cmd.terms); return {ok:!err,message:err??'Counterparty response received.'}; }
+    case 'deal': { const err = dealCommand(s, cmd.id, cmd.action); return { ok: !err, message: err ?? 'Deal updated.' }; }
     case 'sectorIncentive': case 'ministryPlan': case 'cancelMinistryPlan': case 'debtStrategy': case 'fxBand': return controlCommand(s, cmd, atMin);
     case 'interveneFx': return interveneFx(s, cmd.side, cmd.usdMinor, atMin);
     case 'queueCommodity': {
@@ -259,7 +282,7 @@ function dispatch(s: GameState, cmd: Command, atMin: number): CommandResult {
       // Subsidy cuts are politically costly, as in every country that has tried them.
       if (patch.fuelCeiling !== undefined && patch.fuelCeiling > cur.fuelCeiling) s.policyChurn += ((patch.fuelCeiling - cur.fuelCeiling) / cur.fuelCeiling) * 25;
       if (patch.fuelEligible !== undefined && patch.fuelEligible < cur.fuelEligible) s.policyChurn += (cur.fuelEligible - patch.fuelEligible) * 12;
-      return queue(s, 'commodity', patch, `Commodities: ${parts.join('; ')}`, firstOfNextMonth(atMin), atMin);
+      return queue(s, 'commodity', patch, `Commodities: ${parts.join('; ')}`, tomorrowStart(atMin), atMin);
     }
     case 'setDevelopment': {
       if (!s.world.enabled) return { ok: false, message: 'The development budget is modelled in new Malaysia campaigns.' };
@@ -267,7 +290,7 @@ function dispatch(s: GameState, cmd: Command, atMin: number): CommandResult {
       const annual = Math.round(cmd.annual / 1e8) * 1e8;
       const pendingDev = gov.pending.filter((p) => p.kind === 'development').at(-1)?.patch as { annual: number } | undefined;
       if (annual === (pendingDev?.annual ?? s.fiscal.developmentAnnual)) return { ok: false, message: 'No change to queue.' };
-      return queue(s, 'development', { annual }, `Development expenditure RM${(annual / 1e9).toFixed(1)}bn a year`, firstOfNextMonth(atMin), atMin);
+      return queue(s, 'development', { annual }, `Development expenditure RM${(annual / 1e9).toFixed(1)}bn a year`, tomorrowStart(atMin), atMin);
     }
     case 'setFiscalRule': {
       if (!s.world.enabled) return { ok: false, message: 'Fiscal rules apply to new Malaysia campaigns.' };
@@ -288,7 +311,7 @@ function dispatch(s: GameState, cmd: Command, atMin: number): CommandResult {
       const pend = gov.pending.filter((p) => p.kind === 'partner' && (p.patch as { partner: PartnerId }).partner === cmd.partner).at(-1)?.patch as { tariff: number } | undefined;
       if (tariff === (pend?.tariff ?? s.world.partners[cmd.partner].ourTariff)) return { ok: false, message: 'No change to queue.' };
       if (tariff > 0) s.world.partners[cmd.partner].negotiationDoneDay = null;
-      return queue(s, 'partner', { partner: cmd.partner, tariff }, `Surcharge on imports from ${PARTNER_NAMES[cmd.partner]}: ${(tariff * 100).toFixed(1)}%`, firstOfNextMonth(atMin), atMin);
+      return queue(s, 'partner', { partner: cmd.partner, tariff }, `Surcharge on imports from ${PARTNER_NAMES[cmd.partner]}: ${(tariff * 100).toFixed(1)}%`, tomorrowStart(atMin), atMin);
     }
     case 'negotiateAgreement': {
       const r = startNegotiation(s, cmd.partner, atMin);
@@ -321,7 +344,7 @@ function dispatch(s: GameState, cmd: Command, atMin: number): CommandResult {
       const pending = gov.pending.filter(p => p.kind === 'trade').at(-1)?.patch;
       const current = { ...s.trade.policy, ...pending };
       if (patch.tariff === current.tariff && patch.exportBudgetMonthly === current.exportBudgetMonthly) return { ok: false, message: 'No change to queue.' };
-      return queue(s, 'trade', patch, `Trade: tariff ${(patch.tariff * 100).toFixed(1)}%, export support RM ${(patch.exportBudgetMonthly / 1e6).toFixed(0)}m/month`, firstOfNextMonth(atMin), atMin);
+      return queue(s, 'trade', patch, `Trade: tariff ${(patch.tariff * 100).toFixed(1)}%, export support RM ${(patch.exportBudgetMonthly / 1e6).toFixed(0)}m/month`, tomorrowStart(atMin), atMin);
     }
     case 'setLever': {
       const err = setLever(s, cmd.lever, cmd.value, atMin);
@@ -347,7 +370,7 @@ function dispatch(s: GameState, cmd: Command, atMin: number): CommandResult {
         else s.policyChurn += 0.5;
       }
       if (!parts.length) return { ok: false, message: 'No change to queue.' };
-      return queue(s, 'tax', patch, parts.join('; '), firstOfNextMonth(atMin), atMin);
+      return queue(s, 'tax', patch, parts.join('; '), tomorrowStart(atMin), atMin);
     }
     case 'queueBudget': {
       const patch: Partial<BudgetPolicy> = {};
@@ -369,8 +392,7 @@ function dispatch(s: GameState, cmd: Command, atMin: number): CommandResult {
         s.controls.plans = s.controls.plans.filter((pl) => !(pl.category in patch));
         parts.push(`replaces ${replaced.map((pl) => BUDGET_LABELS[pl.category]).join(', ')} ministry plan`);
       }
-      const p = klParts(atMin);
-      return queue(s, 'budget', patch, parts.join('; '), klToEpochMin(p.year, p.month, p.day) + 1440, atMin);
+      return queue(s, 'budget', patch, parts.join('; '), tomorrowStart(atMin), atMin);
     }
     case 'setBorrowing': {
       const b = { ...gov.policies.borrowing, ...cmd.patch };
@@ -395,6 +417,8 @@ function dispatch(s: GameState, cmd: Command, atMin: number): CommandResult {
       return { ok: true, message: `${t.name} commissioned.` };
     }
     case 'cancelProject': {
+      const project=gov.projects.find(x=>x.id===cmd.id);
+      if(project?.concessionDealId!==undefined){const err=dealCommand(s,project.concessionDealId,'cancel');return {ok:!err,message:err??'Concession terminated; obligations remain in Deal Room.'};}
       const p = gov.projects.find((x) => x.id === cmd.id);
       if (!p || p.status !== 'building') return { ok: false, message: 'Project not under construction.' };
       p.status = 'cancelled';

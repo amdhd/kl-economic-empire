@@ -14,7 +14,7 @@ import { deserialize, serialize } from '../persistence/save';
 import { readSlot, writeSlot, type SlotId } from '../persistence/storage';
 import type { GameSpeed, GameState, ScenarioId, TickerId } from '../types/game';
 
-export type PanelId = 'decisions' | 'fdi' | 'standing' | 'explain' | 'settings' | 'finance' | 'population' | 'controls' | 'trade' | 'sources' | 'fiscal' | 'commodities' | 'partners' | 'soe' | 'overview' | 'policies' | 'projects' | 'debt' | 'markets' | 'fund' | 'economy' | 'reports' | 'objectives';
+export type PanelId = 'deals' | 'decisions' | 'fdi' | 'standing' | 'explain' | 'settings' | 'finance' | 'population' | 'controls' | 'trade' | 'sources' | 'fiscal' | 'commodities' | 'partners' | 'soe' | 'overview' | 'policies' | 'projects' | 'debt' | 'markets' | 'fund' | 'economy' | 'reports' | 'objectives';
 export type Selection = { kind: 'company'; id: TickerId } | { kind: 'district'; id: string } | null;
 export interface Toast {
   id: number;
@@ -288,6 +288,29 @@ export function startGameLoop(): () => void {
     document.removeEventListener('visibilitychange', onVis);
     window.removeEventListener('keydown', onKey);
   };
+}
+
+/** Synchronous tab-local checkpoint: async IndexedDB writes may be lost during a reload. */
+function checkpointSession() {
+  const st = useGame.getState();
+  if (st.showNewGame && st.game.scheduler.ticks === 0 && st.game.actions.length === 0) return;
+  try {
+    if (import.meta.env.DEV && sessionStorage.getItem('klDevNoSave')) return;
+    sessionStorage.setItem('kl-session-recovery', serialize(st.game, 'Session recovery'));
+  } catch {
+    // A full/unavailable session store must not interrupt play. Daily/manual saves remain available.
+    void st.save('autosave', 'Autosave', 'throttle');
+  }
+}
+window.addEventListener('beforeunload', checkpointSession);
+window.addEventListener('pagehide', checkpointSession);
+if (import.meta.hot) {
+  import.meta.hot.on('vite:beforeFullReload', checkpointSession);
+  import.meta.hot.dispose(() => {
+    checkpointSession();
+    window.removeEventListener('beforeunload', checkpointSession);
+    window.removeEventListener('pagehide', checkpointSession);
+  });
 }
 
 /** Subscribe a component to economic changes; returns the (mutable) game state. */

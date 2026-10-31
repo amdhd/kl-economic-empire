@@ -45,3 +45,17 @@ describe('treasury explanation', () => {
     expect(explainEconomy(s, 'treasury').summary).toContain('change RM0.000bn');
   });
 });
+
+describe('corporate tax instalments (D-072)', () => {
+  it('smooth month-one cash and settle only the difference at month close', async () => {
+    const { createGame, runHeadless } = await import('../src/engine/game');
+    const s = createGame(2027, 'balanced');
+    const open = s.government.treasury;
+    runHeadless(s, 24 * 7);
+    expect(s.government.mtd.taxCorporate).toBeGreaterThan(0); // collected before month close
+    expect(open - s.government.treasury).toBeLessThan(4.0e9 * 100); // week-one burn is well below the unsmoothed ~RM4.3bn
+    runHeadless(s, 24 * 25);
+    expect(s.reports).toHaveLength(1);
+    expect(s.government.mtd.taxCorporate).toBeLessThan(s.reports[0].gov.taxCorporate * 0.5);
+  });
+});

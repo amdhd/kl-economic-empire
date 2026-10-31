@@ -93,3 +93,39 @@ Thresholds, notification detail, confirmation pause and optional critical-alert 
 Critical alerts pause only when enabled; resume manually after reviewing them. History covers the current session,
 and loading a save does not repeat existing warnings. Time remains Pause / 1× / 2× / 3×, with no offline catch-up.
 New campaigns also offer **Export downturn** and **Energy squeeze**, with starting shocks explained on their cards.
+
+### Deal Room
+
+Open **Info views → Deal Room** for fictional public investment and contracts:
+
+- Negotiate FDI grants, sourcing, training and delivery; grants release at build milestones.
+- Compare private infrastructure concessions with direct public project funding.
+- Lock fleet fuel or participating manufacturers' steel prices, with indexation and default risks.
+- Invest minority SWF equity in startups, handle follow-on rounds/dilution and seek exits.
+- Rescue fictional employers through staged Khazanah loans or equity restructuring.
+- Bid for controlling private-company stakes and manage integration, dividends and exits.
+
+Review an opportunity, send terms, inspect the counteroffer and sign. Signatures reserve real cash; future service
+payments and guarantees can extend beyond the presidency. **Exposure** and the campaign report show those obligations.
+Later fictional cohorts arrive during the campaign. Existing model-3 saves can enable agreements prospectively from
+the Deal Room; existing signed FDI keeps its original rules. All counterparties, terms and outcomes are simulated.
+
+### Reload recovery and stable public play
+
+Refreshes and development code reloads preserve a best-effort, tab-local checkpoint. Choose **Restore previous
+session** on the opening screen to recover it paused; **Continue autosave** remains available separately. Recovery
+uses session storage and can be unavailable if browser storage is full or blocked. Manual slots remain unchanged.
+
+Use the Firebase-hosted production version for uninterrupted play while source files are edited locally.
+Production only changes when a tested build is explicitly deployed. To publish: run `npm run build`, `npm test`,
+`npm run lint` and `npm run e2e`, then `npx firebase-tools deploy --only hosting --project cities-skylines-3-hadi`.
+Local browser saves belong to their domain: localhost saves do not automatically appear on the hosted site.
+Use the configured cloud slots to transfer progress. Hosting deployments do not
+clear browser saves; compatible save migrations still apply when loading after an update.
+
+Public play: https://cities-skylines-3-hadi.web.app
+
+Release validation (31 October 2026): strict build, lint, 270 simulation tests and all 47 browser tests passed.
+Browser tests were run serially after parallel software-map rendering caused intermittent timeouts.
+If a hosting release breaks starting or restoring a campaign, roll back to the preceding release in the Firebase
+Hosting release history. No database rules or account configuration are changed by a hosting-only deployment.

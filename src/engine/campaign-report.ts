@@ -1,3 +1,4 @@
+import { dealExposure } from './deal-report';
 import { baselineFor } from '../data/economic-baseline';
 // Read-only report inputs. Opening values are campaign creation, not January's closing accounts.
 import type { GameState, GovMonthFlows } from '../types/game';
@@ -25,6 +26,6 @@ export function campaignReport(s: GameState) {
   const fundGain = closing.fundNav - opening.fundNav - fundNetTransfers;
   const revenue = revenueOf(fiscal);
   const outlays = outlaysOf(fiscal);
-  return { opening, closing, fiscal, revenue, outlays, fiscalBalance: revenue - outlays,
+  return { deals:dealExposure(s), opening, closing, fiscal, revenue, outlays, fiscalBalance: revenue - outlays,
     fundNetTransfers, fundGain, fundReturn: fundGain / opening.fundNav, drivers: scoreDrivers(s) };
 }

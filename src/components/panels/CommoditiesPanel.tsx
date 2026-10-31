@@ -54,7 +54,7 @@ export function CommoditiesPanel() {
       </div>
       <p className="mt-2 text-[12px] text-slate-400">Oil, LNG, palm oil and rubber are value added outside the seven industries: higher prices raise nominal GDP, PETRONAS profits, petroleum income tax, palm duty and smallholder income. LNG and coal set power costs; steel, aluminium and copper feed construction, industry and chipmakers; wheat and rice feed food prices. Households and firms pay more for fuel and inputs. Resource value added this month {money(w.mtd.resourceVa)}.</p>
     </Section>
-    <Section title="Domestic policy · effective next calendar month">
+    <Section title="Domestic policy · effective tomorrow">
       <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-[12px]">
         <label className="block">RON95 ceiling · RM{pol.fuelCeiling.toFixed(2)}/L <span className="text-slate-400">(unsubsidised ≈ RM{market.toFixed(2)})</span>
           <input type="range" min={1.5} max={3.5} step={0.05} value={pol.fuelCeiling} onChange={(e) => set('fuelCeiling', Number(e.target.value))} aria-label="Fuel ceiling" data-testid="fuel-ceiling" />
@@ -79,7 +79,7 @@ export function CommoditiesPanel() {
       {pending.map((p) => <div key={p.id} className="mt-2 flex items-center justify-between gap-2 text-[12px] text-amber-200"><span>{p.label} · from {formatKL(p.effectiveMin).date}</span><button className="btn" onClick={() => command({ type: 'cancelPolicy', id: p.id })}>Withdraw</button></div>)}
     </Section>
     {confirm && <ConfirmDialog title="Queue commodity policy" confirmLabel="Queue policy" onCancel={() => setConfirm(false)} onConfirm={() => { command({ type: 'queueCommodity', patch: Object.fromEntries(changed.map((k) => [k, pol[k]])) }); setConfirm(false); }}>
-      <ul className="list-disc space-y-1 pl-4">{changed.map((k) => <li key={k}>{k}: {k === 'fuelCeiling' ? `RM${proposed[k].toFixed(2)} → RM${pol[k].toFixed(2)}` : `${pct(proposed[k], 1)} → ${pct(pol[k], 1)}`}</li>)}<li>Effective on the 1st of next month.</li></ul>
+      <ul className="list-disc space-y-1 pl-4">{changed.map((k) => <li key={k}>{k}: {k === 'fuelCeiling' ? `RM${proposed[k].toFixed(2)} → RM${pol[k].toFixed(2)}` : `${pct(proposed[k], 1)} → ${pct(pol[k], 1)}`}</li>)}<li>Effective from tomorrow.</li></ul>
     </ConfirmDialog>}
   </PanelShell>;
 }

@@ -11,6 +11,7 @@ import { EventCard } from '../EventCard';
 const FLOW_LABELS: [keyof GovMonthFlows, string, boolean][] = [
   ['taxCorporate', 'Corporate tax', true], ['taxProperty', 'Property levy', true], ['taxConsumption', 'Consumption levy', true], ['taxHousehold', 'Household surcharge', true], ['federalGrant', 'Other public receipts', true], ['importTariff', 'Import tariffs', true],
   ['soeDividend', 'SOE dividends', true], ['petroleumTax', 'Petroleum income tax', true], ['commodityDuty', 'Commodity duties', true], ['exportSupport', 'Export services', false], ['subsidy', 'Fuel & food subsidies', false],
+  ['dealEscrowIn', 'Deal escrow returned/settled', true], ['dealEscrowOut', 'Deal escrow reserved', false],
   ['borrowing', 'Bond proceeds', true], ['swfTransferIn', 'SWF transfers in', true],
   ['opex', 'Operating outlays', false], ['capex', 'Capital outlays', false], ['interest', 'Debt interest', false], ['principal', 'Principal repaid', false], ['emergency', 'Emergency', false], ['swfContribution', 'SWF injections', false],
 ];

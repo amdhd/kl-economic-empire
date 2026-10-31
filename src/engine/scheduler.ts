@@ -1,3 +1,4 @@
+import { dailyDeals } from './deals';
 import { applyPlans, automaticFx } from './policy-controls';
 import { recentIncomeTrend } from './household-behavior';
 import { baselineFor, budgetFor, nationalV2, trendFor } from '../data/economic-baseline';
@@ -86,6 +87,7 @@ function settleDay(s: GameState, day: number): AggregatedMods {
   // Schema 9: policy programmes and FDI build-out buy domestic output; imported FDI equipment is recorded as imports.
   dailyPolicy(s, gov.purchases);
   s.trade.mtdImports += dailyFdi(s, gov.purchases).imports;
+  dailyDeals(s, day, gov.purchases, gov.paidFraction);
   const e = daily(s, mods, gov);
   e.gdpNominal += res.gdpNominal;
   s.world.mtd.resourceVa += res.gdpNominal;

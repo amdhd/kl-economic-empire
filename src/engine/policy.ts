@@ -40,17 +40,17 @@ export const LEVERS: Record<LeverId, LeverSpec> = {
     cycle: 'Announced incentives attract pledges immediately. Approved grants are paid as projects build, 1–3 years before exports and jobs arrive.' },
   fdiGreenLane: { group: 'fdi', label: 'Investment green lane (fast approvals)', kind: 'toggle', min: 0, max: 1, step: 1, initial: 0, unit: 'toggle', timing: 'tomorrow', rampDays: 1,
     cycle: 'New pledges build about 25% faster and the investment climate improves. No direct fiscal cost.' },
-  minimumWage: { group: 'labour', label: 'National minimum wage', kind: 'slider', min: 1500, max: 3000, step: 50, initial: MIN_WAGE0, unit: 'RMmonth', timing: 'nextMonth', rampDays: 90,
-    cycle: 'Low-wage pay rises from next month and phases in over a quarter. Consumer prices follow in 1–3 months; low-wage hiring slows over 6–12 months; household spending rises.' },
-  workerLevy: { group: 'labour', label: 'Foreign-worker levy', kind: 'slider', min: 0, max: 4000, step: 50, initial: WORKER_LEVY0, unit: 'RMyear', timing: 'nextMonth', rampDays: 60,
-    cycle: 'Levy receipts start next month. Employers slowly cut foreign hires, raising local hiring and wages, and costs in construction, retail and industry.' },
+  minimumWage: { group: 'labour', label: 'National minimum wage', kind: 'slider', min: 1500, max: 3000, step: 50, initial: MIN_WAGE0, unit: 'RMmonth', timing: 'tomorrow', rampDays: 90,
+    cycle: 'Low-wage pay rises from tomorrow and phases in over a quarter. Consumer prices follow in 1–3 months; low-wage hiring slows over 6–12 months; household spending rises.' },
+  workerLevy: { group: 'labour', label: 'Foreign-worker levy', kind: 'slider', min: 0, max: 4000, step: 50, initial: WORKER_LEVY0, unit: 'RMyear', timing: 'tomorrow', rampDays: 60,
+    cycle: 'Levy receipts start tomorrow. Employers slowly cut foreign hires, raising local hiring and wages, and costs in construction, retail and industry.' },
   workerFreeze: { group: 'labour', label: 'Freeze new foreign-worker intake', kind: 'toggle', min: 0, max: 1, step: 1, initial: 0, unit: 'toggle', timing: 'tomorrow', rampDays: 365,
     cycle: 'The foreign workforce shrinks gradually as permits expire. Labour shortages lift wages and local hiring, then cap output in labour-intensive sectors.' },
-  exportConversion: { group: 'capital', label: 'Export-proceeds conversion requirement', kind: 'slider', min: 0, max: 0.75, step: 0.05, initial: 0, unit: 'share', timing: 'nextMonth', rampDays: 60,
+  exportConversion: { group: 'capital', label: 'Export-proceeds conversion requirement', kind: 'slider', min: 0, max: 0.75, step: 0.05, initial: 0, unit: 'share', timing: 'tomorrow', rampDays: 60,
     cycle: 'Exporters must convert this share of receipts to ringgit, supporting the currency over two months. Investors read it as a capital control: FDI interest falls at once.' },
   hotMoneyControls: { group: 'capital', label: 'Short-term capital-flow controls', kind: 'toggle', min: 0, max: 1, step: 1, initial: 0, unit: 'toggle', timing: 'tomorrow', rampDays: 30,
     cycle: 'Dampens ringgit swings within a month. Bond investors demand a small premium and FDI interest falls.' },
-  carbonTax: { group: 'green', label: 'Carbon tax', kind: 'slider', min: 0, max: 150, step: 5, initial: 0, unit: 'RMt', timing: 'nextMonth', rampDays: 180,
+  carbonTax: { group: 'green', label: 'Carbon tax', kind: 'slider', min: 0, max: 150, step: 5, initial: 0, unit: 'RMt', timing: 'tomorrow', rampDays: 180,
     cycle: 'Phased in over six months. Power and industrial prices rise first; firms then abate, cutting emissions. Revenue accrues to the treasury.' },
   greenIncentive: { group: 'green', label: 'Renewables & EV incentive programme', kind: 'slider', min: 0, max: 5e9, step: 0.25e9, initial: 0, unit: 'RMbnYr', timing: 'tomorrow', rampDays: 90,
     cycle: 'Grants buy solar, grid and EV investment straight away. Green capital builds over years, lowering emissions and power-sector fuel imports and drawing green FDI.' },
@@ -108,7 +108,7 @@ export function setLever(s: GameState, id: LeverId, value: number, atMin: number
   const p = klParts(atMin);
   const d = today(s) + 1; // the next settled day
   const effectiveDay = spec.timing === 'tomorrow' ? d
-    : d + (daysInMonth(p.year, p.month) - p.day); // the 1st of next month, as a settled KL day
+    : d + (daysInMonth(p.year, p.month) - p.day); // the 1st of next month, as a settled KL day (no lever uses it since D-072)
   // A new decision ramps from wherever the previous change had reached.
   s.policy.levers[id] = { value: v, from: leverValue(s, id, Math.max(d, effectiveDay)), announcedDay: today(s), effectiveDay, rampDays: spec.rampDays };
   const label = `${spec.label}: ${formatLever(id, v)} (effective ${spec.timing === 'tomorrow' ? 'tomorrow' : 'on the 1st of next month'}, full effect after ~${spec.rampDays} days)`;

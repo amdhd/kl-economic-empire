@@ -2,9 +2,9 @@ import type { GameState } from '../types/game';
 import { outlaysOf, treasuryMYR } from './government';
 import { daysInMonth } from './time';
 
-export type AlertRule = 'treasury' | 'unemployment' | 'housing' | 'projects';
+export type AlertRule = 'treasury' | 'unemployment' | 'housing' | 'projects' | 'deals';
 export interface AlertPreferences {
-  enabled: Record<AlertRule, boolean>;
+  enabled: Record<Exclude<AlertRule,'deals'>, boolean> & {deals?:boolean};
   runwayDays: number;
   unemploymentPct: number;
   housingPressurePct: number;
@@ -13,7 +13,7 @@ export interface AlertPreferences {
   detail: 'brief' | 'detailed';
 }
 export const DEFAULT_ALERTS: AlertPreferences = {
-  enabled: { treasury: true, unemployment: true, housing: true, projects: true },
+  enabled: { treasury: true, unemployment: true, housing: true, projects: true, deals:true },
   runwayDays: 14, unemploymentPct: 6, housingPressurePct: 25, projectOverrunPct: 20,
   pauseOnCritical: false, detail: 'brief',
 };
@@ -25,6 +25,7 @@ export function validAlertPreferences(value: unknown): value is AlertPreferences
   const p = value as AlertPreferences;
   const range = (v: number, lo: number, hi: number) => Number.isFinite(v) && v >= lo && v <= hi;
   return !!p.enabled && (['treasury', 'unemployment', 'housing', 'projects'] as const).every(k => typeof p.enabled[k] === 'boolean')
+    && (p.enabled.deals===undefined||typeof p.enabled.deals==='boolean')
     && range(p.runwayDays, 1, 90) && range(p.unemploymentPct, 1, 30) && range(p.housingPressurePct, 1, 100)
     && range(p.projectOverrunPct, 1, 100) && typeof p.pauseOnCritical === 'boolean' && ['brief', 'detailed'].includes(p.detail);
 }
@@ -59,6 +60,17 @@ export function economicAlerts(s: GameState, p: AlertPreferences, previous: Aler
     const overrun = 100 * (estimated / project.cost - 1);
     addHigh(`project:${project.id}`, 'projects', overrun, p.projectOverrunPct, p.projectOverrunPct + 20,
       `${project.name}: estimated cost +${overrun.toFixed(0)}%`, 'Spent to date plus remaining work at today’s construction prices, compared with base cost. Future prices and funding can change this estimate.');
+  }
+  if(p.enabled.deals!==false && s.deals?.enabled)for(const d of s.deals.items){
+    const push=(suffix:string,severity:EconomicAlert['severity'],title:string,detail:string)=>alerts.push({key:`deal:${d.id}:${suffix}`,rule:'deals',severity,title,detail});
+    if(['opportunity','negotiating'].includes(d.status)&&d.deadline-s.scheduler.lastDay<=3&&d.deadline>s.scheduler.lastDay)push('expiry','warning',`${d.name}: decision deadline near`,'Review, decline or let the offer expire. The clock only advances while playing.');
+    if(d.arrearsMinor>0)push('arrears','critical',`${d.name}: unpaid contractual claim`,'This liability remains recorded even after termination. Inspect funding and the downside in Deal Room.');
+    if(d.status==='failed'&&d.paidMinor>0)push('failure','warning',`${d.name}: agreement failed`,'Review the recorded loss, recoverable claims and any unpaid obligations.');
+    const e=d.enterprise;
+    if(d.status==='active'&&e){
+      if(e.cashMinor<e.costAnnualMinor/365*30)push('runway','critical',`${d.name}: less than 30 days gross-cost cash coverage`,'This is a static runway warning, excluding future receipts. Additional support is optional and uses real available public cash.');
+      if(d.kind==='startup'&&!e.roundDone&&s.scheduler.lastDay>=e.nextRoundDay)push('round','warning',`${d.name}: financing round open`,'Join using SWF cash or accept dilution. The outside round proceeds after 30 days.');
+    }
   }
   return alerts;
 }

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { budgetFor, BUDGET_LABELS, TAX_LABELS } from '../../data/economic-baseline';
 import { treasuryMYR } from '../../engine/government';
 import { estimateTaxChange } from '../../engine/policy-preview';
-import { formatKL, klParts } from '../../engine/time';
+import { formatKL } from '../../engine/time';
 import { useGame, useGameState } from '../../store/game-store';
 import type { BudgetCategory, BudgetPolicy, TaxPolicy } from '../../types/game';
 import { money, pct } from '../../utils/format';
@@ -32,12 +32,10 @@ export function PolicyPanel() {
   const budgetDelta = CATS.reduce((a, k) => a + budget[k] - pol.budget[k], 0);
   const taxChanged = TAX_KEYS.some((k) => Math.abs(tax[k] - (pendingTax(k) ?? pol.tax[k])) > 1e-9);
   const budgetChanged = CATS.some((k) => budget[k] !== (pendingBudget(k) ?? pol.budget[k]));
-  const p = klParts(g.clock.hour * 60);
-  const nextMonth = p.month === 12 ? `1 Jan ${p.year + 1}` : `1 ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][p.month]} ${p.year}`;
   const outlays = last ? last.gov.opex + last.gov.capex + last.gov.interest : CATS.reduce((a, k) => a + pol.budget[k], 0);
 
   return (
-    <PanelShell title="Taxes & budget" subtitle="Fictional fiscal powers. Malaysia baseline for new campaigns. Taxes take effect on the 1st of next month; budget changes the next day." width={680}>
+    <PanelShell title="Taxes & budget" subtitle="Fictional fiscal powers. Malaysia baseline for new campaigns. Tax and budget changes take effect the next day." width={680}>
       <div className="grid grid-cols-4 gap-3 rounded-xl bg-slate-900/40 p-3">
         <Stat label="Treasury cash" value={money(treasuryMYR(g.government))} />
         <Stat label="Tax receipts (last mo.)" value={last ? money(last.gov.taxCorporate + last.gov.taxProperty + last.gov.taxConsumption + last.gov.taxHousehold) : '—'} />
@@ -45,7 +43,7 @@ export function PolicyPanel() {
         <Stat label="Deficit / GDP" value={pct(g.indicators.deficitToGdp)} tone={g.indicators.deficitToGdp > 0.03 ? 'down' : undefined} />
       </div>
 
-      <Section title={`Tax rates · effective ${nextMonth}`}>
+      <Section title={`Tax rates · effective tomorrow`}>
         {TAX_KEYS.map((k) => {
           const meta = TAX_LABELS[k];
           const cur = pol.tax[k];
@@ -78,14 +76,14 @@ export function PolicyPanel() {
       {g.baseline.profile === 'malaysia' && <div className="rounded-lg bg-cyan-500/10 p-3 text-[12px] text-cyan-100">
         2027 MOF operating estimates ÷ 12. Public services = education + higher education; safety = defence + home affairs; development = works + transport operations; transfers = pensions; administration = all remaining operations. Debt service is paid separately. <button className="underline" onClick={() => useGame.getState().setPanel('sources')}>View annual figures & sources</button>
       </div>}
-      <Section title="Operating budget · RM million per month · effective tomorrow">
+      <Section title="Operating budget · per month · effective tomorrow">
         <div className="grid grid-cols-2 gap-x-5 gap-y-2">
           {CATS.map((k) => (
             <div key={k}>
               <div className="mb-0.5 flex items-center justify-between text-[12px]">
                 <span className="text-slate-300">{BUDGET_LABELS[k]}</span>
                 <span className="num">
-                  {budget[k] !== pol.budget[k] && <span className="text-slate-500 line-through">{(pol.budget[k] / 1e6).toFixed(0)}</span>} <b>{(budget[k] / 1e6).toFixed(0)}</b>
+                  {budget[k] !== pol.budget[k] && <span className="text-slate-500 line-through">{money(pol.budget[k], 'MYR', 2)}</span>} <b>{money(budget[k], 'MYR', 2)}</b>
                 </span>
               </div>
               <input type="range" min={0} max={BASE_BUDGET[k] * 2.5} step={10e6} value={budget[k]} onChange={(e) => setEdits({ ...edits, [k]: Number(e.target.value) })} aria-label={BUDGET_LABELS[k]} data-testid={`budget-${k}`} />
@@ -133,11 +131,11 @@ export function PolicyPanel() {
           {confirm === 'tax' ? (
             <ul className="list-disc space-y-1 pl-4">
               {TAX_KEYS.filter((k) => Math.abs(tax[k] - pol.tax[k]) > 1e-9).map((k) => <li key={k}>{TAX_LABELS[k].label}: {pct(pol.tax[k], 1)} → {pct(tax[k], 1)}</li>)}
-              <li>Effective {nextMonth}. Static receipts estimate {taxDelta >= 0 ? '+' : ''}{money(taxDelta)}/month.</li>
+              <li>Effective from tomorrow 00:00. Static receipts estimate {taxDelta >= 0 ? '+' : ''}{money(taxDelta)}/month.</li>
             </ul>
           ) : (
             <ul className="list-disc space-y-1 pl-4">
-              {CATS.filter((k) => budget[k] !== pol.budget[k]).map((k) => <li key={k}>{BUDGET_LABELS[k]}: RM {(pol.budget[k] / 1e6).toFixed(0)}m → RM {(budget[k] / 1e6).toFixed(0)}m / month</li>)}
+              {CATS.filter((k) => budget[k] !== pol.budget[k]).map((k) => <li key={k}>{BUDGET_LABELS[k]}: {money(pol.budget[k], 'MYR', 2)} → {money(budget[k], 'MYR', 2)} / month</li>)}
               <li>Effective from tomorrow 00:00.</li>
               {g.controls.plans.filter((p) => budget[p.category] !== (pendingBudget(p.category) ?? pol.budget[p.category])).map((p) => (
                 <li key={p.category} className="text-amber-300" data-testid={`plan-replaced-${p.category}`}>Replaces the {BUDGET_LABELS[p.category]} ministry plan; its future scheduled appropriations are cancelled.</li>

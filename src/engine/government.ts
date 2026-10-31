@@ -1,3 +1,4 @@
+import { fleetAdjustment } from './supply-contracts';
 import { sectorTax, ministryOutcomes } from './policy-controls';
 import { baselineFor, budgetFor, nationalV2, trendFor } from '../data/economic-baseline';
 import { DEVELOPMENT_PURCHASES, KL_ECONOMY_SHARE, PUBLIC_CAPITAL_DEPRECIATION } from '../data/world';
@@ -22,12 +23,13 @@ export const MAINTENANCE_RATE = 0.03;
 export const BOOST_SATURATION = 0.04;
 
 export const emptyFlows = (): GovMonthFlows => ({
+  dealEscrowOut: 0, dealEscrowIn: 0,
   taxCorporate: 0, taxProperty: 0, taxConsumption: 0, taxHousehold: 0, federalGrant: 0, importTariff: 0, exportSupport: 0,
   soeDividend: 0, petroleumTax: 0, commodityDuty: 0, subsidy: 0, opex: 0, capex: 0,
   interest: 0, borrowing: 0, principal: 0, swfContribution: 0, swfTransferIn: 0, emergency: 0, policyLevy: 0, policyGrant: 0,
 });
 
-const INFLOWS: (keyof GovMonthFlows)[] = ['taxCorporate', 'taxProperty', 'taxConsumption', 'taxHousehold', 'federalGrant', 'importTariff', 'soeDividend', 'petroleumTax', 'commodityDuty', 'borrowing', 'swfTransferIn', 'policyLevy'];
+const INFLOWS: (keyof GovMonthFlows)[] = ['dealEscrowIn', 'taxCorporate', 'taxProperty', 'taxConsumption', 'taxHousehold', 'federalGrant', 'importTariff', 'soeDividend', 'petroleumTax', 'commodityDuty', 'borrowing', 'swfTransferIn', 'policyLevy'];
 export const isInflow = (k: keyof GovMonthFlows) => INFLOWS.includes(k);
 
 /** Government revenue lines (borrowing and fund transfers are financing, not revenue). */
@@ -121,16 +123,29 @@ function otherPublicReceiptsBase(s: GameState): number {
   return Math.max(0, (380_816_996_000 - modeledTaxes * 365 - resources) / 12);
 }
 
+/** Companies pay corporate tax in monthly instalments (D-072): each day they remit a share of the last closed
+ * month's bill (the opening modelled bill in month one), and month close settles only the difference. This
+ * smooths the treasury; total tax collected is unchanged. */
+const INSTALMENT_SHARE = 0.8;
+function corporateInstalmentDaily(s: GameState): number {
+  const last = s.reports.at(-1);
+  if (last) return (INSTALMENT_SHARE * last.gov.taxCorporate) / 30;
+  const c = calibrationFor(s);
+  return INSTALMENT_SHARE * SECTOR_IDS.reduce((a, j) => a + Math.max(0, c.profit0[j]), 0) * BASE_TAX.corporate;
+}
+
 /** Daily: grant receipts, interest accrual, opex/transfers/capex/emergency outlays with financing. */
 export function dailyGovernment(s: GameState, today: number): GovDay {
   const PER_DAY = 12 / 365;
   const gov = s.government;
   const pol = gov.policies;
   post(gov, 'federalGrant', otherPublicReceiptsMonthly(s) * PER_DAY);
+  post(gov, 'taxCorporate', corporateInstalmentDaily(s));
   gov.accruedInterest += (debtMYR(gov) * gov.avgDebtRate) / 365;
 
   const cats = Object.keys(BUDGET_PURCHASES) as Exclude<BudgetCategory, 'transfers'>[];
-  const opexDue = cats.reduce((a, c) => a + pol.budget[c] * PER_DAY, 0);
+  const fleetDelta=fleetAdjustment(s,today);
+  const opexDue = fleetDelta + cats.reduce((a, c) => a + pol.budget[c] * PER_DAY, 0);
   const transfersDue = pol.budget.transfers * PER_DAY;
   // Construction is priced at today's property & construction price index: if it rises, projects
   // cost more in ringgit (escalation) for the same real work.
@@ -138,6 +153,7 @@ export function dailyGovernment(s: GameState, today: number): GovDay {
   const capexDueBy: { id: number; amt: number }[] = [];
   let maintenance = 0;
   for (const p of gov.projects) {
+    if (p.concessionDealId !== undefined) continue;
     if (p.status === 'complete') maintenance += (p.cost * MAINTENANCE_RATE * pCons) / 365;
     if (p.status !== 'building') continue;
     capexDueBy.push({ id: p.id, amt: Math.min(p.cost - p.work, p.cost / p.durationDays) * pCons });
@@ -159,7 +175,7 @@ export function dailyGovernment(s: GameState, today: number): GovDay {
   const purchases = zeroVec();
   let opexPaid = 0;
   for (const c of cats) {
-    const amt = pol.budget[c] * PER_DAY * paidFraction;
+    const amt = (pol.budget[c] * PER_DAY + (c==='admin'?fleetDelta:0)) * paidFraction;
     opexPaid += amt;
     for (const [sec, sh] of Object.entries(BUDGET_PURCHASES[c])) purchases[sec as SectorId] += amt * (sh as number);
   }
@@ -243,8 +259,10 @@ export function monthCloseGovernment(s: GameState): GovMonthClose {
   const BASE_BUDGET = budgetFor(s);
   const gov = s.government;
   const pol = gov.policies;
-  const corporateTax = post(gov, 'taxCorporate', SECTOR_IDS.reduce((sum,j) => sum + Math.max(0,s.sectors[j].mtd.taxableProfit)*sectorTax(s,j),0));
-  s.controls.lastTaxReliefMYR = Math.max(0,(toMinor(SECTOR_IDS.reduce((sum,j)=>sum+Math.max(0,s.sectors[j].mtd.taxableProfit)*pol.tax.corporate,0))-toMinor(corporateTax))/100);
+  const corporateDue = SECTOR_IDS.reduce((sum,j) => sum + Math.max(0,s.sectors[j].mtd.taxableProfit)*sectorTax(s,j),0);
+  // Instalments already remitted this month count towards the bill; any overpayment simply stays with the treasury.
+  const corporateTax = gov.mtd.taxCorporate + post(gov, 'taxCorporate', Math.max(0, corporateDue - gov.mtd.taxCorporate));
+  s.controls.lastTaxReliefMYR = Math.max(0,(toMinor(SECTOR_IDS.reduce((sum,j)=>sum+Math.max(0,s.sectors[j].mtd.taxableProfit)*pol.tax.corporate,0))-toMinor(corporateDue))/100);
   const propertyLevy = post(gov, 'taxProperty', pol.tax.property * PROPERTY_LEVY_BASE * s.sectors.prop.mtd.nominalOutput);
 
   // Interest: pay the accrued amount; refinance if short.

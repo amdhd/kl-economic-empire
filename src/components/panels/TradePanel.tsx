@@ -29,7 +29,7 @@ export function TradePanel() {
     </div>
     <p className="text-[12px] text-slate-400">Flows come from delivered sector exports and imported production inputs. This reduced model excludes household final imports and re-exports; it is not official merchandise trade or a complete balance of payments. Share trading never enters GDP.</p>
     {g.trade.trackingStartDay > klDay(g.clock.startHour * 60) && <p className="text-[12px] text-amber-200">Trade recording began when this legacy save was upgraded. Its first recorded month is partial.</p>}
-    <Section title="Import and export policy · effective next calendar month">
+    <Section title="Import and export policy · effective tomorrow">
       <label className="block text-[12px]">Import tariff · {pct(tariff / 100)} <span className="text-slate-400">(in force {pct(g.trade.policy.tariff)})</span>
         <input type="range" min="0" max="20" step="0.5" value={tariff} onChange={e => setTariff(Number(e.target.value))} aria-label="Import tariff" data-testid="trade-tariff" />
       </label>
@@ -65,7 +65,7 @@ export function TradePanel() {
       else command({ type: 'interveneFx', side, usdMinor });
       setConfirm(null);
     }}>
-      {confirm === 'trade' ? <p>Queue a {pct(tariff / 100)} input tariff and up to {money(support * 1e6)} export services per average month, effective on the 1st of next month. Input costs rise; export gains build with a lag and depend on actual funding.</p> : <p>{side === 'buyUSD' ? 'Buy' : 'Sell'} {fullMoneyMinor(usdMinor, 'USD')}. {q.ok ? `${side === 'buyUSD' ? 'Pay' : 'Receive'} ${fullMoneyMinor(q.myrMinor)} from the central-bank inventory, including spread.` : q.message} FX impact is temporary and not guaranteed.</p>}
+      {confirm === 'trade' ? <p>Queue a {pct(tariff / 100)} input tariff and up to {money(support * 1e6)} export services per average month, effective from tomorrow. Input costs rise; export gains build with a lag and depend on actual funding.</p> : <p>{side === 'buyUSD' ? 'Buy' : 'Sell'} {fullMoneyMinor(usdMinor, 'USD')}. {q.ok ? `${side === 'buyUSD' ? 'Pay' : 'Receive'} ${fullMoneyMinor(q.myrMinor)} from the central-bank inventory, including spread.` : q.message} FX impact is temporary and not guaranteed.</p>}
     </ConfirmDialog>}
   </PanelShell>;
 }
