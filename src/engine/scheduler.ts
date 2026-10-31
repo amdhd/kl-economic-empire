@@ -133,9 +133,9 @@ function closeMonth(s: GameState, key: number, mods: AggregatedMods): void {
   // dividends are paid to holders at the close of the declaring month
   receiveDividends(s, divs);
   monthCloseFund(s);
-  monthCloseSoe(s, key, divs, Math.max(1, s.scheduler.mtdDays));
+  const palmTax = monthCloseSoe(s, key, divs, Math.max(1, s.scheduler.mtdDays));
   monthCloseCentralBank(s); // before the government close so its remittance falls inside this month's flows
-  const govClose = monthCloseGovernment(s);
+  const govClose = monthCloseGovernment(s, palmTax);
 
   const ind = s.indicators;
   const days = Math.max(1, s.scheduler.mtdDays);

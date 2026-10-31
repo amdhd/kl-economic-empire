@@ -133,13 +133,14 @@ export function dailyResources(s: GameState, purchases: Record<SectorId, number>
 }
 
 /** Month close: petroleum tax, palm corporate tax, dividends in and out, PETRONAS cash and debt. */
-export function monthCloseSoe(s: GameState, monthKey: number, divs: Dividend[], days: number): void {
-  if (!nationalV2(s)) return;
+/** Returns the palm corporate tax posted this month. */
+export function monthCloseSoe(s: GameState, monthKey: number, divs: Dividend[], days: number): number {
+  if (!nationalV2(s)) return 0;
   const gov = s.government;
   const p = s.soe.petronas;
   const k = s.soe.khazanah;
-  // Palm plantations pay corporate tax on positive monthly profit.
-  post(gov, 'taxCorporate', Math.max(0, s.world.mtdPalmProfit) * gov.policies.tax.corporate);
+  // Palm plantations pay corporate tax on positive monthly profit (returned so the sector settlement does not treat it as an instalment).
+  const palmTax = post(gov, 'taxCorporate', Math.max(0, s.world.mtdPalmProfit) * gov.policies.tax.corporate);
   s.world.mtdPalmProfit = 0;
 
   // PETRONAS
@@ -172,6 +173,7 @@ export function monthCloseSoe(s: GameState, monthKey: number, divs: Dividend[], 
   k.cash += khazanahIncome - paid + k.cash * s.external.opr * yearShare;
   k.mtdIncome = 0;
   pushBounded(k.history, { monthKey, income: khazanahIncome, dividend: paid, nav: khazanahNav(s) }, 60);
+  return palmTax;
 }
 
 // ------------------------------------------------------------------ player commands

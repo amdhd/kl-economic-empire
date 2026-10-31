@@ -250,3 +250,23 @@ it('formats full cash balances with exact cents, including zero and large safe a
   expect(fullMoneyMinor(Number.MAX_SAFE_INTEGER)).toBe('RM 90,071,992,547,409');
   expect(NATIONAL_GDP).toBeGreaterThan(2e12);
 });
+
+describe('trade accounts', () => {
+  it('record finished consumer imports alongside imported inputs', async () => {
+    const { importCost } = await import('../src/engine/economy');
+    const { SECTORS } = await import('../src/data/economic-baseline');
+    const { runUntil, withoutEvents } = await import('./helpers');
+    withoutEvents(() => {
+      const s = createGame(77);
+      runUntil(s, 2027, 1, 3, 1);
+      const imports0 = s.trade.mtdImports, spending0 = s.households.mtd.consumption;
+      runUntil(s, 2027, 1, 4, 1); // settles exactly one day
+      expect(s.fdi.pledges.some((p) => p.status === 'building')).toBe(false);
+      const inputs = SECTOR_IDS.reduce((a, j) => a + importCost(s, j).cif * SECTORS[j].importShare * s.sectors[j].output, 0);
+      const consumer = s.trade.mtdImports - imports0 - inputs;
+      // 12% of the non-fuel basket (model 3); household spending also includes credit-financed purchases.
+      expect(consumer / (s.households.mtd.consumption - spending0)).toBeGreaterThan(0.08);
+      expect(consumer / (s.households.mtd.consumption - spending0)).toBeLessThan(0.13);
+    });
+  });
+});

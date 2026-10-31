@@ -49,4 +49,35 @@ describe('corporate tax instalments (D-072)', () => {
     expect(s.reports).toHaveLength(1);
     expect(s.government.mtd.taxCorporate).toBeLessThan(s.reports[0].gov.taxCorporate * 0.5);
   });
+
+  it('refund instalments above the bill: a 0% rate collects nothing, and the books still reconcile', async () => {
+    const { applyCommand, createGame } = await import('../src/engine/game');
+    const { runUntil, withoutEvents } = await import('./helpers');
+    withoutEvents(() => {
+      const s = createGame(2027, 'balanced');
+      runUntil(s, 2027, 3, 31, 9);
+      expect(applyCommand(s, { type: 'queueTax', patch: { corporate: 0 } }, s.clock.hour * 60).ok).toBe(true);
+      runUntil(s, 2027, 5, 1, 1);
+      const april = s.reports.at(-1)!;
+      expect(april.label).toMatch(/Apr/);
+      expect(s.reports.at(-2)!.gov.taxCorporate).toBeGreaterThan(1e9); // March still taxed at 24%
+      expect(Math.abs(april.gov.taxCorporate)).toBeLessThan(1); // instalments at the old rate were all refunded
+      expect(april.reconciliation!.cashResidualMinor).toBe(0);
+    });
+  });
+
+  it('do not count palm-plantation tax as a sector instalment', async () => {
+    const { createGame, runHeadless } = await import('../src/engine/game');
+    const { clone, runUntil, withoutEvents } = await import('./helpers');
+    withoutEvents(() => {
+      const s = createGame(2027, 'balanced');
+      runUntil(s, 2027, 3, 31, 23);
+      const withPalm = clone(s), noPalm = clone(s);
+      noPalm.world.mtdPalmProfit = 0;
+      const palmTax = Math.max(0, s.world.mtdPalmProfit) * s.government.policies.tax.corporate;
+      expect(palmTax).toBeGreaterThan(1e8);
+      runHeadless(withPalm, 1); runHeadless(noPalm, 1);
+      expect(withPalm.reports.at(-1)!.gov.taxCorporate - noPalm.reports.at(-1)!.gov.taxCorporate).toBeCloseTo(palmTax, 0);
+    });
+  });
 });
