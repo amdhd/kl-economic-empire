@@ -22,6 +22,7 @@ import type { GameState, MonthlyReport, SectorId } from '../types/game';
 import { monthCloseBank } from './banks';
 import { monthCloseCentralBank } from './central-bank';
 import { dailyCompanies, monthCloseCompanies } from './companies';
+import { dailyInfra } from './infrastructure';
 import { daily, monthClose as economyMonthClose, resetMonthToDate, weekly } from './economy';
 import { expireEvents, weeklyEvents } from './events';
 import { aggregateMods, updateExternal, type AggregatedMods } from './external';
@@ -115,6 +116,7 @@ function settleDay(s: GameState, day: number): AggregatedMods {
   // Households track listed-equity prices with a lag of a few weeks (wealth effect input).
   if (nationalV2(s)) s.households.equityIndex += 0.05 * (s.market.indices.MY.value / 1000 - s.households.equityIndex);
   dailyCompanies(s, day);
+  dailyInfra(s, e.gdpReal);
   // Every agent receives the last valid day's shock before expiry.
   expireEvents(s, day + 1);
   s.scheduler.mtdGdpNominal += e.gdpNominal;

@@ -3,6 +3,7 @@ const paths: Record<string, string> = {
   population: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M16 3a4 4 0 0 1 0 8M22 21v-2a4 4 0 0 0-3-3.87M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z',
   objectives: 'M8 3h8v6a4 4 0 0 1-8 0V3Zm0 2H4v2a4 4 0 0 0 4 4m8-6h4v2a4 4 0 0 1-4 4m-4 2v6m-4 2h8',
   policies: 'M12 3v18M4 7h16M7 7l-4 7h8L7 7Zm10 0-4 7h8l-4-7ZM8 21h8',
+  infra: 'M13 2 4 14h7l-1 8 9-12h-7l1-8Z',
   projects: 'M3 21h18M5 21V5h10v16M9 9h2m-2 4h2m-2 4h2m4-5h4v9',
   debt: 'm3 8 9-5 9 5H3Zm2 4v6m7-6v6m7-6v6M3 21h18',
   controls: 'M4 6h16M4 12h16M4 18h16M8 3v6m8 0v6M9 15v6',
