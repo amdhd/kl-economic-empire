@@ -416,7 +416,7 @@ remains external. Featured-company tax is still informational inside sector coll
 
 ### Trade policy and accounting
 
-Queue tariff `t ∈ [0,.2]` and export-service budget `B ∈ [0,2bn]` for the 1st of the next month. Settle the old month first.
+Queue tariff `t ∈ [0,.2]` and export-service budget `B ∈ [0,2bn]` from the next day.
 `importCostIndex_j = FXrelative × foreign/energy basket_j × (1+t)`.
 For actual delivered output `Y_j`, `imports_j = foreignCostIndex_j × importShare_j × Y_j` before tariffs.
 `tariffReceipts = Σ imports_j × t`, posted via `post('importTariff')` to treasury. Sector input costs include this tariff;
@@ -872,3 +872,10 @@ cash runway, failed agreements and unpaid contracts notify on entry/escalation. 
 Save validation checks cash units, ownership totals, financial amounts, terms and project links. Old model-3 saves
 can explicitly enable new opportunities from today; existing signed FDI is not rewritten. Earlier economic models
 remain disabled. All money claims are simulated, and no legal/real-market equivalence is claimed.
+
+## Policy timing and corporate tax instalments (D-072)
+Tax, trade, commodity, development, partner-tariff and lever decisions take effect at the next 00:00 KL. Daily, companies
+remit `0.8 × last closed month's corporate tax / 30` (month one: `0.8 × Σ max(0, profit0) × corporate rate`). At month close the
+treasury posts `max(0, bill − instalments paid)`; an overpayment stays with the treasury. Tax relief forgone is measured against the
+full bill. BNM FX reserves are display-only and cannot fund budgets.
+

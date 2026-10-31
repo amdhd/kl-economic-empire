@@ -118,11 +118,11 @@ describe('state-owned enterprises', () => {
 });
 
 describe('commodities, subsidies and duties', () => {
-  it('raising the fuel ceiling takes effect next month, cuts the subsidy bill and raises the CPI', () => withoutEvents(() => {
+  it('raising the fuel ceiling takes effect tomorrow, cuts the subsidy bill and raises the CPI', () => withoutEvents(() => {
     const base = createGame(920), cut = clone(base);
     expect(act(cut, { type: 'queueCommodity', patch: { fuelCeiling: 2.6 } }).ok).toBe(true);
     runUntil(base, 2027, 2, 1, 1); runUntil(cut, 2027, 2, 1, 1);
-    expect(cut.reports[0].gov.subsidy).toBe(base.reports[0].gov.subsidy); // January under the old ceiling
+    expect(cut.reports[0].gov.subsidy).toBeLessThan(base.reports[0].gov.subsidy); // January includes the new ceiling from day 2
     runUntil(base, 2027, 4, 1, 1); runUntil(cut, 2027, 4, 1, 1);
     expect(cut.reports.at(-1)!.gov.subsidy).toBeLessThan(base.reports.at(-1)!.gov.subsidy * 0.2);
     expect(cut.indicators.cpi).toBeGreaterThan(base.indicators.cpi);

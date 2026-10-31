@@ -88,12 +88,11 @@ describe('dated Malaysia opening, with separate legacy calibration', () => {
 });
 
 describe('import tariffs and funded export services', () => {
-  it('settles January under the old policy and includes later tariffs/support in exact treasury reconciliation', () => withoutEvents(() => {
+  it('applies from the next day and includes later tariffs/support in exact treasury reconciliation', () => withoutEvents(() => {
     const s = createGame(710);
     expect(act(s, { type: 'queueTrade', tariff: 0.1, exportBudgetMonthly: 100e6 }).ok).toBe(true);
     runUntil(s, 2027, 2, 1);
-    expect(s.reports[0].gov.importTariff).toBe(0);
-    expect(s.reports[0].gov.exportSupport).toBe(0);
+    expect(s.reports[0].gov.importTariff).toBeGreaterThan(0);
     expect(s.trade.policy.tariff).toBe(0.1);
     runUntil(s, 2027, 3, 1);
     const r = s.reports[1];

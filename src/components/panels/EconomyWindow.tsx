@@ -114,7 +114,8 @@ function Summary({ g, balance, label }: { g: GameState; balance: number; label: 
           <Line label="Treasury balance" value={fullMoneyMinor(g.government.treasury)} />
           <div data-testid="bottom-fund-cash"><Line label="Sovereign fund cash" value={`${fullMoneyMinor(g.fund.myrCash)} · ${fullMoneyMinor(g.fund.usdCash, 'USD')}`} /></div>
           <Line label="Public debt" value={money(debtMYR(g.government))} />
-          <p className="econ-note">Treasury cash is separate from the sovereign fund and central-bank reserves.</p>
+          <div data-testid="bottom-bnm-reserves"><Line label="BNM FX reserves (not spendable)" value={money(g.centralBank.usdReserves / 100, 'USD')} /></div>
+          <p className="econ-note">Treasury cash is the government&apos;s working float, refilled by receipts and borrowing. It is separate from the sovereign fund and from BNM&apos;s foreign-currency reserves, which only back FX operations.</p>
         </Detail>
         <Detail title={`Fiscal flows · ${label}`}>
           <Line label="Revenue" value={money(revenueOf(flows))} tone="in" />
@@ -172,7 +173,7 @@ function Budget({ g, balance, label }: { g: GameState; balance: number; label: s
           <Line label="In force" value={money(isDev ? g.fiscal.developmentAnnual / 12 : pol[sel])} tone="out" />
           <Line label="Opening (Budget 2027)" value={money(opening)} />
         </div>
-        <button className="btn btn-primary" disabled={Math.abs(value - current) < 1} onClick={apply} data-testid="econ-budget-apply">{isDev ? 'Queue from next month' : 'Queue from tomorrow'}</button>
+        <button className="btn btn-primary" disabled={Math.abs(value - current) < 1} onClick={apply} data-testid="econ-budget-apply">Queue from tomorrow</button>
       </Detail>
       <div className="econ-info">
         <div className="econ-info-head"><span className="econ-info-icon" style={{ color: LINE_COLOR[sel] }}><HudIcon name={BUDGET_INFO[sel].icon} size={34} /></span><h3>{isDev ? 'DEVELOPMENT' : BUDGET_LABELS[sel].toUpperCase()}</h3></div>
@@ -226,7 +227,7 @@ function Taxation({ g, balance, label }: { g: GameState; balance: number; label:
       <div className="econ-info">
         <div className="econ-info-head"><span className="econ-info-icon" style={{ color: LINE_COLOR[sel] }}><HudIcon name="policies" size={34} /></span><h3>{meta.label.toUpperCase()}</h3></div>
         <p>{meta.hint}</p>
-        <p>The estimate holds demand, prices and profits fixed. Real receipts also move as the economy responds, and every change takes effect on the 1st of next month.</p>
+        <p>The estimate holds demand, prices and profits fixed. Real receipts also move as the economy responds, and every change takes effect tomorrow.</p>
       </div>
     </div>
   );

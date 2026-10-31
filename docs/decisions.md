@@ -458,3 +458,14 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   projections, separate from maximum exposure and unpaid calls. Add opt-in deal alerts and unfinished-contract
   reporting. Later fictional cohorts arrive every 90 days without touching existing random streams. Schema-9 model-3
   saves may enable new agreements prospectively; older models retain their disabled rules.
+
+- **D-072 Next-day policy, instalments and reserve display (user request).** Every player policy (taxes, trade tariff and
+  export support, partner surcharges, commodity policy, development expenditure and the labour/capital/green levers) now
+  takes effect at the next 00:00 KL, like budgets; previously these waited for the 1st of next month. Ministry plans and
+  sector incentives keep their monthly schedule. Companies now pay corporate tax in daily instalments of 80% of the last closed
+  month's bill (the opening modelled bill in month one); month close settles only the difference, so total tax is
+  unchanged while the treasury no longer sags for two weeks and triggers bridge borrowing. The treasury readout is
+  explained as the government's spendable working float (federal deposits), not income, with days of outlays covered; BNM's
+  US$116.4bn FX reserve is shown beside it in the treasury card and the Economy summary, marked not spendable (D-022).
+  Budget sliders show compact RM (RM3.41bn) instead of raw millions.
+

@@ -246,9 +246,10 @@ export function applyCommand(s: GameState, cmd: Command, atMin: number): Command
   return res;
 }
 
-function firstOfNextMonth(atMin: number): number {
+/** Policy decisions take effect at the start of the next KL day (D-072). */
+function tomorrowStart(atMin: number): number {
   const p = klParts(atMin);
-  return p.month === 12 ? klToEpochMin(p.year + 1, 1, 1) : klToEpochMin(p.year, p.month + 1, 1);
+  return klToEpochMin(p.year, p.month, p.day) + 1440;
 }
 
 function dispatch(s: GameState, cmd: Command, atMin: number): CommandResult {
@@ -281,7 +282,7 @@ function dispatch(s: GameState, cmd: Command, atMin: number): CommandResult {
       // Subsidy cuts are politically costly, as in every country that has tried them.
       if (patch.fuelCeiling !== undefined && patch.fuelCeiling > cur.fuelCeiling) s.policyChurn += ((patch.fuelCeiling - cur.fuelCeiling) / cur.fuelCeiling) * 25;
       if (patch.fuelEligible !== undefined && patch.fuelEligible < cur.fuelEligible) s.policyChurn += (cur.fuelEligible - patch.fuelEligible) * 12;
-      return queue(s, 'commodity', patch, `Commodities: ${parts.join('; ')}`, firstOfNextMonth(atMin), atMin);
+      return queue(s, 'commodity', patch, `Commodities: ${parts.join('; ')}`, tomorrowStart(atMin), atMin);
     }
     case 'setDevelopment': {
       if (!s.world.enabled) return { ok: false, message: 'The development budget is modelled in new Malaysia campaigns.' };
@@ -289,7 +290,7 @@ function dispatch(s: GameState, cmd: Command, atMin: number): CommandResult {
       const annual = Math.round(cmd.annual / 1e8) * 1e8;
       const pendingDev = gov.pending.filter((p) => p.kind === 'development').at(-1)?.patch as { annual: number } | undefined;
       if (annual === (pendingDev?.annual ?? s.fiscal.developmentAnnual)) return { ok: false, message: 'No change to queue.' };
-      return queue(s, 'development', { annual }, `Development expenditure RM${(annual / 1e9).toFixed(1)}bn a year`, firstOfNextMonth(atMin), atMin);
+      return queue(s, 'development', { annual }, `Development expenditure RM${(annual / 1e9).toFixed(1)}bn a year`, tomorrowStart(atMin), atMin);
     }
     case 'setFiscalRule': {
       if (!s.world.enabled) return { ok: false, message: 'Fiscal rules apply to new Malaysia campaigns.' };
@@ -310,7 +311,7 @@ function dispatch(s: GameState, cmd: Command, atMin: number): CommandResult {
       const pend = gov.pending.filter((p) => p.kind === 'partner' && (p.patch as { partner: PartnerId }).partner === cmd.partner).at(-1)?.patch as { tariff: number } | undefined;
       if (tariff === (pend?.tariff ?? s.world.partners[cmd.partner].ourTariff)) return { ok: false, message: 'No change to queue.' };
       if (tariff > 0) s.world.partners[cmd.partner].negotiationDoneDay = null;
-      return queue(s, 'partner', { partner: cmd.partner, tariff }, `Surcharge on imports from ${PARTNER_NAMES[cmd.partner]}: ${(tariff * 100).toFixed(1)}%`, firstOfNextMonth(atMin), atMin);
+      return queue(s, 'partner', { partner: cmd.partner, tariff }, `Surcharge on imports from ${PARTNER_NAMES[cmd.partner]}: ${(tariff * 100).toFixed(1)}%`, tomorrowStart(atMin), atMin);
     }
     case 'negotiateAgreement': {
       const r = startNegotiation(s, cmd.partner, atMin);
@@ -343,7 +344,7 @@ function dispatch(s: GameState, cmd: Command, atMin: number): CommandResult {
       const pending = gov.pending.filter(p => p.kind === 'trade').at(-1)?.patch;
       const current = { ...s.trade.policy, ...pending };
       if (patch.tariff === current.tariff && patch.exportBudgetMonthly === current.exportBudgetMonthly) return { ok: false, message: 'No change to queue.' };
-      return queue(s, 'trade', patch, `Trade: tariff ${(patch.tariff * 100).toFixed(1)}%, export support RM ${(patch.exportBudgetMonthly / 1e6).toFixed(0)}m/month`, firstOfNextMonth(atMin), atMin);
+      return queue(s, 'trade', patch, `Trade: tariff ${(patch.tariff * 100).toFixed(1)}%, export support RM ${(patch.exportBudgetMonthly / 1e6).toFixed(0)}m/month`, tomorrowStart(atMin), atMin);
     }
     case 'setLever': {
       const err = setLever(s, cmd.lever, cmd.value, atMin);
@@ -369,7 +370,7 @@ function dispatch(s: GameState, cmd: Command, atMin: number): CommandResult {
         else s.policyChurn += 0.5;
       }
       if (!parts.length) return { ok: false, message: 'No change to queue.' };
-      return queue(s, 'tax', patch, parts.join('; '), firstOfNextMonth(atMin), atMin);
+      return queue(s, 'tax', patch, parts.join('; '), tomorrowStart(atMin), atMin);
     }
     case 'queueBudget': {
       const patch: Partial<BudgetPolicy> = {};
@@ -391,8 +392,7 @@ function dispatch(s: GameState, cmd: Command, atMin: number): CommandResult {
         s.controls.plans = s.controls.plans.filter((pl) => !(pl.category in patch));
         parts.push(`replaces ${replaced.map((pl) => BUDGET_LABELS[pl.category]).join(', ')} ministry plan`);
       }
-      const p = klParts(atMin);
-      return queue(s, 'budget', patch, parts.join('; '), klToEpochMin(p.year, p.month, p.day) + 1440, atMin);
+      return queue(s, 'budget', patch, parts.join('; '), tomorrowStart(atMin), atMin);
     }
     case 'setBorrowing': {
       const b = { ...gov.policies.borrowing, ...cmd.patch };

@@ -29,13 +29,13 @@ test('shows full cash balances beside month close and exposes dated national sou
   await expect(cash).toBeVisible();
 });
 
-test('queues trade at month boundary, settles reserve-backed FX and reconciles the new flows', async ({ page }) => {
+test('queues trade for tomorrow, settles reserve-backed FX and reconciles the new flows', async ({ page }) => {
   await startCampaign(page);
   await page.getByTestId('nav-trade').click();
   await page.getByTestId('trade-tariff').fill('10');
   await page.getByTestId('export-support').fill('100');
   await page.getByTestId('queue-trade').click();
-  await expect(page.getByRole('dialog')).toContainText('1st of next month');
+  await expect(page.getByRole('dialog')).toContainText('tomorrow');
   await page.getByTestId('confirm-btn').click();
   const before = await page.evaluate(() => (window as unknown as Dev).__klDev.state());
   expect(before.trade.policy.tariff).toBe(0);
@@ -49,7 +49,7 @@ test('queues trade at month boundary, settles reserve-backed FX and reconciles t
   expect(after.centralBank.usdReserves).toBe(before.centralBank.usdReserves - 100e6 * 100);
   await runHours(page, 31 * 24 - 8);
   const closed = await page.evaluate(() => (window as unknown as Dev).__klDev.state());
-  expect(closed.reports[0].gov.importTariff).toBe(0);
+  expect(closed.reports[0].gov.importTariff).toBeGreaterThan(0);
   expect(closed.trade.policy.tariff).toBe(0.1);
   await runHours(page, 28 * 24);
   const feb = await page.evaluate(() => (window as unknown as Dev).__klDev.state());
