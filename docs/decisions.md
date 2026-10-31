@@ -595,6 +595,31 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   next month. (5) A 15-day skip never goes past the end of the term. Undo: the pre-skip state is serialized, written to
   the autosave slot and also held in memory (later pause autosaves overwrite the slot), and is dropped when play resumes.
   Normal speeds stay at 1/2/3/5 and the 250 ms clamp is unchanged. Skipping changes no economic rule.
+- **D-084 Infrastructure capacity in Boom mode (user request, PROJECT_SPEC §27).** Game design, not an estimate.
+  `src/data/infrastructure.ts`, `src/engine/infrastructure.ts`; state `GameState.infra` (created for new Boom games only;
+  absent in realistic campaigns and in older saves, which stay unconstrained, so there is no schema bump).
+  Three networks open at load 1.00 with capacity 1.25. Load = (30-day smoothed real GDP ÷ opening) ^ elasticity (power
+  0.85, transport 0.70); housing = workforce ratio × (GDP per worker ratio)^0.5. Overload `x = max(0, load/capacity − 1)`
+  cuts each sector's output capacity by `1/(1 + 1.2 × Σ weight × x)`, floored at 0.35; the daily economy reads the
+  multiplier computed the day before. The player orders +0.25, +0.50 or +1.00 capacity (`buildInfra`, up to four builds per
+  network) which is paid evenly over 12–24 months through the treasury's capex (buying construction, industry and tech
+  output) and adds capacity only when fully paid; `cancelInfra` sinks money already spent. Cost per +1.00 is 6–8% of the
+  opening nominal GDP × price level × (real size ratio)^0.5, so it stays a real but not overwhelming charge as the
+  economy grows. The panel shows load, capacity, builds under way and the load expected in about 18 months on the current
+  trend. Effects measured on the seed-2027 ten-year Boom run with FDI approved: a player who never builds reaches about
+  US$1.8tn by Dec 2029 and US$27tn by Dec 2036; one who orders capacity ahead reaches about US$2.4tn and US$54tn, with
+  debt near the RM85tn limit. Bottlenecks raise the year-two inflation hump to about 11–12% (was 8%), so the Boom
+  inflation test bound is now 14%. The test `infraAutopilot` helper is the reference competent player.
+- **D-085 Peer ladder and rival board (user request, PROJECT_SPEC §28).** `PEERS` in `src/data/countries.ts` holds the
+  49 economies ranked 11th–60th (Canada … Slovakia) by IMF WEO Oct 2026 NGDPD 2026, with the same indicators as `RIVALS`
+  (GDP 2026–28, 2027 growth and inflation, 2026 current account, population), pulled from the IMF DataMapper API on
+  1 Nov 2026 (same vintage as D-059; Malaysia's 547.1 matches). All move with the simulated global cycle. They are
+  deliberately NOT in `RIVALS`, so the standing score, `gapToTopTen` and the 11-row Global standing table are unchanged.
+  `peerBoard` ranks Malaysia among all 60 and `peerWindow` returns five rows, two above and two below (shifted at the
+  ends of the ladder). The HUD board (`RivalsBoard`, top right under the settings row, clicking opens Global standing)
+  shows rank, economy, GDP and the gap to Malaysia, and appears only where the board exists (new Malaysia campaigns).
+  Opening US$497bn puts Malaysia 38th, with the Philippines $5bn ahead and Denmark $3bn. Rivals beyond 2028 keep their
+  2027–28 growth rate, as before. Iran, Iraq and Ukraine appear because the IMF lists them; their paths are the IMF's, not a judgement.
 - **D-086 Deal Room clarity, looser deals, monthly GDP reasons (user request, PROJECT_SPEC §29).**
   *Looser negotiation:* `DEAL_ROUNDS` 3 → 6 for every deal kind; takeover rival premium 1.08–1.25 → 1.00–1.06 (same single
   random draw, so streams are unchanged), counter premium +0.01 → +0.005, bid floor 1.05 → 0.90; supply duration premium
@@ -608,4 +633,4 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   *Charts:* `bnTick` formats billions as RM850bn then RM1.4tn. *Monthly GDP* (`src/engine/gdp-history.ts`) is derived from
   closed reports, so older saves work: per month, US$ run rate at that month's FX, the move split into output (valued at last
   month's rate) and ringgit rate, top two sector movers in ringgit, real output and CPI change, and the first active shock.
-- **D-087 Boom mode FDI: 1-month builds and more offers (user request).** In Boom mode every new FDI pledge builds in `BOOM.fdiBuildMonths` = 1 month (the Deal Room "months to build" slider goes down to 1), the climate gets +`BOOM.fdiAttractiveness` = 10 points, and the weekly arrival hazard is capped at 0.9 (multiplier stays 4). Realistic mode is unchanged. Instant builds front-load demand, so the year-two inflation hump rises to about 14% (the boom test bound is now 15%) and year-three GDP reaches about US$2.5tn.
+- **D-087 Boom mode FDI: 1-month builds and more offers (user request).** In Boom mode every new FDI pledge builds in `BOOM.fdiBuildMonths` = 1 month (the Deal Room "months to build" slider goes down to 1), the climate gets +`BOOM.fdiAttractiveness` = 10 points, and the weekly arrival hazard is capped at 0.9 (multiplier stays 4). Realistic mode is unchanged. Instant builds front-load demand, so the year-two inflation hump rises to about 14% (about 16% with the D-084 infrastructure bottlenecks; the boom test bound is 16%) and year-three GDP reaches about US$2.5tn.

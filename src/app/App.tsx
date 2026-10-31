@@ -13,7 +13,9 @@ import { CommoditiesPanel } from '../components/panels/CommoditiesPanel';
 import { FiscalPanel } from '../components/panels/FiscalPanel';
 import { PartnersPanel } from '../components/panels/PartnersPanel';
 import { GdpHistoryPanel } from '../components/panels/GdpHistoryPanel';
+import { RivalsBoard } from '../components/hud/RivalsBoard';
 import { SoePanel } from '../components/panels/SoePanel';
+import { InfrastructurePanel } from '../components/panels/InfrastructurePanel';
 import { Component, useEffect, useState, type ReactNode } from 'react';
 import { BottomBar } from '../components/hud/BottomBar';
 import { LeftRail } from '../components/hud/LeftRail';
@@ -54,6 +56,7 @@ const PANELS: Record<PanelId, () => ReactNode> = {
   partners: () => <PartnersPanel />,
   soe: () => <SoePanel />,
   gdphistory: () => <GdpHistoryPanel />,
+  infra: () => <InfrastructurePanel />,
   trade: () => <TradePanel />,
   ministry: () => <TradeMinistryPanel />,
   central: () => <CentralBankPanel />,
@@ -112,7 +115,10 @@ export function App() {
           <div className={`panel-slot min-h-0 ${panel === 'markets' ? 'panel-slot-wide' : ''}`}>
             {panel && <ErrorBoundary label="Panel">{PANELS[panel]()}</ErrorBoundary>}
           </div>
-          {selection?.kind === 'company' && <div className="company-slot min-h-0 ml-auto"><ErrorBoundary label="Company panel"><CompanyPanel key={selection.id} id={selection.id} /></ErrorBoundary></div>}
+          <div className="ml-auto flex min-h-0 flex-col items-end gap-2">
+            <ErrorBoundary label="Rival economies"><RivalsBoard /></ErrorBoundary>
+            {selection?.kind === 'company' && <div className="company-slot min-h-0"><ErrorBoundary label="Company panel"><CompanyPanel key={selection.id} id={selection.id} /></ErrorBoundary></div>}
+          </div>
         </div>
         {panel === 'finance' && <ErrorBoundary label="Economy window"><EconomyWindow /></ErrorBoundary>}
         <div className="bottom-dock pointer-events-auto">

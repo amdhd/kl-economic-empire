@@ -1,5 +1,5 @@
 import { MALAYSIA_IMF } from '../../data/countries';
-import { gapToTopTen, standingBoard, standingComponents } from '../../engine/standing';
+import { gapToTopTen, peerWindow, standingBoard, standingComponents } from '../../engine/standing';
 import { useGameState } from '../../store/game-store';
 import { pct } from '../../utils/format';
 import { Bar, Section, Stat } from '../ui';
@@ -37,6 +37,15 @@ export function StandingPanel() {
           ))}</tbody>
         </table>
         <p className="mt-2 text-[11px] text-slate-400">Rivals: IMF World Economic Outlook (Oct 2026) GDP for 2026–28, real growth and inflation for 2027, current account for 2026, moved by the simulated US/global cycle and events. Malaysia: simulated nominal GDP at the simulated ringgit; growth is year-on-year once a year has passed; its external balance is the model's reduced sector trade account. The campaign opens from 2025 official GDP, so Malaysia starts below the IMF's 2026 estimate of ${MALAYSIA_IMF.gdpUsd2026.toFixed(0)}bn.</p>
+      </Section>
+      <Section title="Rivals near you · economies ranked 11th–60th are included">
+        <table className="w-full text-[12px]" data-testid="peer-table">
+          <tbody>{peerWindow(g).map(r => (
+            <tr key={r.id} className={r.isMalaysia ? 'bg-emerald-400/15 font-semibold text-white' : ''}>
+              <td className="py-0.5">{r.rank}</td><td>{r.flag} {r.name}</td><td className="num text-right">{usd(r.gdpUsd)}</td><td className="num text-right">{r.growthPct.toFixed(1)}% growth</td>
+            </tr>
+          ))}</tbody>
+        </table>
       </Section>
       <Section title="Closing the gap">
         <div className="mb-1 text-[12.5px]">Malaysia is {pct(gap.ratio, 0)} the size of the 10th economy ({usd(gap.tenth)}).</div>
