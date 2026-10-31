@@ -1,0 +1,33 @@
+import { expect, test } from '@playwright/test';
+import { startCampaign } from './helpers';
+import type { GameState } from '../src/types/game';
+type Dev = { __klDev: { state: () => GameState } };
+const state = (page: import('@playwright/test').Page) => page.evaluate(() => (window as unknown as Dev).__klDev.state());
+
+test('central bank panel: take control of the rate, tighten banks, buy bonds, issue bills and share reserve income', async ({ page }) => {
+  await startCampaign(page);
+  await page.getByTestId('nav-central').click();
+  await expect(page.getByTestId('panel')).toContainText('Central bank');
+  await page.getByTestId('cb-mode-manual').click();
+  await page.getByTestId('cb-target').fill('0.02');
+  await page.getByTestId('cb-set-target').click();
+  await page.getByTestId('confirm-btn').click();
+  let s = await state(page);
+  expect(s.centralBank.mode).toBe('manual');
+  expect(s.centralBank.targetOpr).toBeCloseTo(0.02, 9);
+  await page.getByTestId('cb-srr').fill('0.04');
+  await page.getByTestId('cb-set-srr').click();
+  await page.getByTestId('confirm-btn').click();
+  await page.getByTestId('cb-buy-bonds').click();
+  await page.getByTestId('confirm-btn').click();
+  await page.getByTestId('cb-issue-bills').click();
+  await page.getByTestId('confirm-btn').click();
+  await page.getByTestId('cb-remit').fill('0.5');
+  await page.getByTestId('cb-set-remit').click();
+  await page.getByTestId('confirm-btn').click();
+  s = await state(page);
+  expect(s.centralBank.srr).toBeCloseTo(0.04, 9);
+  expect(s.centralBank.qeHoldings).toBe(10e9);
+  expect(s.centralBank.bills).toBe(10e9 * 100);
+  expect(s.centralBank.remitShare).toBeCloseTo(0.5, 9);
+});

@@ -6,6 +6,7 @@ const paths: Record<string, string> = {
   projects: 'M3 21h18M5 21V5h10v16M9 9h2m-2 4h2m-2 4h2m4-5h4v9',
   debt: 'm3 8 9-5 9 5H3Zm2 4v6m7-6v6m7-6v6M3 21h18',
   controls: 'M4 6h16M4 12h16M4 18h16M8 3v6m8 0v6M9 15v6',
+  central: 'm3 9 9-6 9 6H3Zm2 3v6m4-6v6m6-6v6m4-6v6M3 21h18M12 7h.01',
   trade: 'M3 7h17l-4-4m5 14H4l4 4M20 7l-4 4M4 17l4-4',
   markets: 'M3 3v18h18M6 15l5-5 4 3 6-8',
   fund: 'M8 7V4h8v3M3 7h18v13H3V7Zm0 6h18m-11-2h4v4h-4',

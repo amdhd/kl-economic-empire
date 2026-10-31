@@ -7,7 +7,7 @@ import { createGame, SCHEMA_VERSION } from '../engine/game';
 import { COMMODITY_IDS } from '../data/world';
 import { COMPANIES } from '../data/companies';
 import { LEGACY_BASELINE, SECTOR_IDS } from '../data/economic-baseline';
-import { initialCentralBank } from '../engine/trade-fx';
+import { initialCentralBank, neutralMonetaryPolicy } from '../engine/trade-fx';
 import { initialFiscal, validateFiscal } from '../engine/fiscal-rules';
 import { initialSoe, validateSoe } from '../engine/soe';
 import { initialWorld, validateCommodityPolicy, validateWorld } from '../engine/world';
@@ -55,6 +55,13 @@ const MIGRATIONS: Record<number, Migration> = {
     const s = state as unknown as GameState;
     s.deals ??= initialDeals(s.seed, false, s.scheduler.lastDay);
     for (const f of [s.government.mtd, ...s.reports.map(r => r.gov)]) { f.dealEscrowOut = 0; f.dealEscrowIn = 0; }
+    return state;
+  },
+  // v11 → v12: central-bank monetary policy. Existing campaigns stay on the automatic rule with neutral settings.
+  11: state => {
+    const s = state as unknown as GameState;
+    const cb = s.centralBank as unknown as Record<string, unknown>;
+    for (const [k, v] of Object.entries({ ...neutralMonetaryPolicy(), targetOpr: s.external.opr })) cb[k] ??= v;
     return state;
   },
   // v10 → v11: progressive income tax. Existing campaigns keep their flat surcharge (no `pit` flag); the new rate
