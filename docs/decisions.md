@@ -573,4 +573,4 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   them as much), so the multiplier harness's 4-quarter spending multiplier and residual-gap guards are now checked on the
   two-seed mean (both still pass), and one FX lever test's per-seed threshold reflects its measured 1.2–2.0% range.
   Combined with D-078, the sacrifice ratio's 4-seed mean moves from 4.19 to 4.51 (seeds 3.6–5.0; published 0.5–4), so its
-  guard is now a two-seed mean ≤ 5.0. This widens D-078's documented gap and awaits the user's acceptance.
+  guard is now a two-seed mean ≤ 5.0. This widens D-078's documented gap; the user accepted it (1 Nov 2026).
