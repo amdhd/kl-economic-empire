@@ -519,3 +519,14 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   "Imported inputs". The score is unchanged (standing uses exports only); the displayed trade balance and current account fall.
   (6) **Startup liquidation** pays proceeds to the deal's owner (the SWF for startups) and realises the SWF gain or loss once;
   it previously paid Khazanah.
+
+- **D-077 Trade ministry (user request, schema 13).** The user asked to act as trade secretary: import/export charts at real
+  trillion-ringgit scale, product deals, export promotion and buyer contracts. The core calibration's "exports" are a
+  final-demand residual (about RM0.8tn, more than half rest-of-Malaysia demand from the KL era), so the user chose a
+  **separate trade layer** over recalibrating the core: a product-level ledger at official 2025 levels (MITI goods, DOSM
+  services) driven by the simulation's own cycles, prices, FX and partner access. Only policy-won exports (at their
+  domestic content) and concession displacement feed back into GDP, so an untouched campaign is identical to before
+  (tested), and cyclical moves are not counted twice. Product deals live in the ministry panel (no public money);
+  buyer contracts are a new Deal Room kind `export` with a performance bond in escrow. Commodities are excluded from
+  product deals (world prices). The score formula is unchanged; the standing board's current account now uses the ledger.
+  Model-3 saves migrate by opening the ledger from today; earlier models keep it off. Magnitudes are documented assumptions.

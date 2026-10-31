@@ -1,6 +1,6 @@
 import type { RngState, SectorId } from './game';
 export type DealKind =
-  'diligence' | 'investment' | 'concession' | 'supply' | 'startup' | 'rescue' | 'takeover';
+  'diligence' | 'investment' | 'concession' | 'supply' | 'startup' | 'rescue' | 'takeover' | 'export';
 export type DealStatus =
   'opportunity' | 'negotiating' | 'agreed' | 'active' | 'completed' | 'rejected' | 'expired' | 'failed';
 export type DealPayer = 'treasury' | 'fund' | 'strategic';
@@ -44,6 +44,9 @@ export interface Deal {
   enterprise?: PrivateEnterprise;
   investedMinor?: number;
   volume?: number;
+  /** Export buyer contracts (D-077): the product sold, its spot price index at signing, and penalties charged. */
+  product?: import('../data/trade').ExportProductId;
+  penaltyMinor?: number;
   delivered?: number;
   lockedPrice?: number;
   effectInfra?: Partial<Record<SectorId, number>>;

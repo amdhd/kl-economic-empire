@@ -1051,3 +1051,11 @@ The user asked to control the policy rate and other central-bank tools, and to u
 §8 rule that the OPR stays exogenous. The automatic rule remains the default; manual control is bounded by MPC meeting dates, step
 limits and a credibility cost. Reserve operations still cannot be spent on the budget. See D-075 and `docs/economy-model.md`.
 
+## 23. User amendment — trade ministry (1 November 2026)
+
+The user asked to act as trade secretary: see Malaysia's imports and exports at real scale with charts, negotiate deals and
+grow exports of specific products (electronics, services, steel and others). New Malaysia campaigns add a trade-ministry
+ledger at official 2025 levels (MITI/DOSM, pinned in `docs/data-sources.md`), export promotion programmes, product trade
+deals with partners and export buyer contracts in the Deal Room. Buyers are fictional and everything after the opening is a
+simulation. The opening economy and the score formula are unchanged. See D-077 and `docs/economy-model.md`.
+

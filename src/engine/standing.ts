@@ -6,6 +6,7 @@ import { baselineFor } from '../data/economic-baseline';
 import type { GameState } from '../types/game';
 import { cycleDeviation } from './external';
 import { clamp } from './util';
+import { tradeRunRate } from './trade-book';
 
 /** Years of game time since the campaign opened (1 Jan 2027). */
 export const yearsElapsed = (s: GameState) => Math.max(0, s.external.daysElapsed / 365);
@@ -32,7 +33,8 @@ export function standingBoard(s: GameState): StandingRow[] {
   const open = s.fdi?.standing[0];
   const growthPct = s.indicators.realGrowthYoY ? s.indicators.realGrowthYoY * 100 : MALAYSIA_IMF.realGrowth2027;
   const tradeBalance = s.trade.history.slice(-12);
-  const ca = tradeBalance.length ? 100 * tradeBalance.reduce((a, m) => a + m.exports - m.imports, 0) * (12 / tradeBalance.length) / Math.max(1, s.indicators.nominalGdpAnnual) : MALAYSIA_IMF.currentAccount2026;
+  // With the trade ledger (D-077) the goods-and-services balance comes from official-level trade, not the core residual.
+  const ca = s.tradeBook?.enabled && s.tradeBook.history.length ? 100 * tradeRunRate(s).balance / Math.max(1, s.indicators.nominalGdpAnnual) : tradeBalance.length ? 100 * tradeBalance.reduce((a, m) => a + m.exports - m.imports, 0) * (12 / tradeBalance.length) / Math.max(1, s.indicators.nominalGdpAnnual) : MALAYSIA_IMF.currentAccount2026;
   rows.push({ id: 'MYS', name: 'Malaysia (you)', flag: '🇲🇾', gdpUsd: my, growthPct, inflationPct: s.indicators.inflationYoY * 100, currentAccountPct: ca,
     perCapita: my * 1e9 / s.households.population, currencyPct: open ? 100 * (open.myrPerUsd / s.external.myrPerUsd - 1) : 0, isMalaysia: true, rank: 0 });
   rows.sort((a, b) => b.gdpUsd - a.gdpUsd).forEach((r, i) => (r.rank = i + 1));

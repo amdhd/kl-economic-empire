@@ -6,6 +6,9 @@ import { concessionOffers } from './concessions';
 import { syncInvestmentDeals } from './investment-deals';
 import type { Deal } from '../types/deals';
 import { initialDeals, addDeal, dealCommand, offerDeal } from './deals';
+import { exportOffers } from './export-contracts';
+import { initialTradeBook, setProgramme, tradeDealCommand, type TradeDealAction } from './trade-book';
+import type { ProgrammeId } from '../data/trade';
 // Game construction, typed player commands, and the real-time driver.
 import { initialControls, controlCommand } from './policy-controls';
 import { COMPANIES } from '../data/companies';
@@ -43,7 +46,7 @@ import { seedRng } from './rng';
 import { klDay, klParts, klToEpochMin, monthKey } from './time';
 import { clamp, news, pushBounded, toMinor } from './util';
 
-export const SCHEMA_VERSION = 12;
+export const SCHEMA_VERSION = 13;
 export const START = { year: 2027, month: 1, day: 1, hour: 8 };
 export const CAMPAIGN_MONTHS = 24;
 
@@ -163,6 +166,7 @@ function createWithProfile(seed: number, scenario: ScenarioId, profile: 'malaysi
   s.market = initialMarket(s);
   seedHistory(s, startDay);
   s.indicators.cpi = computeCpi(s);
+  s.tradeBook = initialTradeBook(s, s.fdi.enabled && s.world.enabled);
   s.scheduler.startNav = navMYR(s);
   s.soe.openingEquity = soeEquity(s);
   if (s.world.enabled) seedWorldHistory(s.world, seed, startDay);
@@ -186,6 +190,7 @@ function createWithProfile(seed: number, scenario: ScenarioId, profile: 'malaysi
   enterpriseOffers(s);
   rescueOffers(s);
   takeoverOffers(s);
+  exportOffers(s);
   if (scenario === 'export-slump') startEvent(s, 'global_slowdown', startDay, 180, 1);
   if (scenario === 'energy-shock') startEvent(s, 'oil_spike', startDay, 90, 1);
   if (s.controls.plans.length) news(s, { kind: 'policy', tone: 'neutral', title: 'Inherited budget path', body: `Operating appropriations are indexed at ${(trend.budgetEscalation * 100).toFixed(0)}% a year, in monthly steps, roughly in line with trend nominal GDP. Development spending stays at its 2027 level. Review or cancel each ministry plan under Economic controls.` });
@@ -235,7 +240,9 @@ export type Command =
   | { type: 'fx'; from: Currency; amountMinor: number }
   | { type: 'setLever'; lever: LeverId; value: number }
   | { type: 'decidePledge'; id: number; approve: boolean; incentive: number }
-  | { type: 'rebalance'; targetMY: number; targetUS: number };
+  | { type: 'rebalance'; targetMY: number; targetUS: number }
+  | { type: 'exportProgramme'; programme: ProgrammeId; budgetAnnual: number }
+  | ({ type: 'tradeDeal' } & TradeDealAction);
 
 export interface CommandResult {
   ok: boolean;
@@ -259,11 +266,23 @@ function tomorrowStart(atMin: number): number {
 function dispatch(s: GameState, cmd: Command, atMin: number): CommandResult {
   const gov = s.government;
   switch (cmd.type) {
-    case 'enableDeals': { if(s.deals.enabled||!s.fdi.enabled)return {ok:false,message:'Deals are already enabled or this save uses an earlier economic model.'}; s.deals.enabled=true;s.deals.startDay=s.scheduler.lastDay;s.deals.lastOfferDay=s.scheduler.lastDay;addDeal(s,'advisory','diligence','Independent investment due diligence','treasury',250_000);syncInvestmentDeals(s);concessionOffers(s);supplyOffers(s);enterpriseOffers(s);rescueOffers(s);takeoverOffers(s);return {ok:true,message:'Deal Room enabled prospectively. Existing contracts keep their original terms.'}; }
+    case 'enableDeals': { if(s.deals.enabled||!s.fdi.enabled)return {ok:false,message:'Deals are already enabled or this save uses an earlier economic model.'}; s.deals.enabled=true;s.deals.startDay=s.scheduler.lastDay;s.deals.lastOfferDay=s.scheduler.lastDay;addDeal(s,'advisory','diligence','Independent investment due diligence','treasury',250_000);syncInvestmentDeals(s);concessionOffers(s);supplyOffers(s);enterpriseOffers(s);rescueOffers(s);takeoverOffers(s);exportOffers(s);return {ok:true,message:'Deal Room enabled prospectively. Existing contracts keep their original terms.'}; }
     case 'dealOffer': { const err=offerDeal(s,cmd.id,cmd.terms); return {ok:!err,message:err??'Counterparty response received.'}; }
     case 'deal': { const err = dealCommand(s, cmd.id, cmd.action); return { ok: !err, message: err ?? 'Deal updated.' }; }
     case 'sectorIncentive': case 'ministryPlan': case 'cancelMinistryPlan': case 'debtStrategy': case 'fxBand': return controlCommand(s, cmd, atMin);
     case 'interveneFx': return interveneFx(s, cmd.side, cmd.usdMinor, atMin);
+    case 'exportProgramme': {
+      const err = setProgramme(s, cmd.programme, cmd.budgetAnnual);
+      if (err) return { ok: false, message: err };
+      logPolicy(s, atMin, tomorrowStart(atMin), `Export programme: ${cmd.programme} RM${(cmd.budgetAnnual / 1e9).toFixed(2)}bn a year`);
+      return { ok: true, message: 'Programme budget set; spending and promotion start tomorrow and build over about five months.' };
+    }
+    case 'tradeDeal': {
+      const err = tradeDealCommand(s, cmd);
+      if (err) return { ok: false, message: err };
+      if (cmd.action !== 'offer') logPolicy(s, atMin, atMin, `Trade deal ${cmd.action}${cmd.action === 'propose' ? `: ${cmd.product} with ${PARTNER_NAMES[cmd.partner]}` : ` #${cmd.id}`}`);
+      return { ok: true, message: cmd.action === 'propose' ? 'Draft opened. The partner has named its price.' : cmd.action === 'offer' ? 'Partner response received.' : cmd.action === 'sign' ? 'Formal talks opened.' : 'Deal withdrawn.' };
+    }
     case 'cbPolicy': case 'cbBonds': case 'cbBills': {
       const err = cmd.type === 'cbPolicy' ? setMonetaryPolicy(s, cmd, atMin) : cmd.type === 'cbBonds' ? tradeBonds(s, cmd.amountMYR, atMin) : tradeBills(s, cmd.amountMYR, atMin);
       return err ? { ok: false, message: err } : { ok: true, message: 'Central-bank decision recorded.' };

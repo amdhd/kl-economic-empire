@@ -33,6 +33,7 @@ import { hourlyMarket } from './stock-market';
 import { reconcileMonth } from './reconciliation';
 import { daysInMonth, klDay, klDayStartMin, klParts, monthKey, monthKeyLabel } from './time';
 import { surchargeEquivalent } from './income-tax';
+import { monthCloseTradeBook, prepareTradeDay, recordTradeDay } from './trade-book';
 import { clamp, news, pushBounded } from './util';
 
 export function runHourTick(s: GameState): void {
@@ -88,10 +89,13 @@ function settleDay(s: GameState, day: number): AggregatedMods {
   const res = dailyResources(s, gov.purchases);
   // Schema 9: policy programmes and FDI build-out buy domestic output; imported FDI equipment is recorded as imports.
   dailyPolicy(s, gov.purchases);
-  s.trade.mtdImports += dailyFdi(s, gov.purchases).imports;
+  const fdiImports = dailyFdi(s, gov.purchases).imports;
+  s.trade.mtdImports += fdiImports;
   dailyDeals(s, day, gov.purchases, gov.paidFraction);
+  prepareTradeDay(s, day, gov.purchases);
   const e = daily(s, mods, gov);
   e.gdpNominal += res.gdpNominal;
+  recordTradeDay(s, { inputImports: e.inputImports, consumerImports: e.consumerImports, displaced: e.displaced, fdiImports, gdpNominal: e.gdpNominal });
   s.world.mtd.resourceVa += res.gdpNominal;
   e.gdpReal += res.gdpReal;
   // Households track listed-equity prices with a lag of a few weeks (wealth effect input).
@@ -239,6 +243,7 @@ function closeMonth(s: GameState, key: number, mods: AggregatedMods): void {
   s.trade.history.push({ monthKey: key, exports: s.trade.mtdExports, imports: s.trade.mtdImports, tariff: g.importTariff, support: g.exportSupport });
   monthClosePolicy(s, operatingStock(s, 'datacentre'));
   monthCloseFdi(s, key);
+  monthCloseTradeBook(s, key);
   s.trade.history = s.trade.history.slice(-60);
   s.trade.mtdExports = 0;
   s.trade.mtdImports = 0;

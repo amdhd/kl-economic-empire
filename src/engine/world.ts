@@ -11,6 +11,7 @@ import {
 import type { CommodityId, CommodityPolicy, GameState, PartnerId, PartnerState, WorldState } from '../types/game';
 import { rand, randInt, randnClipped, seedRng } from './rng';
 import { klDay } from './time';
+import { dealsInForce } from './trade-book';
 import { clamp, news, pushBounded } from './util';
 
 export const initialCommodityPolicy = (): CommodityPolicy => ({
@@ -139,7 +140,6 @@ export function weeklyWorld(s: GameState, today: number): void {
 // ------------------------------------------------------------------ partners
 function updatePartners(s: GameState, day: number): void {
   const w = s.world;
-  const e = s.external;
   for (const id of PARTNER_IDS) {
     const p = w.partners[id];
     if (p.retaliationDay !== null && day >= p.retaliationDay) {
@@ -157,18 +157,13 @@ function updatePartners(s: GameState, day: number): void {
         news(s, { kind: 'policy', tone: 'good', title: `Trade agreement upgraded with ${PARTNERS[id].name}`, body: `Lower non-tariff barriers: exports gain access, imports from this partner cost less.` });
       } else news(s, { kind: 'policy', tone: 'bad', title: `Talks with ${PARTNERS[id].name} collapsed`, body: 'Negotiations cannot conclude while tariffs are in dispute.' });
     }
-    // Relations drift back toward a level set by the dispute.
-    const target = 70 - 150 * p.ourTariff - 50 * p.theirTariff + 8 * p.agreement;
+    // Relations drift back toward a level set by the dispute; product deals in force (D-077) add goodwill.
+    const target = 70 - 150 * p.ourTariff - 50 * p.theirTariff + 8 * p.agreement + 4 * dealsInForce(s, id);
     p.relations += (clamp(target, 0, 100) - p.relations) / 60;
   }
   // Export access: partner demand cycles × tariff barriers × agreements, weighted by export shares.
   let access = 0;
-  for (const id of PARTNER_IDS) {
-    const m = PARTNERS[id];
-    const p = w.partners[id];
-    const cycle = w.cycles[`p_${id}`] + (m.usCycle ? (e.cycles.us ?? 0) - (e.cycles.global ?? 0) : 0);
-    access += m.exportShare * Math.exp(cycle) * Math.pow(1 + p.theirTariff, -EXPORT_TARIFF_ELASTICITY) * (1 + AGREEMENT_ACCESS * p.agreement);
-  }
+  for (const id of PARTNER_IDS) access += PARTNERS[id].exportShare * partnerAccessTerm(s, id);
   w.exportAccess = access;
   // CES import price across partners: tariffs divert purchases toward untariffed sources.
   const sigma = IMPORT_SUBSTITUTION;
@@ -183,6 +178,13 @@ function updatePartners(s: GameState, day: number): void {
   }
   w.importPriceIndex = Math.pow(denom, 1 / (1 - sigma));
   w.importDutyShare = spend > 0 ? duty / spend : 0;
+}
+
+/** One partner's export-access term: its demand cycle × its tariff on Malaysia × agreement tier (1 with no shocks). */
+export function partnerAccessTerm(s: GameState, id: PartnerId): number {
+  const w = s.world, e = s.external, m = PARTNERS[id], p = w.partners[id];
+  const cycle = w.cycles[`p_${id}`] + (m.usCycle ? (e.cycles.us ?? 0) - (e.cycles.global ?? 0) : 0);
+  return Math.exp(cycle) * Math.pow(1 + p.theirTariff, -EXPORT_TARIFF_ELASTICITY) * (1 + AGREEMENT_ACCESS * p.agreement);
 }
 
 /** Schedule the partner's response to a change in Malaysia's surcharge on its goods. */

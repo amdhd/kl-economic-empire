@@ -1,5 +1,6 @@
 import { dealExposure, quoteDealCommitment } from '../../engine/deal-report';
 import { supplyUnitPrice } from '../../engine/supply-contracts';
+import { buyerMaxPrice, deliveryShare, exportSpot, exportUnitPrice } from '../../engine/export-contracts';
 import { concessionQuote } from '../../engine/concessions';
 import { useState } from 'react';
 import { useGame, useGameState } from '../../store/game-store';
@@ -18,6 +19,7 @@ const DEAL_TAGS: Record<string, { tag: string; plain: string }> = {
   rescue: { tag: 'Bailout', plain: 'A struggling company needs help. We lend or buy shares to save it.' },
   diligence: { tag: 'Background check', plain: 'We study a company before deciding whether to deal with it.' },
   takeover: { tag: 'Buy a company', plain: 'We buy a controlling share of a private company.' },
+  export: { tag: 'Export sale', plain: 'A foreign buyer agrees to buy our goods every year at a set price. We post a bond and must deliver.' },
 };
 
 export function DealsPanel() {
@@ -155,6 +157,14 @@ export function DealsPanel() {
                 same loss and restore spot purchasing.
               </p>
             )}
+            {d.kind === 'export' && d.product && (
+              <p data-testid={`export-terms-${d.id}`}>
+                {money(d.volume ?? 0)} a year · {d.status === 'opportunity' || d.status === 'negotiating'
+                  ? `price ${(exportSpot(g, d.product) * d.terms.priceFactor).toFixed(3)} (spot ${exportSpot(g, d.product).toFixed(3)}); the buyer pays at most ${buyerMaxPrice(d.terms.months, d.terms.protection).toFixed(3)}× spot for these terms`
+                  : `contract price ${exportUnitPrice(g, d).toFixed(3)} vs spot ${exportSpot(g, d.product).toFixed(3)} · delivering ${Math.round(deliveryShare(g, d) * 100)}% · penalties paid ${money((d.penaltyMinor ?? 0) / 100)}`}.
+                {' '}Bond {money(d.priceMinor / 100)} returns at the end; leaving early forfeits half of it.
+              </p>
+            )}
             {d.enterprise && (
               <p>
                 Reference annual sales {money(d.enterprise.revenueAnnualMinor / 100)} · costs{' '}
@@ -165,7 +175,7 @@ export function DealsPanel() {
             <p className="text-slate-400">
               Decision deadline {klDayLabel(d.deadline)} · {d.note}
             </p>
-            {['investment', 'concession', 'supply', 'startup', 'rescue', 'takeover'].includes(d.kind) &&
+            {['investment', 'concession', 'supply', 'startup', 'rescue', 'takeover', 'export'].includes(d.kind) &&
               d.status === 'negotiating' && (
                 <div className="grid grid-cols-2 gap-2">
                   {(d.kind === 'investment'
@@ -190,6 +200,12 @@ export function DealsPanel() {
                           ] as const)
                         : d.kind === 'startup'
                           ? ([['stake', 'Share of startup we own', 0.1, 0.4, 0.05, 'Bigger share means more profit and control, but founders may refuse.', '%']] as const)
+                          : d.kind === 'export'
+                            ? ([
+                                ['months', 'Contract length (months)', 12, 60, 1, 'How long the buyer keeps buying. Longer fixed contracts make the buyer ask for a discount.', ''],
+                                ['priceFactor', 'Price vs today', 0.9, 1.15, 0.01, '1.00 is today\'s market price. Higher earns more, but the buyer may counter.', ''],
+                                ['protection', 'Price moves with market', 0, 1, 0.1, '0 means a fixed price. 1 means the price follows the market, up or down.', '%'],
+                              ] as const)
                           : d.kind === 'supply'
                             ? ([
                                 ['months', 'Contract length (months)', 3, 24, 1, 'How long the supplier must keep delivering.', ''],
@@ -328,7 +344,7 @@ export function DealsPanel() {
                 </button>
               )}
               {(d.status === 'agreed' ||
-                (['concession', 'supply'].includes(d.kind) && d.status === 'active')) && (
+                (['concession', 'supply', 'export'].includes(d.kind) && d.status === 'active')) && (
                 <button className="btn" onClick={() => askAction(d, 'cancel')}>
                   {d.status === 'active' ? 'Terminate contract' : 'Cancel before closing'}
                 </button>
@@ -377,7 +393,7 @@ export function DealsPanel() {
               : reviewAction === 'followOn'
                 ? `Follow-on cash needed ${money(20e6 * (review.enterprise?.publicShare ?? 0))}.`
                 : reviewAction === 'cancel'
-                  ? `Cancellation can charge ${money(review.kind === 'concession' && review.status === 'active' ? ((review.assetCostMinor ?? 0) * 0.1) / 100 : review.kind === 'supply' && review.status === 'active' ? (review.escrowMinor * 0.2) / 100 : 0)}. Existing arrears remain payable.`
+                  ? `Cancellation can charge ${money(review.kind === 'concession' && review.status === 'active' ? ((review.assetCostMinor ?? 0) * 0.1) / 100 : review.kind === 'supply' && review.status === 'active' ? (review.escrowMinor * 0.2) / 100 : review.kind === 'export' && review.status === 'active' ? Math.min(review.escrowMinor, review.priceMinor * 0.5) / 100 : 0)}. Existing arrears remain payable.`
                   : reviewAction === 'liquidate'
                     ? 'Capital sells at 40% recovery, limited by buyer cash. Senior public loans are paid before other creditors and shareholders. Unrecovered claims are written off.'
                     : reviewAction === 'dividend'

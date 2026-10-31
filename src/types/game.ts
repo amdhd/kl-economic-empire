@@ -552,6 +552,8 @@ export interface GameState {
   policy: PolicyState;
   /** Schema 9 (model 3): foreign direct investment pledges, pipeline and metrics (D-059). */
   fdi: FdiState;
+  /** Schema 13 (model 3): trade-ministry ledger at official 2025 levels, promotion programmes and product deals (D-077). */
+  tradeBook: TradeBookState;
   events: { active: ActiveEvent[]; nextId: number; log: ActiveEvent[] };
   indicators: Indicators;
   baseline: BaselineSnapshot;
@@ -564,6 +566,48 @@ export interface GameState {
   policyLog: { atMin: number; effectiveMin: number; label: string }[];
   /** Trust shocks from recent policy changes; decays monthly. */
   policyChurn: number;
+}
+
+export type TradeDealStatus = 'draft' | 'talks' | 'inForce' | 'collapsed' | 'withdrawn';
+/** A product chapter negotiated with one partner: we ask for access for `product` at depth `ask`; they ask us to open
+ * `concession` at depth `give`. */
+export interface TradeDeal {
+  id: number;
+  partner: PartnerId;
+  product: import('../data/trade').ExportProductId;
+  ask: 1 | 2;
+  concession: import('../data/trade').ConcessionId;
+  give: 0 | 1 | 2;
+  /** The concession and depth the partner currently demands; signing needs our offer to meet it. */
+  wanted: { concession: import('../data/trade').ConcessionId; give: 1 | 2 };
+  status: TradeDealStatus;
+  rounds: number;
+  createdDay: number;
+  concludeDay: number | null;
+  startDay: number | null;
+  note: string;
+}
+type ByProduct = Record<import('../data/trade').ExportProductId, number>;
+type ByImport = Record<import('../data/trade').ImportCategoryId, number>;
+export interface TradeMonth { monthKey: number; days: number; exports: ByProduct; imports: ByImport; partners: Record<PartnerId, number>; promotion: number; policyExports: number }
+export interface TradeBookState {
+  enabled: boolean;
+  /** Opening nominal GDP ÷ 2025 nominal GDP: carries 2025 official levels to the campaign opening. */
+  scale: number;
+  /** Driver levels when the ledger opened; the economy-side bases are captured on the first settled day. */
+  base: { drivers: Record<import('../data/trade').TradeDriver, number>; prices: Record<SectorId, number>; fx: number; fxUs: number; access: Record<PartnerId, number>;
+    inputImports: number; consumerImports: number; investment: number; gdp: number; captured: boolean };
+  programmes: Record<import('../data/trade').ProgrammeId, { budget: number; boost: number; next: { budget: number; fromDay: number } | null }>;
+  deals: TradeDeal[];
+  nextDealId: number;
+  /** Extra real export demand won by policy, per core sector and day (computed on the previous settlement). */
+  policyReal: Record<SectorId, number>;
+  /** Share of each sector's home demand lost to imports opened by concessions in force. */
+  displacement: Record<SectorId, number>;
+  /** The last settled day, MYR. */
+  day: { exports: ByProduct; imports: ByImport; partners: Record<PartnerId, number>; promotion: number; policyExports: number; importedContent: number };
+  mtd: TradeMonth;
+  history: TradeMonth[];
 }
 
 export interface TradePolicy { tariff: number; exportBudgetMonthly: number }

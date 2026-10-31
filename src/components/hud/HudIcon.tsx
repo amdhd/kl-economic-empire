@@ -8,6 +8,7 @@ const paths: Record<string, string> = {
   controls: 'M4 6h16M4 12h16M4 18h16M8 3v6m8 0v6M9 15v6',
   central: 'm3 9 9-6 9 6H3Zm2 3v6m4-6v6m6-6v6m4-6v6M3 21h18M12 7h.01',
   trade: 'M3 7h17l-4-4m5 14H4l4 4M20 7l-4 4M4 17l4-4',
+  ministry: 'M4 20V10m6 10V4m6 16v-7m4 7H2',
   markets: 'M3 3v18h18M6 15l5-5 4 3 6-8',
   fund: 'M8 7V4h8v3M3 7h18v13H3V7Zm0 6h18m-11-2h4v4h-4',
   economy: 'M4 20V10h4v10m4 0V4h4v16m4 0v-8h3v8',

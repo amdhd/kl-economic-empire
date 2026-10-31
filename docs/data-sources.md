@@ -248,3 +248,29 @@ do not follow timetables. Construction and investment sites on the map are ficti
 - Non-tax revenue 2027: *Summary of Federal Government Revenue Estimates 2027*, Fiscal Outlook 2027 pp. 234-237 (`ringkasan.pdf`), codes 71000-78000 excluding 75000 investment returns. Total revenue estimate RM380,816,996,000.
 - Federal Government debt, year-end RM bn: 2022 RM1,079.6bn and Jun 2026 RM1,378.9bn from MOF Fiscal Outlook tables; 2017 RM686.8bn, 2018 RM741.05bn (2015-base GDP), 2019 RM793bn, 2020 RM879.6bn, 2021 RM979.8bn, 2023 RM1.172tn, 2024 RM1,247.6bn, 2025 RM1.32tn as reported by [The Edge](https://www.theedgemarkets.com/article/debt-held-federal-govt-rose-rm741b-end2018), [Malay Mail](https://www.malaymail.com/news/malaysia/2026/10/05/govts-debt-to-gdp-ratio-rises-to-652pc-but-statutory-debt-stays-within-the-limit-says-audit-dept/237774) and other press citing MOF/Auditor General. 2023 and 2025 are rounded; 2016 and federal cash history were not found in a citable form.
 
+
+## Trade-ministry ledger (D-077, schema 13)
+
+Pinned 1 November 2026. Calendar-2025 levels; campaigns open at these values × (opening nominal GDP ÷ 2025 GDP).
+
+- **Goods** — MITI, *Malaysia's 2025 Trade Performance* (media release, 20 Jan 2026; provisional DOSM data, tabulated
+  by MATRADE), <https://www.miti.gov.my/miti/resources/Media%20Release/Press_Release_Trade_Performance_2025.pdf>.
+  Exports RM1,606,650.4m, imports RM1,454,847.1m (Table 1). Table 6 products: E&E RM711,613.2m; petroleum products
+  103,553.4m; palm oil & palm-based agriculture 84,221.8m; machinery, equipment & parts 78,303.4m; optical & scientific
+  65,638.3m; chemicals 65,203.6m; manufactures of metal 63,159.0m; LNG 51,633.9m; palm-based manufactures 40,640.2m;
+  processed food 38,471.6m. Mining goods RM92.28bn (text). Table 7 / text markets: Singapore 249,550.7m, USA 233,079.9m,
+  China 188,875.1m, Japan 76,376.1m, India 52,297.3m, ASEAN RM457.62bn, EU RM129.17bn. Table 13 sources: China
+  353,026.7m, Singapore 152,825.8m, USA 134,388.1m, Japan 66,589.2m; ASEAN RM319.99bn, EU RM98.87bn. Imports by end
+  use (text): intermediate RM720.78bn, capital RM214.48bn, consumption RM120.15bn.
+- **Services** — DOSM, *Statistics of International Trade in Services 2025* (25 Jun 2026),
+  <https://www.dosm.gov.my/portal-main/release-content/statistics-of-international-trade-in-services-2025>, Table 1
+  (exports by component, 2025r, RM m): total 277,912.2; travel 110,649.8; other business services 49,625.3; transport
+  37,692.6; telecom, computer & information 30,969.8; manufacturing services 22,643.6; maintenance & repair 9,823.3.
+  Imports RM272.6bn; services trade RM550.5bn = 27.2% of GDP (used to imply 2025 nominal GDP ≈ RM2,024bn).
+- **Derived lines** — "Other goods", "Other services", "Rest of world" and "Other goods" imports are totals less the
+  published lines. "Steel & manufactures of metal" uses the *manufactures of metal* line; iron & steel products
+  (SITC 67) exports are not in the release's top-ten table and stay in "Other goods". India's imports are not
+  separately published there and stay in "Rest of world" (the game's approximate partner share is used for deals).
+- **Assumptions (not data)** — domestic content of extra exports by product, driver mapping and elasticities, programme
+  effectiveness and costs, deal access gains and concession displacement, and buyer-contract terms. All buyers are
+  fictional; all post-opening values are simulations.

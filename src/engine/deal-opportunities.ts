@@ -3,6 +3,7 @@ import { enterpriseOffers } from './private-enterprises';
 import { rescueOffers } from './rescues';
 import { takeoverOffers } from './takeovers';
 import { supplyOffers } from './supply-contracts';
+import { exportOffers } from './export-contracts';
 
 /** Small successive fictional cohorts keep decisions available beyond the opening month. */
 export function periodicDealOffers(s: GameState, day: number): void {
@@ -15,6 +16,8 @@ export function periodicDealOffers(s: GameState, day: number): void {
   s.deals.lastOfferDay = day;
   const episode = Math.floor((day - s.deals.startDay) / 90);
   if (episode < 1 || episode > 7) return;
+  // Export buyers return every quarter with fresh offers for any contract that is not running (D-077).
+  exportOffers(s);
   const first = s.deals.items.length;
   if (episode % 3 === 1) enterpriseOffers(s);
   else if (episode % 3 === 2) {

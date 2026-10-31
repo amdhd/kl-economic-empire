@@ -1,4 +1,5 @@
 import { periodicDealOffers } from './deal-opportunities';
+import { cancelExport, dailyExportContract, offerExport, signExport } from './export-contracts';
 import { offerTakeover, signTakeover } from './takeovers';
 import { offerRescue, signRescue, liquidateEnterprise, equityPayout } from './rescues';
 import { dailyEnterprise, enterpriseAction, signEnterprise, offerEnterprise } from './private-enterprises';
@@ -169,6 +170,10 @@ export function dealCommand(
     cancelSupply(s, d);
     return null;
   }
+  if (action === 'cancel' && d.kind === 'export' && ['agreed', 'active'].includes(d.status)) {
+    cancelExport(s, d);
+    return null;
+  }
   if (action === 'cancel' && d.kind === 'concession' && ['agreed', 'active'].includes(d.status)) {
     cancelConcession(s, d);
     return null;
@@ -194,6 +199,7 @@ export function dealCommand(
     if (d.kind === 'supply') return signSupply(s, d);
     if (d.kind === 'concession') return signConcession(s, d);
     if (d.kind === 'investment') return signInvestment(s, d);
+    if (d.kind === 'export') return signExport(s, d);
     const err = reserveDeal(s, d, d.priceMinor);
     if (err) return err;
     d.status = 'agreed';
@@ -222,6 +228,7 @@ export function dailyDeals(
     }
     dailyConcessions(s, d, day, purchases);
     dailySupply(s, d, day, paidFraction);
+    dailyExportContract(s, d, day);
     dailyEnterprise(s, d, day, purchases);
     if (d.kind === 'diligence' && d.status === 'agreed' && day >= d.nextDay) {
       const paid = spendDeal(s, d, d.priceMinor);
@@ -251,6 +258,7 @@ export function offerDeal(s: GameState, id: number, terms: Partial<Deal['terms']
   if (d?.kind === 'rescue') return offerRescue(s, d, terms);
   if (d?.kind === 'startup') return offerEnterprise(s, d, terms);
   if (d?.kind === 'supply') return offerSupply(s, d, terms);
+  if (d?.kind === 'export') return offerExport(s, d, terms);
   return d?.kind === 'concession' ? offerConcession(s, d, terms) : offerInvestment(s, id, terms);
 }
 export function validateDeals(s: GameState): void {
@@ -277,7 +285,7 @@ export function validateDeals(s: GameState): void {
       !Number.isSafeInteger(d.id) ||
       d.id < 1 ||
       d.id >= v.nextId ||
-      !['diligence', 'investment', 'concession', 'supply', 'startup', 'rescue', 'takeover'].includes(
+      !['diligence', 'investment', 'concession', 'supply', 'startup', 'rescue', 'takeover', 'export'].includes(
         d.kind,
       ) ||
       ![
@@ -364,6 +372,7 @@ export function validateDeals(s: GameState): void {
       d.assetCostMinor ?? 0,
       d.serviceDailyMinor ?? 0,
       d.investedMinor ?? 0,
+      d.penaltyMinor ?? 0,
     ]) {
       assertSafeMinor(n);
       if (n < 0) throw new Error('Corrupt save: deal balance');
