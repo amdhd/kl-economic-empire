@@ -748,3 +748,22 @@ direct effect alone is ~0.8. Oil and levy shocks are still about 1.3–1.5× the
 tax, PETRONAS cash) is saved unless the player spends it, and households bear the full levy. Both are player-visible
 levers rather than hidden amplifiers. Coefficients remain fictional game calibration checked against published
 ranges, not estimated Malaysian parameters. `tests/multipliers.test.ts` locks these results in on two seeds.
+
+## D-058: sovereign fund macro effects (model 3)
+
+- **Capital flows.** `convertFx` MYR→USD: `centralBank.pressure = clamp(p + 0.003 × usdReceived/1e9, ±0.08)`;
+  USD→MYR subtracts `0.003 × usdSold/1e9`. The existing daily fixing decays pressure by `e^{−1/30}`, then applies
+  `exp(pressure)` to MYR/USD. Fund and central-bank flows share the one bounded state. Converting ~US$3.7bn (the
+  fund's RM15bn ringgit cash) weakens the ringgit ~1.1% next day; the whole ~RM25bn ≈ 1.8%.
+- **Persistent impact.** On each fill, `sentiment += ±0.5 × impact` (impact = `0.1·√(fund value traded today / ADV)`).
+  Sentiment multiplies the fundamental value (`e^{sentiment}`) and decays 5%/day toward event targets. Prices then
+  move toward the higher fundamental with the usual ~9.5-day half-life. The KL index rises, feeding
+  `equityIndex` (5%/day) and the 3% wealth effect. The fund pays the full impact in its fill price, so it cannot
+  profit from its own buying: a one-week round trip in a large Maybank order loses NAV (tested).
+- **Tobin's q.** Monthly desired capital growth adds `0.008 × ln(equityIndex)`, so all listed-equity moves (fund
+  trades, rates, earnings, events) feed investment modestly: a 10% higher index adds ~0.08pp to desired growth.
+- **Validation after D-058** (`npm run multipliers`, 4 seeds): spending multiplier 0.81 / 0.76 (4q/8q), OPR +25bp
+  −0.17% after 8q, Okun 0.30, sacrifice ratio 3.3, oil +10% −0.43% (4q), levy multiplier 0.92, oil +50% −1.95%
+  after ~200 days, RON95 removal −0.30%. The equity channel strengthens rate and oil transmission slightly.
+`tests/fund-macro.test.ts` covers pressure size, reversal and decay, the RM25bn bound, sentiment lift and fade,
+round-trip losses, the q effect and model-2 neutrality.

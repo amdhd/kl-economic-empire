@@ -383,3 +383,12 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   full penalty. Model 1/2 saves keep the D-051 rule. The counter-cyclical bot in `tools/campaigns.ts` now measures
   "neutral" against the inherited budget path, not the 2027 level (it had been cancelling indexation). Its campaign test
   now checks recession unemployment and a bounded score cost instead of a score gain.
+- **D-058 Sovereign fund macro effects (user-requested trade-off, model 3).** (a) Fund MYR→USD conversions are capital
+  outflows: `pressure += 0.003 × US$bn` through the central bank's bounded (±0.08) pressure, decaying over 30 days from
+  the next fixing; USD→MYR reverses it. Converting the fund's whole ~RM25bn (≈US$6bn) gives ≈1.8% weaker ringgit at
+  peak. (b) Half of each fill's price impact becomes company sentiment, decaying 5%/day, so domestic buying lifts
+  the price and KL index (and, through the existing equity index, household spending). The fill price still pays the
+  full impact, so buy-and-sell round trips lose value (tested). (c) Tobin's q: desired capital growth `+ 0.008 ×
+  ln(equityIndex)` for all share-price moves, using the lagged equity index. 0.02 nearly doubled OPR transmission, so
+  0.008 keeps OPR +25bp at −0.17% after 8 quarters. Model 1/2 saves keep trades macro-neutral. The FX desk discloses
+  the expected pressure before conversion.

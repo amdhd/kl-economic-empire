@@ -306,3 +306,7 @@ the best bot strategy. With it, tax and austerity rank below passive play again,
 winning. Counter-cyclical stimulus is now roughly score-neutral: it lowers recession unemployment but costs wealth.
 All bots cluster at 54–59 and none wins; 75 stays provisional pending human playtesting. The recession scenario's
 endpoint score still exceeds balanced play (the D-051 limitation).
+
+**After D-058** (fund macro effects, same 12 seeds): hands-off 58.01, balanced growth 56.83, tax maximiser 54.20,
+investment heavy 57.70, austerity 47.51, adaptive 57.08, adverse recession 59.31; no wins. The bots barely trade
+the fund, so these move mainly through Tobin's q.

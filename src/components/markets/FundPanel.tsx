@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { COMPANY_BY_ID, currencyOf } from '../../data/companies';
+import { demandFor } from '../../data/economic-baseline';
 import { treasuryMYR } from '../../engine/government';
 import { FX_SPREAD, navMYR, planRebalance, positionValueMYR } from '../../engine/sovereign-fund';
 import { formatKL, klDayLabel } from '../../engine/time';
@@ -125,6 +126,8 @@ function FxBox() {
   const [amt, setAmt] = useState(500);
   const fxr = g.external.myrPerUsd;
   const out = from === 'MYR' ? (amt * 1e6) / (fxr * (1 + FX_SPREAD)) : amt * 1e6 * fxr * (1 - FX_SPREAD);
+  const k = demandFor(g).fundFxPressure;
+  const usdBn = (from === 'MYR' ? out : amt * 1e6) / 1e9;
   return (
     <Section title={`FX desk · MYR/USD ${fx(fxr)}`}>
       <div className="mb-2 flex items-center gap-2">
@@ -135,6 +138,9 @@ function FxBox() {
         <span className="shrink-0 text-slate-400">m {from}</span>
       </div>
       <div className="num mb-2 text-[12px] text-slate-300">You receive ≈ <b>{money(out, from === 'MYR' ? 'USD' : 'MYR', 2)}</b> (spread {pct(FX_SPREAD, 2)})</div>
+      {k > 0 && <div className="mb-2 text-[11.5px] text-slate-400" data-testid="fx-flow-note">
+        Capital flow: {from === 'MYR' ? 'weakens' : 'supports'} the ringgit by ≈ {pct(k * usdBn, 2)} at the next fixing, fading over ~30 days (simulated).
+      </div>}
       <button className="btn w-full" disabled={!(amt > 0)} onClick={() => command({ type: 'fx', from, amountMinor: Math.round(amt * 1e6 * 100) })} data-testid="fx-convert">Convert</button>
     </Section>
   );

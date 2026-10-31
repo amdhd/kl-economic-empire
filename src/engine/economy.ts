@@ -370,7 +370,9 @@ export function monthClose(s: GameState, inflationYoY: number, unemployment: num
     // Investment: after-tax return vs baseline, cost of credit, utilisation and confidence
     const rok = (afterTax * 365) / days / sec.capital;
     const g = clamp(
-      TREND.capitalGrowth + 0.12 * (rok - CAL.rok0[j]) - DEMAND.investmentRate * (bank.lendingRate - BASE_LEND_RATE) + 0.12 * (sec.avgUtil - NORMAL_UTIL) + confidence.investmentGrowth,
+      TREND.capitalGrowth + 0.12 * (rok - CAL.rok0[j]) - DEMAND.investmentRate * (bank.lendingRate - BASE_LEND_RATE) + 0.12 * (sec.avgUtil - NORMAL_UTIL) + confidence.investmentGrowth
+        // Tobin's q (model 3, D-058): firms invest more when listed equity is valued above its opening level.
+        + DEMAND.tobinQ * Math.log(hh.equityIndex),
       -0.02,
       0.09,
     );

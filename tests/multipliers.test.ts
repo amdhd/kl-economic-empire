@@ -18,7 +18,7 @@ describe('macro validation harness (model 3)', () => {
       within(r, 'okun');
       within(r, 'sacrificeRatio');
       // Known residual gaps (docs/economy-model.md): an unrecycled oil windfall and full levy incidence on households.
-      expect(r.oil10GdpPct4q).toBeGreaterThan(-0.45);
+      expect(r.oil10GdpPct4q).toBeGreaterThan(-0.5); // D-058's equity channel adds a little
       expect(r.levyMultiplier4q).toBeLessThan(1.1);
       // Before D-056 these were about −3.3% and −1.4% after ~200 days.
       expect(r.oil50GdpPct200d).toBeGreaterThan(-2.2);
