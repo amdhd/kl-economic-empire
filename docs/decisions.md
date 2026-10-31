@@ -595,3 +595,13 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   next month. (5) A 15-day skip never goes past the end of the term. Undo: the pre-skip state is serialized, written to
   the autosave slot and also held in memory (later pause autosaves overwrite the slot), and is dropped when play resumes.
   Normal speeds stay at 1/2/3/5 and the 250 ms clamp is unchanged. Skipping changes no economic rule.
+- **D-085 Peer ladder and rival board (user request, PROJECT_SPEC §28).** `PEERS` in `src/data/countries.ts` holds the
+  49 economies ranked 11th–60th (Canada … Slovakia) by IMF WEO Oct 2026 NGDPD 2026, with the same indicators as `RIVALS`
+  (GDP 2026–28, 2027 growth and inflation, 2026 current account, population), pulled from the IMF DataMapper API on
+  1 Nov 2026 (same vintage as D-059; Malaysia's 547.1 matches). All move with the simulated global cycle. They are
+  deliberately NOT in `RIVALS`, so the standing score, `gapToTopTen` and the 11-row Global standing table are unchanged.
+  `peerBoard` ranks Malaysia among all 60 and `peerWindow` returns five rows, two above and two below (shifted at the
+  ends of the ladder). The HUD board (`RivalsBoard`, top right under the settings row, clicking opens Global standing)
+  shows rank, economy, GDP and the gap to Malaysia, and appears only where the board exists (new Malaysia campaigns).
+  Opening US$497bn puts Malaysia 38th, with the Philippines $5bn ahead and Denmark $3bn. Rivals beyond 2028 keep their
+  2027–28 growth rate, as before. Iran, Iraq and Ukraine appear because the IMF lists them; their paths are the IMF's, not a judgement.

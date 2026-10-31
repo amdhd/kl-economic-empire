@@ -1,7 +1,7 @@
 // Global standing (schema 9, model 3; D-059): Malaysia against the ten largest economies by IMF 2026 US$ GDP.
 // Rivals follow their IMF WEO (Oct 2026) projections, moved by the simulated US/global cycles. Malaysia's US$ GDP is
 // the simulated nominal GDP run rate at the current simulated ringgit. Nothing here is live data.
-import { MALAYSIA_IMF, RIVALS, type RivalCountry } from '../data/countries';
+import { MALAYSIA_IMF, PEERS, RIVALS, type RivalCountry } from '../data/countries';
 import { baselineFor } from '../data/economic-baseline';
 import type { GameState } from '../types/game';
 import { cycleDeviation } from './external';
@@ -25,9 +25,22 @@ export function malaysiaGdpUsd(s: GameState): number {
 
 export interface StandingRow { id: string; name: string; flag: string; gdpUsd: number; growthPct: number; inflationPct: number; currentAccountPct: number; perCapita: number; currencyPct: number; isMalaysia: boolean; rank: number }
 
-export function standingBoard(s: GameState): StandingRow[] {
+export const standingBoard = (s: GameState): StandingRow[] => boardOf(s, RIVALS);
+
+/** The ladder: the ten largest plus the 11th–60th economies, with Malaysia placed among them (D-085). */
+export const peerBoard = (s: GameState): StandingRow[] => boardOf(s, [...RIVALS, ...PEERS]);
+
+/** Five rows for the always-visible board: two above Malaysia, Malaysia, two below (shifted at either end of the ladder). */
+export function peerWindow(s: GameState): StandingRow[] {
+  const all = peerBoard(s);
+  const i = all.findIndex(r => r.isMalaysia);
+  const start = clamp(i - 2, 0, Math.max(0, all.length - 5));
+  return all.slice(start, start + 5);
+}
+
+function boardOf(s: GameState, list: RivalCountry[]): StandingRow[] {
   const t = yearsElapsed(s);
-  const rows: StandingRow[] = RIVALS.map(r => ({ id: r.id, name: r.name, flag: r.flag, gdpUsd: rivalGdpUsd(s, r, t), growthPct: r.realGrowth2027, inflationPct: r.inflation2027, currentAccountPct: r.currentAccount2026,
+  const rows: StandingRow[] = list.map(r => ({ id: r.id, name: r.name, flag: r.flag, gdpUsd: rivalGdpUsd(s, r, t), growthPct: r.realGrowth2027, inflationPct: r.inflation2027, currentAccountPct: r.currentAccount2026,
     perCapita: rivalGdpUsd(s, r, t) * 1e3 / r.population2026, currencyPct: 0, isMalaysia: false, rank: 0 }));
   const my = malaysiaGdpUsd(s);
   const open = s.fdi?.standing[0];
