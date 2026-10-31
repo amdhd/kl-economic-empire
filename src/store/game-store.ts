@@ -1,4 +1,7 @@
 import { useAppearance, validAppearance } from '../map/appearance';
+import { alertTransitions, economicAlerts, type AlertMemory, type EconomicAlert } from '../engine/alerts';
+import type { ExplainMetric } from '../engine/economic-explanations';
+import { usePreferences } from './preferences';
 import { flushCloud, syncCloud } from '../persistence/cloud';
 // Thin UI store. The engine mutates `game` in place; `rev` bumps whenever economic state changes
 // (hourly tick or player command) so selectors re-run. The visual clock is published separately
@@ -11,15 +14,22 @@ import { deserialize, serialize } from '../persistence/save';
 import { readSlot, writeSlot, type SlotId } from '../persistence/storage';
 import type { GameSpeed, GameState, ScenarioId, TickerId } from '../types/game';
 
-export type PanelId = 'finance' | 'population' | 'controls' | 'trade' | 'sources' | 'fiscal' | 'commodities' | 'partners' | 'soe' | 'overview' | 'policies' | 'projects' | 'debt' | 'markets' | 'fund' | 'economy' | 'reports' | 'objectives';
+export type PanelId = 'explain' | 'settings' | 'finance' | 'population' | 'controls' | 'trade' | 'sources' | 'fiscal' | 'commodities' | 'partners' | 'soe' | 'overview' | 'policies' | 'projects' | 'debt' | 'markets' | 'fund' | 'economy' | 'reports' | 'objectives';
 export type Selection = { kind: 'company'; id: TickerId } | { kind: 'district'; id: string } | null;
 export interface Toast {
   id: number;
   tone: 'good' | 'bad' | 'neutral';
   text: string;
+  source?: 'alert';
 }
 
 interface Store {
+  explainMetric: ExplainMetric;
+  explain: (metric: ExplainMetric) => void;
+  alertMemory: AlertMemory;
+  alertHistory: (EconomicAlert & { atMin: number })[];
+  lastAlertDay: number;
+  checkAlerts: () => void;
   game: GameState;
   rev: number;
   uiMinute: number;
@@ -37,7 +47,7 @@ interface Store {
   togglePause: () => void;
   pause: () => void;
   command: (c: Command) => CommandResult;
-  toast: (tone: Toast['tone'], text: string) => void;
+  toast: (tone: Toast['tone'], text: string, source?: 'alert') => void;
   newGame: (seed: number, scenario: ScenarioId) => void;
   /** `cloud: 'throttle'` coalesces routine autosaves into at most one upload per few minutes. */
   save: (slot: SlotId, label?: string, cloud?: 'now' | 'throttle') => Promise<void>;
@@ -53,6 +63,30 @@ let toastId = 1;
 let resumeAfterDialog = false;
 
 export const useGame = create<Store>((set, get) => ({
+  explainMetric: 'gdp',
+  explain: explainMetric => set({ explainMetric, panel: 'explain' }),
+  alertMemory: {},
+  alertHistory: [],
+  lastAlertDay: -1,
+  checkAlerts: () => {
+    const st = get(), g = st.game;
+    const day = klDay(g.clock.hour * 60);
+    if (day === st.lastAlertDay) return;
+    const prefs = usePreferences.getState().alerts;
+    const { fresh, memory } = alertTransitions(st.alertMemory, economicAlerts(g, prefs, st.alertMemory));
+    const stop = prefs.pauseOnCritical && fresh.some(a => a.severity === 'critical');
+    if (stop) {
+      g.clock.paused = true;
+      resumeAfterDialog = false;
+    }
+    set({ alertMemory: memory, lastAlertDay: day,
+      alertHistory: [...st.alertHistory, ...fresh.map(a => ({ ...a, atMin: g.clock.hour * 60 }))].slice(-40),
+      rev: stop ? st.rev + 1 : st.rev });
+    if (fresh.length) {
+      const first = fresh.find(a => a.severity === 'critical') ?? fresh[0];
+      st.toast('bad', `${stop ? 'Paused · ' : ''}${first.title}${fresh.length > 1 ? ` (+${fresh.length - 1} more)` : ''}${prefs.detail === 'detailed' ? `. ${first.detail}` : ''}`, 'alert');
+    }
+  },
   game: createGame(20270101, 'balanced'),
   rev: 0,
   uiMinute: 0,
@@ -62,17 +96,19 @@ export const useGame = create<Store>((set, get) => ({
   showNewGame: true,
   showHelp: false,
   confirmOpen: 0,
-  pauseOnDialogs: true,
+  pauseOnDialogs: usePreferences.getState().pauseOnDialogs,
   lastSaved: null,
   setPanel: (panel) => set({ panel }),
   select: (selection) => set({ selection }),
   setSpeed: (speed) => {
+    if (get().confirmOpen > 0 && get().pauseOnDialogs) return;
     const g = get().game;
     g.clock.speed = speed;
     if (!g.scheduler.campaignEnded) g.clock.paused = false;
     set({ rev: get().rev + 1 });
   },
   togglePause: () => {
+    if (get().confirmOpen > 0 && get().pauseOnDialogs) return;
     const g = get().game;
     if (g.scheduler.campaignEnded) return;
     g.clock.paused = !g.clock.paused;
@@ -80,6 +116,7 @@ export const useGame = create<Store>((set, get) => ({
     set({ rev: get().rev + 1 });
   },
   pause: () => {
+    resumeAfterDialog = false;
     const g = get().game;
     if (!g.clock.paused) {
       g.clock.paused = true;
@@ -93,14 +130,16 @@ export const useGame = create<Store>((set, get) => ({
     set({ rev: get().rev + 1 });
     return res;
   },
-  toast: (tone, text) => {
+  toast: (tone, text, source) => {
     const id = toastId++;
-    set({ toasts: [...get().toasts.slice(-3), { id, tone, text }] });
+    set({ toasts: [...get().toasts.slice(-3), { id, tone, text, source }] });
     setTimeout(() => set({ toasts: get().toasts.filter((t) => t.id !== id) }), 4200);
   },
   newGame: (seed, scenario) => {
     const game = createGame(seed, scenario);
-    set({ game, rev: get().rev + 1, uiMinute: displayMinutes(game.clock), selection: null, panel: null, showNewGame: false });
+    resumeAfterDialog = false;
+    set({ game, rev: get().rev + 1, uiMinute: displayMinutes(game.clock), selection: null, panel: null, showNewGame: false,
+      alertMemory: {}, alertHistory: [], lastAlertDay: klDay(game.clock.hour * 60) });
     lastAutosaveDay = klDay(game.clock.hour * 60);
   },
   save: async (slot, label, cloud = 'now') => {
@@ -127,7 +166,10 @@ export const useGame = create<Store>((set, get) => ({
       const game = deserialize(json);
       const appearance: unknown = JSON.parse(json).appearance;
       if (validAppearance(appearance)) useAppearance.getState().update(appearance);
+      resumeAfterDialog = false;
       set({ game, rev: get().rev + 1, uiMinute: displayMinutes(game.clock), selection: null, showNewGame: false,
+        alertMemory: alertTransitions({}, economicAlerts(game, usePreferences.getState().alerts)).memory,
+        alertHistory: [], lastAlertDay: klDay(game.clock.hour * 60),
         panel: game.scheduler.campaignEnded ? 'objectives' : get().panel });
       lastAutosaveDay = klDay(game.clock.hour * 60);
       get().toast('good', `Loaded ${slot} — paused.`);
@@ -159,12 +201,16 @@ export const useGame = create<Store>((set, get) => ({
     }
     set({ confirmOpen: Math.max(0, n), rev: st.rev + 1 });
   },
-  setPauseOnDialogs: (pauseOnDialogs) => set({ pauseOnDialogs }),
+  setPauseOnDialogs: (pauseOnDialogs) => {
+    usePreferences.getState().update({ pauseOnDialogs });
+    set({ pauseOnDialogs });
+  },
   tick: (delta) => {
     const st = get();
     const g = st.game;
     if (g.clock.paused) return;
     const ticks = advance(g, delta);
+    if (ticks > 0) st.checkAlerts();
     const minute = displayMinutes(g.clock);
     const patch: Partial<Store> = {};
     if (ticks > 0) patch.rev = st.rev + 1;
@@ -248,6 +294,7 @@ if (import.meta.env.DEV) {
     runHours: (h: number) => {
       const st = useGame.getState();
       runHeadless(st.game, h);
+      st.checkAlerts();
       useGame.setState({ rev: st.rev + 1, uiMinute: displayMinutes(st.game.clock) });
     },
     state: () => useGame.getState().game,

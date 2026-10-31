@@ -191,3 +191,47 @@ toward the mid-40s, raising yields and lowering the stability score: consolidati
 lower than before because deep development cuts erode public capital and the large demand multiplier (see
 economy-model "Known limitation") amplifies the contraction. Bots still never win; 75 stays provisional pending
 human playtesting.
+
+
+## Household feedback correction — D-051 (31 October 2026)
+
+Paired 24-month experiments on seeds **11, 42, 201, 2027**, current national model. Random event and commodity-episode
+hazards are disabled, while seeded background price/demand cycles remain active. All policies are hands-off except
+subsidy removal (fuel eligibility becomes zero at the next month boundary). Oil is a 50% event multiplier, ramped
+in over seven days, active on days 31–120. Recession uses the existing 180-day slowdown/credit-crunch scenario.
+Each shock is compared with its same-seed, same-version, same-diagnostic baseline. Values are the mean of individual
+seed peak monthly real-GDP gaps, not real-world estimates. Baseline and after-run JSON are in ignored artifacts;
+the repeatable dev-only harness is `scripts/household-balance.mjs`.
+
+| Scenario | Peak GDP gap before | Peak gap after | Month 12 gap before | Month 12 gap after |
+|---|---:|---:|---:|---:|
+| Temporary oil shock | −2.505% | −1.798% | +0.093% | +0.788% |
+| Remove fuel subsidy eligibility | −4.007% | −1.909% | −3.148% | −1.585% |
+| Recession | −7.513% | −5.546% | −4.150% | −0.346% |
+
+Ablation: fixing MPC at its opening value reduced the old recession trough to −5.778%; after the correction it is
+−5.451%, close to the new full-model −5.546%. Fixing confidence at 0.6 changes the old recession trough to −6.670%
+and the new one to −5.437%. These diagnostics isolate broad channels, not additive causal shares. Unit tests also
+bound investment and credit adjustments separately. The cash constraint is tested with deliberately depleted savings;
+these aggregate campaigns started with ample savings and did not hit it. Recessions still reduce wages/output and
+income; persistent subsidy reform retains a negative output gap, rather than receiving a forced recovery.
+
+Campaign-test expectations changed deliberately: a meaningful strategy-score spread is now >5 rather than >8, with
+additional checks that tax maximisation lowers debt and costs >15 approval points. The responsive bot still gains
+about 2.43 points on weak seeds (<55 passive score, seeds 301–312); its whole-sample gain is roughly −0.06, so stimulus
+is no longer required to pay off in healthy campaigns. Require >1 point in the weak subset and more benefit there
+than across all seeds. No victory thresholds, score coefficients or bot policies were changed to make tests pass.
+
+**Remaining scoring limitation:** the score rewards recent recovered output/approval and partially offsets external
+shocks. Across 20 seeded campaigns (201–220), the recession's final mean score can exceed the balanced mean (56.06 vs
+53.13 in this pass), despite lost cumulative output and income. The recession regression now checks those full-campaign
+economic costs, including >1% mean cumulative output loss, rather than incorrectly treating the adjusted endpoint score
+as a measure of total harm. Scoring calibration and human playtesting remain separate work. These results demonstrate
+less amplification, not validation against empirical Malaysian multipliers.
+
+Experiment boundary: the existing weekly scheduler skips draws for already-active events, so different starting shocks
+can change later RNG alignment even with the same seed. These are multi-seed replay comparisons, not perfectly matched
+external histories. Within-scenario ablations retain the same prescribed shocks. No engine RNG ordering was changed.
+
+Final verification for D-051–D-054: production build, lint, **211 unit/invariant/campaign tests** and **35 Playwright
+browser tests** pass. The explanation panel was visually checked at 1280×800 and alert settings at 1600×900.

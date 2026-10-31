@@ -1,4 +1,5 @@
 import { sectorTax } from './policy-controls';
+import { confidenceChannels, householdBehaviour, householdSpending } from './household-behavior';
 import { calibrationFor } from './calibration';
 import { baselineFor, nationalV2 } from '../data/economic-baseline';
 import { COMMODITY_IMPORT, UTILITY_FUEL_PASSTHROUGH, FUEL_CPI_WEIGHT, HOUSEHOLD_EQUITY0, PUBLIC_CAPITAL_ELASTICITY, WEALTH_MPC } from '../data/world';
@@ -10,7 +11,7 @@ import { foodUserPrice, fuelPriceIndex, householdFuelBillDelta } from './world';
 import { BASE_TAX, CPI_WEIGHTS, INVESTMENT_GOODS, IO, SECTOR_IDS, SECTORS } from '../data/economic-baseline';
 import type { CommodityId, GameState, SectorId } from '../types/game';
 import {
-  BASE_MPC, CAPITAL_GROWTH0, CREDIT_SPEND, HOUSEHOLD_AMORT_MONTHLY, HOUSEHOLD_RATE_PREMIUM,
+  CAPITAL_GROWTH0, CREDIT_SPEND, HOUSEHOLD_AMORT_MONTHLY, HOUSEHOLD_RATE_PREMIUM,
   NORMAL_UTIL, PROPERTY_LEVY_BASE, SURCHARGE_BASE_SHARE, type Vec,
 } from './calibration';
 import type { AggregatedMods } from './external';
@@ -142,9 +143,9 @@ export function householdDemand(s: GameState, transfersPaid: number) {
   // Wealth effect: households spend a small share of listed-equity gains and losses (model 2).
   const wealthSpend = nationalV2(s) ? (WEALTH_MPC / 365) * HOUSEHOLD_EQUITY0 * (hh.equityIndex - 1) : 0;
   // Pump prices: extra fuel spending comes out of the household budget for other goods (model 2).
-  const consumption = Math.max(0, (0.5 * disposable + 0.5 * permanentIncome) * hh.mpc + wealthSpend - householdFuelBillDelta(s));
+  const { consumption, spending, fuelAdjustment } = householdSpending(disposable, permanentIncome, hh.savings, hh.mpc, wealthSpend, householdFuelBillDelta(s));
   const credit = hh.newCreditMonthly * PER_DAY;
-  return { wagesBy, wages, other, householdTax, interestH, amortH, disposable, permanentIncome, consumption, credit };
+  return { wagesBy, wages, other, householdTax, interestH, amortH, disposable, permanentIncome, consumption, spending, fuelAdjustment, credit };
 }
 
 export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEconomy {
@@ -153,12 +154,12 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
   const hh = s.households;
   const bank = s.bank;
   const tax = s.government.policies.tax;
-  const { wagesBy, wages, other, householdTax, interestH, amortH, disposable, permanentIncome, consumption, credit } = householdDemand(s, gov.transfersPaid);
+  const { wagesBy, wages, other, householdTax, interestH, amortH, disposable, permanentIncome, consumption, spending, credit } = householdDemand(s, gov.transfersPaid);
   post(s.government, 'taxHousehold', householdTax);
   bank.mtdInterestH += interestH;
   bank.mtdAmortH += amortH;
   hh.permanentIncome = permanentIncome;
-  hh.savings += disposable - consumption;
+  hh.savings = (hh.savings + disposable) - spending;
 
   // Discretionary export services are paid only from available treasury cash.
   const support = post(s.government, 'exportSupport', s.trade.policy.exportBudgetMonthly * PER_DAY);
@@ -293,7 +294,7 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
   hh.mtd.tax += householdTax;
   hh.mtd.debtService += interestH + amortH;
   hh.mtd.disposable += disposable;
-  hh.mtd.consumption += consumption + credit;
+  hh.mtd.consumption += spending + credit;
   return { gdpNominal, gdpReal, levy, householdTax };
 }
 
@@ -331,12 +332,13 @@ export function weekly(s: GameState): void {
  * `taxRate` is the rate that applied during the month. Sets next month's investment plans,
  * credit, wages, expectations and household behaviour.
  */
-export function monthClose(s: GameState, inflationYoY: number, unemployment: number, realIncomeGrowth: number, days: number, coreInflation = inflationYoY): void {
+export function monthClose(s: GameState, inflationYoY: number, unemployment: number, incomeTrend: number, days: number, coreInflation = inflationYoY): void {
   const BASELINE = baselineFor(s);
   const CAL = calibrationFor(s);
   const BASE_LEND_RATE = baselineFor(s).opr + 0.02;
   const hh = s.households;
   const bank = s.bank;
+  const confidence = confidenceChannels(hh.confidence);
 
 
   // Profits → distributions and internal funds (normalised to an average-length month)
@@ -354,7 +356,7 @@ export function monthClose(s: GameState, inflationYoY: number, unemployment: num
     // Investment: after-tax return vs baseline, cost of credit, utilisation and confidence
     const rok = (afterTax * 365) / days / sec.capital;
     const g = clamp(
-      CAPITAL_GROWTH0 + 0.12 * (rok - CAL.rok0[j]) - 0.6 * (bank.lendingRate - BASE_LEND_RATE) + 0.12 * (sec.avgUtil - NORMAL_UTIL) + 0.03 * (hh.confidence - 0.6),
+      CAPITAL_GROWTH0 + 0.12 * (rok - CAL.rok0[j]) - 0.6 * (bank.lendingRate - BASE_LEND_RATE) + 0.12 * (sec.avgUtil - NORMAL_UTIL) + confidence.investmentGrowth,
       -0.02,
       0.09,
     );
@@ -367,7 +369,7 @@ export function monthClose(s: GameState, inflationYoY: number, unemployment: num
   // Credit: firms' external financing need + households' borrowing demand vs bank supply
   let firmNeed = 0;
   for (const j of SECTOR_IDS) firmNeed += Math.max(0, desired[j] - internal[j]);
-  const hhDemand = bank.loansH * (HOUSEHOLD_AMORT_MONTHLY + 0.004 * clamp(hh.confidence / 0.6, 0.2, 1.6) * clamp(1 - 8 * (bank.lendingRate - BASE_LEND_RATE), 0.2, 1.6));
+  const hhDemand = bank.loansH * (HOUSEHOLD_AMORT_MONTHLY + 0.004 * confidence.creditGrowthMultiplier * clamp(1 - 8 * (bank.lendingRate - BASE_LEND_RATE), 0.2, 1.6));
   const firmRepay = bank.loansF * 0.01;
   const supply = creditSupply(s);
   const demandTotal = firmNeed + firmRepay + hhDemand;
@@ -408,10 +410,9 @@ export function monthClose(s: GameState, inflationYoY: number, unemployment: num
   hh.laborForce += 0.06 * (hh.employed / (1 - BASELINE.naturalUnemployment) - hh.laborForce);
   hh.population *= 1 + 0.012 / 12;
 
-  // Confidence and MPC (spec §8 reduced form)
-  const confTarget = clamp(0.6 - 2 * (unemployment - BASELINE.naturalUnemployment) - 2 * Math.max(0, coreInflation - 0.03) + 1.5 * realIncomeGrowth - 0.15 * (0.5 - s.external.riskAppetite), 0.1, 0.95);
-  hh.confidence += (confTarget - hh.confidence) * 0.35;
-  hh.mpc = clamp(BASE_MPC - 0.5 * (unemployment - BASELINE.naturalUnemployment) - 1.0 * Math.max(0, coreInflation - 0.03) + 0.1 * (hh.confidence - 0.6), 0.7, 0.95);
+  const behaviour = householdBehaviour(hh.confidence, hh.mpc, unemployment - BASELINE.naturalUnemployment, coreInflation, incomeTrend, s.external.riskAppetite);
+  hh.confidence = behaviour.confidence;
+  hh.mpc = behaviour.mpc;
 }
 
 /** New lending capacity this month: capital headroom × willingness. */

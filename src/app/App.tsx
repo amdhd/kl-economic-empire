@@ -1,4 +1,7 @@
 import { PopulationPanel } from '../components/panels/PopulationPanel';
+import { ExplanationPanel } from '../components/panels/ExplanationPanel';
+import { SettingsPanel } from '../components/panels/SettingsPanel';
+import { SCENARIOS } from '../data/scenarios';
 import { EconomyWindow } from '../components/panels/EconomyWindow';
 import { ControlsPanel } from '../components/panels/ControlsPanel';
 import { CommoditiesPanel } from '../components/panels/CommoditiesPanel';
@@ -28,6 +31,8 @@ import { startGameLoop, useGame, type PanelId } from '../store/game-store';
 import type { ScenarioId } from '../types/game';
 
 const PANELS: Record<PanelId, () => ReactNode> = {
+  explain: () => <ExplanationPanel />,
+  settings: () => <SettingsPanel />,
   population: () => <PopulationPanel />,
   // Rendered as a centred window rather than in the inspector slot.
   finance: () => null,
@@ -117,20 +122,20 @@ function NewGameModal() {
   }, []);
   return (
     <div className="fixed inset-0 z-[70] grid place-items-center bg-slate-950/70 backdrop-blur-sm" role="dialog" aria-modal="true" data-testid="new-game">
-      <div className="glass w-[560px] rounded-3xl p-6">
+      <div className="glass w-[560px] max-h-[92vh] overflow-y-auto rounded-3xl p-6">
         <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-300">Alternate history · 2027</div>
         <h1 className="mt-1 text-[28px] font-black tracking-tight text-white">KL Economic Empire</h1>
         <p className="mt-2 text-[13px] leading-relaxed text-slate-300">
-          Lead a fictional Malaysian presidency from the Kuala Lumpur skyline. New campaigns start with dated Malaysian GDP, federal debt and operating budget figures. Set taxes and budgets, build infrastructure, and run a sovereign wealth fund across 40 simulated Malaysian and US equities. Can you make Malaysia richer and more livable in 24 months — without a fiscal or financial crisis?
+          Lead a fictional Malaysian presidency from the Kuala Lumpur skyline. New campaigns start with dated Malaysian GDP, federal debt and operating budget figures. Set taxes and budgets, build infrastructure, and run a sovereign wealth fund across 60 simulated Malaysian and US equities. Can you make Malaysia richer and more livable in 24 months — without a fiscal or financial crisis?
         </p>
         <p className="mt-2 rounded-lg bg-amber-400/10 p-2 text-[11.5px] text-amber-200 ring-1 ring-amber-300/20">
           Alternate-history powers and all future outcomes are fictional. Official starting figures have different reference dates; see Baseline & sources. Company names and tickers are real; every price, financial statement and event is simulated. Not investment advice.
         </p>
         <div className="mt-4 grid grid-cols-2 gap-3">
-          {([['balanced', 'Balanced start', 'Calm global backdrop; seeded random events.'], ['recession', 'Adverse: global recession', 'Begins in a global slowdown and credit crunch.']] as const).map(([id, t, d]) => (
-            <button key={id} onClick={() => setScenario(id)} className={`rounded-xl p-3 text-left ring-1 transition ${scenario === id ? 'bg-emerald-500/15 ring-emerald-400/50' : 'bg-slate-800/50 ring-slate-600/30 hover:bg-slate-700/50'}`} data-testid={`scenario-${id}`}>
-              <div className="text-[13.5px] font-bold text-white">{t}</div>
-              <div className="text-[11.5px] text-slate-400">{d}</div>
+          {SCENARIOS.map(({ id, title, description }) => (
+            <button key={id} onClick={() => setScenario(id)} aria-pressed={scenario === id} className={`rounded-xl p-3 text-left ring-1 transition ${scenario === id ? 'bg-emerald-500/15 ring-emerald-400/50' : 'bg-slate-800/50 ring-slate-600/30 hover:bg-slate-700/50'}`} data-testid={`scenario-${id}`}>
+              <div className="text-[13.5px] font-bold text-white">{title}</div>
+              <div className="text-[11.5px] text-slate-400">{description}</div>
             </button>
           ))}
         </div>

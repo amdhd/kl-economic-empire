@@ -16,7 +16,8 @@ CPI: 100 = start. FX: MYR per USD.
 
 ## Daily step (`economy.ts`, order: external → government → households/sectors → companies)
 1. **Households:** wages `Σ L_j·w0_j·W`; disposable `YD = wages + transfers + distributed profits − surcharge − interest − amortisation`.
-   Permanent income `P += 0.012(YD − P)`; consumption `C = MPC·(0.5·YD + 0.5·P)` (draws on savings when income dips).
+   Permanent income `P += 0.012(YD − P)`; desired spending `C* = MPC·(0.5·YD + 0.5·P) + equityWealthSpend`.
+   Funded spending `C = min(max(0, C*), max(0, YD + savings))`; fuel costs reallocate this envelope (see D-051 below).
    New household credit is spent 35 % on property, 65 % on consumer goods.
 2. **Demand:** consumption by basket share; consumer-sector spending net of the consumption levy; government
    purchases by budget line; investment by `INVESTMENT_GOODS`; exports `X0_j × index_j`, where the index mixes
@@ -47,7 +48,7 @@ Employment moves 12 % toward `demand / labour productivity`, bounded by 98.5 % o
 - **Investment:** desired capital growth `g = 3.5 % + 0.12·(after-tax ROK − base) − 0.6·Δlending rate + 0.12·(util − 85 %) + confidence`,
   partial adjustment 30 %/month, external finance rationed by bank supply. New capacity matures after **6 months**.
 - **Wages:** `ΔW/W = (E[π] + 1.5 % + 0.6·(3.5 % − u)) / 12`; expectations `0.82E + 0.10π + 0.08·2 %`.
-- **MPC** `= 0.86 − 0.5(u − 3.5 %) − 1.0·max(0, π − 3 %) + 0.1(confidence − 0.6)`, clamped 0.70–0.95.
+- **MPC:** gradually approaches a target within 0.835–0.875; unemployment acts through confidence rather than a second direct penalty. See D-051 below for equations.
 - **Approval:** 35 %/month toward satisfaction = 25 % employment + 25 % real income + 15 % affordability + 15 % services
   + 10 % trust + 10 % stability. Trust falls with tax rises, cuts to services/transfers, arrears, downgrades.
 
@@ -568,11 +569,11 @@ separate RNG stream; SOE dividends are wealth-neutral; capex cuts lower producti
 and palm policies; tariffs, diversion, retaliation, agreements; glide path, credibility, escape clause; development and
 public capital; wealth effect; schema-6 round trip, schema-5 migration and corrupt-save rejection.
 
-### Known limitation (measured, not yet fixed)
+### Historical limitation (addressed by D-051 below; not empirical calibration)
 The engine's demand multiplier is large: removing the RON95 ceiling lowers real GDP by ~1.8% after 200 days in a
 controlled run, and oil +50% by ~4.5% (model 1 gave ~5.6% before this change). Real-world estimates are several times
 smaller. The cause is the existing feedback between unemployment, confidence and the propensity to consume, not the new
-systems; it needs a whole-model recalibration against published multipliers.
+systems; D-051 reduces the repeated behavioural amplification. Further empirical calibration remains open; the historical numbers below and new controlled experiments use different shock durations and should not be directly compared.
 
 ## Schema 7: ten commodities and 60 securities
 Prices: `p_c = exp(cycle_c + link_c + episodes_c)` with links coal `0.3 ln oil + g`, palm `0.4 ln oil + 0.3 g`, rubber
@@ -582,3 +583,86 @@ cycle); LNG `= gasIndex × e^{cycle}`, gasIndex `+= (oil − gasIndex)/180`. Imp
 `= σ × Σ_{wheat,rice} imports × FX × max(0, p − 1)`. Rubber VA `= 2.5bn × 0.7 × volume × price × FX`, 90% of its change
 to households. Company revenue `× (1 + Σ s_c (p_c − 1))` for commodity-priced producers (Press Metal: aluminium 0.8).
 Covered by `tests/phase7-world.test.ts` ("ten commodities", schema-6 migration).
+
+
+## D-051: bounded household feedback and funded spending (31 October 2026)
+
+The correction applies to future ticks of all campaigns, including existing saves; it does not rewrite previous
+reports, cash, debt, RNG or the opening baseline. No fields or schema version change. A loaded old MPC moves toward
+its new target gradually rather than jumping at load. Coefficients are fictional gameplay assumptions, not fitted
+Malaysian estimates. Approval and wealth scoring still compare living standards with campaign-opening income.
+
+### Confidence and precautionary saving
+
+Use calendar-normalised real disposable income per person from monthly reports. At close, compare current income
+with the report up to three months earlier: `trend = clamp((income / prior)^(1/n) − 1, −0.03, 0.03)`.
+`n = min(3, prior report count)`; before any report use the opening income with `n = 1`. Thus a permanent level loss
+stops being a negative trend after three stable intervals. Nonpositive current/prior incomes use −3%/+3% respectively
+(current takes precedence); this avoids undefined ratios without claiming a precise growth rate at zero income.
+
+- `inflationStress = max(0, coreInflation − 0.03)` (pump-price CPI remains excluded in model 2).
+- `confidenceTarget = clamp(0.6 − (u − naturalU) − 0.5·inflationStress + 1.5·trend + 0.15·(risk − 0.5), 0.1, 0.95)`.
+- `confidence += 0.25·(confidenceTarget − confidence)` monthly.
+- `mpcTarget = 0.86 + clamp(0.06·(confidence − 0.6) − 0.1·inflationStress, −0.025, 0.015)`.
+- `mpc += clamp(0.25·(mpcTarget − mpc), −0.005, 0.005)` monthly.
+
+Wage losses still reduce actual disposable income. The separate direct unemployment penalty in MPC is removed.
+Confidence's investment-growth contribution is `0.01·(confidence − 0.6)` per year (formerly 0.03); the multiplier on
+net household credit-growth demand is `clamp(1 + 0.5·(confidence − 0.6), 0.8, 1.2)` (formerly confidence/0.6).
+Both use the incoming month's confidence as before, while profitability, utilisation, rates, repayment demand and
+bank supply retain their existing channels. No price, GDP or employment outcome is capped to force recovery.
+
+### Household funding and fuel accounting
+
+Daily desired cash spending uses the existing 50/50 current/permanent-income blend plus the equity wealth effect.
+It is limited to `max(0, disposable + savings)`. This prevents paper gains or stale income expectations from financing
+unavailable spending. Already-approved new credit is spent separately as before, with the existing bank loan/deposit
+entries; the cap does not manufacture loans or count new credit twice.
+
+The fuel-price delta reallocates that funded envelope: `fuelAdjustment = min(fuelDelta, C)` and nonfuel basket spending
+is `C − fuelAdjustment`. If C is zero, both are zero. Higher fuel costs reduce other purchases; lower fuel costs release
+basket spending within the same total cash outlay. If extra fuel costs exceed the envelope, other purchases reach zero
+and fuel spending is affordability-rationed. Desired fuel volume/CPI pricing remains a reduced-form approximation.
+Savings change by `YD − C`, and month-to-date total consumption records `C + newCredit`. Previously subtracting the
+extra fuel bill only from basket demand accidentally booked that amount as household saving.
+
+**Remaining boundary:** savings are the existing aggregate net liquid position. If mandatory tax/debt deductions alone
+exceed income plus savings, the signed shortfall remains visible; discretionary spending is zero. This patch does not
+forgive that shortfall, create emergency credit, or introduce a full household arrears/default waterfall. Normal
+campaigns in the controlled four-seed runs never exhausted savings; explicit low-cash tests exercise the funding cap.
+
+### Verification
+
+`tests/household-behavior.test.ts` covers recovery after a persistent income-level loss, bounded/gradual saving responses,
+separate investment/credit confidence channels, exhausted resources, fuel reallocation, read-only previews, actual daily
+cash settlement and deterministic save/resume. Existing invariant tests cover fiscal/bank identities and policy lags.
+`node scripts/household-balance.mjs artifacts/household-balance.json` runs paired 24-month baseline, temporary oil,
+subsidy-removal and recession experiments across four seeds, with fixed-MPC and fixed-confidence diagnostic variants.
+The script is dev-only. See `docs/game-balance.md` for measured before/after results and scoring limitations.
+
+## D-052–D-054: explainability, risk signals and scenario settings
+
+The read-only explanation module reports arithmetic contributions, not causal policy estimates:
+- Unemployment: `−Δemployed / previousLabourForce + employedNow·(1/previousLabourForce − 1/currentLabourForce)`;
+  multiply by 100 for percentage points. Previous workforce is reconstructed from last reported jobs/unemployment.
+- CPI: each weighted basket price change from opening, with pump-price weight in national model 2. A reconciliation
+  row separates any difference between the published CPI and prices under a just-effective policy awaiting daily settlement.
+- Approval: `0.35 × componentWeight × (componentTarget − previousApproval)` at the latest monthly close.
+- GDP: sector nominal value added annualised by actual calendar days; resources/net product taxes are the residual
+  needed to reconcile total nominal GDP. These are explicitly not real-growth contributions.
+- Treasury: month-to-date receipts minus paid outlays plus borrowing minus principal plus net SWF transfers.
+
+Alerts are read-only daily UI signals. Treasury coverage = cash / average paid daily gross outlays, using the last
+closed month or settled days so far before that. No estimate exists before spending is observed. This excludes future
+revenue/financing and is not an insolvency prediction. Housing pressure = `100·(rentIndex/wageIndex − 1)`, not an observed
+rent-to-income ratio. Estimated project cost = spent + remaining real work × current construction price, compared with
+base cost. Completed/cancelled projects are excluded. Default warning thresholds: 14 days treasury, 6% unemployment,
+25% housing pressure, 20% project overrun. Critical thresholds: half the treasury limit; +2, +15 and +20 percentage
+points respectively for the other rules. A 10% release margin avoids boundary chatter. Alerts do not post money,
+change RNG or alter economic decisions; optional pause only controls the existing clock.
+
+New export-slump and energy-shock scenarios use existing slowdown/oil event templates, at normal magnitude for
+180/90 days. Their future hazards equal the balanced scenario. Existing recession hazards remain unchanged and are
+now explicitly shown before campaign creation. Tests cover explanation reconciliation, read-only behaviour, alert
+entry/escalation/recovery, disabled rules, invalid preferences, project estimates and scenario save/resume. Browser
+coverage verifies metric clicks, critical versus warning pause, deduplication and persisted preferences.

@@ -1,9 +1,10 @@
+import { EXPLAIN_LABELS, type ExplainMetric } from '../../engine/economic-explanations';
 import { OFFICIAL_GDP, OFFICIAL_MONTHLY } from '../../data/official-history';
 import { isInflow } from '../../engine/government';
 import { SECTOR_IDS, SECTORS } from '../../data/economic-baseline';
 import { calibrationFor } from '../../engine/calibration';
 import { daysInMonth, klDay, klDayLabel, monthKeyLabel } from '../../engine/time';
-import { useGameState } from '../../store/game-store';
+import { useGame, useGameState } from '../../store/game-store';
 import { fx, money, pct } from '../../utils/format';
 import { TimeChart } from '../charts/TimeChart';
 import { EventCard } from '../EventCard';
@@ -26,6 +27,7 @@ export function EconomyPanel() {
   const e = g.external;
   return (
     <PanelShell title={g.baseline.profile === 'malaysia' ? 'Malaysia economy' : 'KL economy · legacy'} subtitle="Aggregate households, 7 input–output sectors, banks and the external economy. Dated official opening totals; modeled sector allocation and simulated outcomes." width={760}>
+      <Section title="Why did this change?"><div className="flex flex-wrap gap-2">{(Object.keys(EXPLAIN_LABELS) as ExplainMetric[]).map(id => <button key={id} className="btn" onClick={() => useGame.getState().explain(id)}>{EXPLAIN_LABELS[id]}</button>)}</div></Section>
       {g.baseline.profile === 'malaysia' && <Section title="Past five years · official historical reference">
         <p className="mb-2 text-[12px] text-slate-400">Pinned observations available 31 Oct 2026. Campaign charts below begin at the fictional opening and then use your simulated results. Official CPI below uses 2010=100; campaign CPI uses opening=100. No interpolation across missing periods.</p>
         <div className="grid grid-cols-2 gap-3">

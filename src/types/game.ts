@@ -581,7 +581,7 @@ export interface BaselineSnapshot {
   rentBurden: number;
 }
 
-export type ScenarioId = 'balanced' | 'recession';
+export type ScenarioId = 'balanced' | 'recession' | 'export-slump' | 'energy-shock';
 
 // ---------------------------------------------------------------- world: commodities & partners
 export type CommodityId = 'oil' | 'gas' | 'coal' | 'palm' | 'rubber' | 'rice' | 'wheat' | 'steel' | 'aluminium' | 'copper';

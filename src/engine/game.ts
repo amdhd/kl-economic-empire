@@ -157,6 +157,8 @@ function createWithProfile(seed: number, scenario: ScenarioId, profile: 'malaysi
     s.external.cycles.us = -0.03;
     s.external.cycles.risk = -0.15;
   }
+  if (scenario === 'export-slump') startEvent(s, 'global_slowdown', startDay, 180, 1);
+  if (scenario === 'energy-shock') startEvent(s, 'oil_spike', startDay, 90, 1);
   news(s, { kind: 'system', tone: 'neutral', title: 'Welcome, President', body: 'A fictional Malaysian presidency governs the national economy from the KL map. New campaigns use dated official starting figures; subsequent outcomes are simulations. All companies’ prices and financials are fictional simulations. Press Space to start the clock.' });
   return s;
 }

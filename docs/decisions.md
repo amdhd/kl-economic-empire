@@ -314,3 +314,31 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   line list, a slider editor and an explanation column, and the monthly balance pinned to the list. Edits use the same
   commands and lags as the full panels (budgets tomorrow, taxes next month); no economic rule changes.
 - **D-050 Modern Glass appearance (user-directed).** Default to London-inspired steel-blue building colors, charcoal roads, muted greenery and overcast lighting, with an original KL palette toggle. Add one original 168m tiered elliptical extrusion prototype near KLCC, explicitly labeled fictional and switchable; no copied models, company ownership or economic effects. This is stylized glass shading, not physically reflective materials. Cosmetic preferences persist separately in local storage and optionally in the save envelope (including cloud saves); old saves remain valid without an engine schema change. No construction tools or economic rules are introduced.
+
+- **D-051 Household feedback correction (user-directed).** Replace the campaign-opening income gap in confidence
+  with up to three months of geometric monthly real-income-per-person change. Keep opening comparisons in approval
+  and scoring. Remove unemployment's second direct MPC penalty; bound precautionary saving and ease into it monthly.
+  Reduce confidence's separate investment and credit-demand multipliers without changing bank supply. Bound daily
+  ordinary spending by income plus net savings; approved credit remains separate. Fuel costs reallocate the funded
+  spending envelope and no longer appear as fictitious saving. Mandatory-payment shortfalls remain a visible signed
+  net liquid position (no new household debt/default model). Apply prospectively to existing saves, with no state,
+  RNG, clock, schema or historical-balance reset. The 24-month score still emphasizes recent conditions and adjusts
+  for external shocks: recession tests now measure cumulative output/income costs, not guaranteed lower final scores.
+  Record the new equations, boundaries and paired replay results in economy-model.md and game-balance.md.
+- **D-052 Economic explanations (user request #4).** Click GDP, unemployment, inflation, approval or treasury in the
+  Economy summary (also approval in the bottom bar) for a read-only inspector. Decompose nominal GDP run-rate change,
+  workforce/employment arithmetic, CPI level versus opening, monthly approval formula and month-to-date cash flows.
+  Label periods/units and separate those measured contributions from present mechanisms, recent decisions, active
+  events and pending delivery. Do not invent counterfactual policy shares or statistical forecast bands. CPI includes
+  an explicit settlement-timing reconciliation when a newly effective rate is not yet reflected in published prices.
+- **D-053 Alerts and settings (user request #10).** Device-local preferences persist separately from engine saves:
+  enabled rules and thresholds for gross-outlay treasury coverage, unemployment, rent/wage-index pressure and estimated
+  project cost escalation; brief/detailed notifications, confirmation pause and optional critical-alert pause.
+  Evaluate at daily UI settlements, notify on entry/escalation, rearm after a 10% recovery margin. Store at most 40
+  session alerts. Loading seeds the monitor without replaying existing risks; new games reset it. Critical pauses
+  require player resume and cannot be undone by closing a deliberation dialog. No speed, offline or simulation changes.
+- **D-054 Additional starting scenarios.** Export downturn starts the existing global slowdown for 180 days at
+  magnitude 1; Energy squeeze starts the existing +40% oil shock for 90 days at magnitude 1 (seven-day ramp).
+  Both retain normal later event probabilities. The Recession card now discloses its existing persistent 3× adverse /
+  0.6× other hazard weights and 180-day, 1.3× opening shocks. Scenarios reuse deterministic registered events without
+  additional random draws; no new economic equations or saved fields. Saved scenario strings remain in schema 7.
