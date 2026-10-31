@@ -18,6 +18,7 @@ const GROUPS: { title: string; items: { id: PanelId; label: string; color: strin
     { id: 'decisions', label: 'Policy decisions', color: '#b9e48f' },
   ] },
   { title: 'Trade & resources', items: [
+    { id: 'ministry', label: 'Trade ministry', color: '#7cc4f2' },
     { id: 'trade', label: 'Trade & FX', color: '#e2c778' },
     { id: 'central', label: 'Central bank', color: '#f0c36d' },
     { id: 'partners', label: 'Trading partners', color: '#8fd3c7' },

@@ -13,6 +13,7 @@ import { initialSoe, validateSoe } from '../engine/soe';
 import { initialWorld, validateCommodityPolicy, validateWorld } from '../engine/world';
 import { initialPolicy, validatePolicy } from '../engine/policy';
 import { initialFdi, validateFdi } from '../engine/fdi';
+import { initialTradeBook, validateTradeBook } from '../engine/trade-book';
 import type { GameState } from '../types/game';
 
 export interface SaveFile {
@@ -55,6 +56,13 @@ const MIGRATIONS: Record<number, Migration> = {
     const s = state as unknown as GameState;
     s.deals ??= initialDeals(s.seed, false, s.scheduler.lastDay);
     for (const f of [s.government.mtd, ...s.reports.map(r => r.gov)]) { f.dealEscrowOut = 0; f.dealEscrowIn = 0; }
+    return state;
+  },
+  // v12 → v13: trade-ministry ledger (D-077). Model-3 Malaysia saves open it from today at official 2025 levels; nothing
+  // already settled changes. Earlier models keep it switched off.
+  12: state => {
+    const s = state as unknown as GameState;
+    s.tradeBook ??= initialTradeBook(s, !!s.fdi?.enabled && !!s.world?.enabled);
     return state;
   },
   // v11 → v12: central-bank monetary policy. Existing campaigns stay on the automatic rule with neutral settings.
@@ -230,6 +238,7 @@ export function deserialize(json: string): GameState {
   validateFiscal(s.fiscal);
   validatePolicy(s.policy);
   validateFdi(s.fdi);
+  validateTradeBook(s.tradeBook);
   if (s.policy.enabled !== s.fdi.enabled || (s.policy.enabled && s.baseline.model !== 3)) throw new Error('Corrupt save: inconsistent policy generation');
   if (![1, 2, 3].includes(s.baseline.model) || !(s.households.equityIndex > 0)
     || (s.baseline.profile !== 'malaysia' || s.baseline.model === 1) !== !s.world.enabled) throw new Error('Corrupt save: inconsistent model generation');

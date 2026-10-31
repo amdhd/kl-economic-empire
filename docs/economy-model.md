@@ -898,3 +898,27 @@ Month close: `income = usd × 0.5 × UST10 / 12 × fx + bonds × debtRate / 12`;
 Bills: outstanding `bills ≤ 0.5 × (reserves + bills)` (cumulative cap). Bill interest is paid to banks as `reserves += i; capital += i`
 (deposits unchanged).
 
+
+## Trade ministry ledger (D-077)
+A satellite account at official 2025 levels (`src/data/trade.ts`), opened at `value2025 × scale`, `scale = opening nominal
+GDP / 2025 GDP`. Daily export value of product `p`, before policy:
+`X_p = X0_p/365 × (D_p/D_p0)^ε_p × P_p`, where `D` is the product's driver (semis, industrial, consumer, global demand,
+tech cycle, tourism; world oil, gas × PETRONAS production, palm price × volume, steel price × √industrial),
+`ε = 0.5` for the equity-linked semis and tech drivers (1 otherwise), and `P_p = MYR/USD ÷ opening` for world-priced
+lines or `(p_j/p_j0)^0.4 × (fx·usPrice ÷ opening)^0.6` for manufactures and services (supplying sector `j`). Non-commodity
+goods are also scaled by partner access `exportAccess / opening`.
+Policy gains: `won_p = X_p × (promotion_p + deals_p) + contracts_p`. Promotion: each programme's boost moves 1/150 a day
+toward `1 − exp(−paid×365 / scale_k)` and lifts listed products by `max_p,k × boost` (credit insurance ×(1 + 3·slump));
+costs post daily to `exportSupport` (40% fin, 20% tech, 40% cons purchases). Deals in force: `share_k × {10%, 20%} × ramp`
+(180-day ramp). Contracts: `volume/365 × delivered × 0.5 × unit price ÷ signing spot` (LNG: a PETRONAS price hedge,
+`volume/365 × (unit/spot − 1)`, with no volume). Only `won_p × domesticContent_p / price_j` enters the core model, as extra
+real export demand for sector `j`; the rest is imported content in the ledger's intermediate imports.
+Concessions in force remove `{0.15%, 0.3%} × importShare_k × 10 × ramp` (cap 5%) of the conceding sector's home demand
+(procurement: ministry purchases only) to imports. Imports by end use index the core: intermediate ∝ input imports,
+capital ∝ private investment (+ FDI equipment), consumption ∝ finished consumer imports, other goods ∝ goods exports,
+services ∝ ½ nominal GDP + ½ goods imports. With no trade policy the core economy is unchanged (tested).
+Deals: required offer `ask × (1.3 − relations/100)`; offer value `depth × (1 if the partner's preferred market else 0.6)`;
+talks 120/180 days; collapse on a tariff dispute or relations < 40; in-force deals add 4 to the partner's relations target;
+withdrawal costs 15 (in force) or 5 (talks). Buyer contracts: 2% bond in escrow; buyer pays at most
+`1.04 − 0.002 × months × (1 − indexation)` × spot; delivery `clamp(1 − 2(util − 1), 0.5, 1)`; shortfall penalty 25% of the
+undelivered value from the bond, then the treasury; buyer exits if the contract price exceeds spot by 40%.

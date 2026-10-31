@@ -34,6 +34,10 @@ export interface DayEconomy {
   gdpReal: number;
   levy: number;
   householdTax: number;
+  /** Trade-ledger inputs (D-077): imported production inputs, finished consumer imports, home sales lost to concessions. */
+  inputImports: number;
+  consumerImports: number;
+  displaced: Vec;
 }
 
 /** Share of steel imports replaced by domestic producers under a safeguard duty (ASSUMPTION). */
@@ -183,6 +187,10 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
   s.trade.readiness += (targetReadiness - s.trade.readiness) / 90;
   const exports = zero();
   const fdiX = fdiExports(s);
+  // Trade ministry (D-077): exports won by promotion, product deals and buyer contracts, and home sales opened to imports.
+  const tradeX = s.tradeBook?.enabled ? s.tradeBook.policyReal : undefined;
+  const opened = s.tradeBook?.enabled ? s.tradeBook.displacement : undefined;
+  const displaced = zero();
   // --- Final demand (nominal MYR → real) -------------------------------------------------------
   const finalReal: number[] = [];
   let levy = 0;
@@ -199,8 +207,14 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
     if (j === 'prop') hh.mtd.rent += consumption * SECTORS[j].consumption;
     let inv = 0;
     for (const k of SECTOR_IDS) inv += s.sectors[k].investmentMonthly * PER_DAY * (INVESTMENT_GOODS[j] ?? 0);
-    const domesticNominal = c + gov.purchases[j] + inv;
-    const xReal = CAL.X0[j] * exportIndex(s, j) * (j === 'prop' ? mods.propDemand : 1) + fdiX[j];
+    let domesticNominal = c + gov.purchases[j] + inv;
+    if (opened?.[j]) {
+      // Procurement concessions reach only ministry purchases; the other concessions reach all home sales of the sector.
+      displaced[j] = (j === 'prop' ? gov.purchases[j] : domesticNominal) * opened[j];
+      domesticNominal -= displaced[j];
+      s.trade.mtdImports += displaced[j];
+    }
+    const xReal = CAL.X0[j] * exportIndex(s, j) * (j === 'prop' ? mods.propDemand : 1) + fdiX[j] + (tradeX?.[j] ?? 0);
     exports[j] = xReal;
     if (j === 'cons') {
       // Visitors (the tourism share of consumer exports) pay the levy on top of the sector price.
@@ -230,6 +244,7 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
   let carbonTax = 0, emissions = 0, emissions0 = 0;
   let wheatImports = 0;
   let riceImports = 0;
+  let inputImports = 0;
   SECTOR_IDS.forEach((j, idx) => {
     const sec = s.sectors[j];
     const boost = productivityBoost(s, j);
@@ -251,6 +266,7 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
     wheatImports += ic.wheatQty * req;
     riceImports += ic.riceQty * req;
     s.trade.mtdImports += imports;
+    inputImports += imports;
     s.trade.mtdExports += exports[j] * (demand > 0 ? out / demand : 0) * sec.price;
     let inter = ic.user * req;
     for (const i of SECTOR_IDS) inter += IO[i][j] * s.sectors[i].price * out;
@@ -323,7 +339,7 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
   hh.mtd.debtService += interestH + amortH;
   hh.mtd.disposable += disposable;
   hh.mtd.consumption += spending + credit;
-  return { gdpNominal, gdpReal, levy, householdTax };
+  return { gdpNominal, gdpReal, levy, householdTax, inputImports, consumerImports: importedConsumption, displaced };
 }
 
 /** Basket-weighted domestic prices excluding the consumption levy and pump prices (1 at opening). */
