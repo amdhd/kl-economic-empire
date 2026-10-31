@@ -411,3 +411,8 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   marker and a rising extrusion at illustrative **fictional** sites (the game has no real addresses), then a lit "operating"
   block. Company markers flash on hourly moves ≥1% and show an 8-second bubble when a company event starts.
   Automated browsers (navigator.webdriver) update trains every 500 ms to keep tests light.
+- **D-062 Treasury chip shows daily closes (user request).** Display-only. The bottom-bar treasury reads the latest
+  `s.daily` close instead of the live ledger, so it changes once per settled day (the opening balance before the first
+  close). Its trend is the change vs the previous close in signed billions ("+1.2B", millions below 0.1B), green/red.
+  Hovering (or focusing) the chip shows a card with the balance, the change vs the close seven days earlier (or the oldest
+  close), and a sparkline of the last 30 daily closes coloured by that weekly trend. The live balance stays in the Economy window.

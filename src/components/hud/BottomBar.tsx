@@ -1,5 +1,5 @@
 import { Clock, SpeedControls } from './TopBar';
-import { fullMoneyMinor, money } from '../../utils/format';
+import { TreasuryChip } from './TreasuryChip';
 import { useMemo } from 'react';
 import { daysInMonth, formatKL, klParts } from '../../engine/time';
 import { useGame, useGameState } from '../../store/game-store';
@@ -8,14 +8,10 @@ import { useGame, useGameState } from '../../store/game-store';
 export function BottomBar() {
   const g = useGameState();
   const setPanel = useGame.getState().setPanel;
-  const panel = useGame((s) => s.panel);
   const items = useMemo(() => g.news.slice(-14).reverse(), [g.news.length, g.news]); // eslint-disable-line react-hooks/exhaustive-deps
   const p = klParts(g.clock.hour * 60);
   const daysLeft = daysInMonth(p.year, p.month) - p.day + 1;
   const text = items.map((n) => ({ ...n, when: formatKL(n.atMin) }));
-  // Treasury change over the last settled day (the money chip's "per day" trend).
-  const d = g.daily;
-  const perDay = d.length >= 2 ? d[d.length - 1].treasury - d[d.length - 2].treasury : 0;
   const approval = g.indicators.approval;
   const mood = approval >= 70 ? '😄' : approval >= 60 ? '🙂' : approval >= 45 ? '😐' : '☹️';
   return (
@@ -38,12 +34,7 @@ export function BottomBar() {
       <button className="cs-chip" onClick={() => useGame.getState().explain('approval')} title={`Approval ${approval.toFixed(0)}% · victory needs 60%`} data-testid="bottom-approval">
         <span aria-hidden>{mood}</span><b className="num">{approval.toFixed(0)}%</b>
       </button>
-      <button className={`cs-money ${panel === 'finance' ? 'is-active' : ''}`} onClick={() => setPanel(panel === 'finance' ? null : 'finance')} aria-pressed={panel === 'finance'}
-        title="Treasury balance (spendable government cash). Click for the full Economy window." data-testid="bottom-treasury">
-        <span className="cs-coin" aria-hidden><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2" /><circle cx="12" cy="12" r="2.6" /><path d="M6 9.5v5M18 9.5v5" /></svg></span>
-        <b className="num">{fullMoneyMinor(g.government.treasury)}</b>
-        <span className={`num cs-trend ${perDay < 0 ? 'down' : perDay > 0 ? 'up' : ''}`}>{perDay >= 0 ? '+' : '−'}{money(Math.abs(perDay))}/day</span>
-      </button>
+      <TreasuryChip />
     </footer>
   );
 }
