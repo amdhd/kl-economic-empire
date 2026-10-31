@@ -42,7 +42,7 @@ export function TradePanel() {
     </Section>
     <Section title="Central bank · sterilised FX desk">
       <div className="grid grid-cols-2 gap-3">
-        <Stat label="Simulated MYR per US$1" value={fx(g.external.myrPerUsd)} />
+        <Stat label="Simulated MYR per $1" value={fx(g.external.myrPerUsd)} />
         <Stat label="Automatic OPR" value={pct(g.external.opr, 2)} />
         <Stat label="Usable foreign-currency inventory" value={fullMoneyMinor(g.centralBank.usdReserves, 'USD')} />
         <Stat label="Segregated MYR inventory" value={fullMoneyMinor(g.centralBank.myrCash)} />
@@ -51,7 +51,7 @@ export function TradePanel() {
       {g.baseline.profile === 'legacy-kl' && <p className="mt-2 text-[12px] text-amber-200">Legacy saves receive no invented reserves. Start a new Malaysia campaign for the central-bank desk.</p>}
       <div className="mt-3 flex flex-wrap items-end gap-3">
         <label className="text-[12px]">Action<select className="input mt-1 block" value={side} onChange={e => setSide(e.target.value as typeof side)} aria-label="FX intervention direction"><option value="sellUSD">Sell USD · support MYR</option><option value="buyUSD">Buy USD · weaken MYR</option></select></label>
-        <label className="text-[12px]">US$ million<input className="input num mt-1 block !w-32" type="number" min="1" max="1000" step="10" value={usdMillions} onChange={e => setUsdMillions(Number(e.target.value))} aria-label="FX intervention USD millions" data-testid="intervention-amount" /></label>
+        <label className="text-[12px]">$ million<input className="input num mt-1 block !w-32" type="number" min="1" max="1000" step="10" value={usdMillions} onChange={e => setUsdMillions(Number(e.target.value))} aria-label="FX intervention USD millions" data-testid="intervention-amount" /></label>
         <button className="btn btn-primary" disabled={!q.ok} onClick={() => setConfirm('fx')} data-testid="review-intervention">Review intervention</button>
       </div>
       <p className="mt-2 text-[12px] text-slate-400" data-testid="intervention-quote">{q.ok ? `${side === 'buyUSD' ? 'Pay' : 'Receive'} ${fullMoneyMinor(q.myrMinor)} at ${fx(q.rate)} MYR/USD, including spread.` : q.message}</p>

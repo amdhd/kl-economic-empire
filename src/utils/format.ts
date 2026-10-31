@@ -5,20 +5,22 @@ const fmt0 = nf(0);
 const fmt1 = nf(1);
 const fmt2 = nf(2);
 
-const SYMBOL: Record<Currency, string> = { MYR: 'RM', USD: 'US$' };
+const SYMBOL: Record<Currency, string> = { MYR: 'RM', USD: '$' };
+/** "RM 1.2bn" keeps a space after RM; dollars read "$1.2bn". */
+const prefix = (c: Currency) => (c === 'USD' ? '$' : 'RM ');
 
 /** Compact money: RM 1.23bn, RM 456.7m, RM 12.3k. `value` is in major units. */
 export function money(value: number, currency: Currency = 'MYR', digits = 1): string {
   if (!Number.isFinite(value)) return '—';
   const sign = value < 0 ? '−' : '';
   const a = Math.abs(value);
-  const sym = SYMBOL[currency];
+  const pre = prefix(currency);
   const d = nf(digits);
-  if (a >= 1e12) return `${sign}${sym} ${d.format(a / 1e12)}tn`;
-  if (a >= 1e9) return `${sign}${sym} ${d.format(a / 1e9)}bn`;
-  if (a >= 1e6) return `${sign}${sym} ${d.format(a / 1e6)}m`;
-  if (a >= 1e4) return `${sign}${sym} ${d.format(a / 1e3)}k`;
-  return `${sign}${sym} ${fmt2.format(a)}`;
+  if (a >= 1e12) return `${sign}${pre}${d.format(a / 1e12)}tn`;
+  if (a >= 1e9) return `${sign}${pre}${d.format(a / 1e9)}bn`;
+  if (a >= 1e6) return `${sign}${pre}${d.format(a / 1e6)}m`;
+  if (a >= 1e4) return `${sign}${pre}${d.format(a / 1e3)}k`;
+  return `${sign}${pre}${fmt2.format(a)}`;
 }
 
 /** Money from integer minor units (sen / cents). */
@@ -26,10 +28,10 @@ export function moneyMinor(minor: number, currency: Currency = 'MYR', digits = 1
   return money(minor / 100, currency, digits);
 }
 
-/** Exact money with 2 decimals, e.g. share prices: RM 9.84 / US$ 412.10 */
+/** Exact money with 2 decimals, e.g. share prices: RM 9.84 / $412.10 */
 export function price(value: number, currency: Currency): string {
   if (!Number.isFinite(value)) return '—';
-  return `${SYMBOL[currency]} ${fmt2.format(value)}`;
+  return `${prefix(currency)}${fmt2.format(value)}`;
 }
 
 /** 0.0512 -> "5.1%" */
@@ -56,14 +58,15 @@ export const FICTIONAL_LABEL = 'Simulated · fictional data';
 export function sharePrice(value: number, currency: Currency): string {
   if (!Number.isFinite(value)) return '—';
   const digits = currency === 'MYR' && value < 1 ? 3 : 2;
-  return `${SYMBOL[currency]} ${nf(digits).format(value)}`;
+  return `${prefix(currency)}${nf(digits).format(value)}`;
 }
 
 export const currencySymbol = (c: Currency) => SYMBOL[c];
 
-/** Full digits, preserving every integer sen/cents without compact suffixes. */
+/** Full digits in whole ringgit/dollars, without compact suffixes. */
 export function fullMoneyMinor(minor: number, currency: Currency = 'MYR'): string {
   if (!Number.isSafeInteger(minor)) return '—';
   const a = Math.abs(minor);
-  return `${minor < 0 ? '−' : ''}${SYMBOL[currency]} ${fmt0.format(Math.floor(a / 100))}.${String(a % 100).padStart(2, '0')}`;
+  // Whole ringgit/dollars: the sen/cents still exist in the ledger but are not shown (user preference).
+  return `${minor < 0 ? '−' : ''}${prefix(currency)}${fmt0.format(Math.floor(a / 100))}`;
 }

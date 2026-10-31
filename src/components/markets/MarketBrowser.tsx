@@ -59,7 +59,7 @@ function FxPane({ game }: { game: GameState }) {
         <div className="rounded-xl bg-white/[0.03] p-3">
           <div className="text-[11px] uppercase tracking-wider text-slate-400">MYR / USD</div>
           <div className="text-xl font-semibold tabular-nums text-white">{fx(f.usdPerMyr)}</div>
-          <div className="text-xs text-slate-500">US$ per RM 1</div>
+          <div className="text-xs text-slate-500">$ per RM 1</div>
         </div>
         <div className="rounded-xl bg-white/[0.03] p-3">
           <div className="text-[11px] uppercase tracking-wider text-slate-400">Conversion spread</div>
@@ -68,7 +68,7 @@ function FxPane({ game }: { game: GameState }) {
         </div>
       </div>
       {f.history.length >= 2 ? (
-        <PriceChart points={f.history.map((p) => ({ t: p.t, label: p.label, o: p.v, h: p.v, l: p.v, c: p.v, v: 0 }))} currency="MYR" resolution="day" height={200} title="USD/MYR · daily fix · simulated" unit="RM per US$" decimals={4} />
+        <PriceChart points={f.history.map((p) => ({ t: p.t, label: p.label, o: p.v, h: p.v, l: p.v, c: p.v, v: 0 }))} currency="MYR" resolution="day" height={200} title="USD/MYR · daily fix · simulated" unit="RM per $" decimals={4} />
       ) : (
         <div className="rounded-lg border border-white/10 p-6 text-center text-xs text-slate-400">The daily FX fix is recorded at each KL midnight. History appears after the first game day.</div>
       )}

@@ -81,7 +81,7 @@ describe('market rows, search and charts', () => {
   it('formats MYR and USD prices distinctly', () => {
     expect(sharePrice(16.84, 'MYR')).toBe('RM 16.84');
     expect(sharePrice(0.355, 'MYR')).toBe('RM 0.355');
-    expect(sharePrice(1234.5, 'USD')).toBe('US$ 1,234.50');
+    expect(sharePrice(1234.5, 'USD')).toBe('$1,234.50');
     expect(rows.filter((r) => r.currency === 'MYR')).toHaveLength(26);
     expect(rows.filter((r) => r.currency === 'USD').every((r) => r.exchange === 'US')).toBe(true);
     const nvda = rows.find((r) => r.id === 'US:NVDA')!;

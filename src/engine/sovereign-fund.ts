@@ -225,7 +225,7 @@ export function convertFx(s: GameState, from: Currency, amountMinor: number): st
     f.usdCash += usd;
     f.feesPaidMYR += (amountMinor / 100) * (FX_SPREAD / (1 + FX_SPREAD));
     fundFxPressure(s, usd);
-    addTx(s, 'fx', 'MYR', -amountMinor, `Converted to US$ ${(usd / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })} @ ${(fx * (1 + FX_SPREAD)).toFixed(4)}`, { fx, counterCurrency: 'USD', counterAmountMinor: usd });
+    addTx(s, 'fx', 'MYR', -amountMinor, `Converted to $${(usd / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })} @ ${(fx * (1 + FX_SPREAD)).toFixed(4)}`, { fx, counterCurrency: 'USD', counterAmountMinor: usd });
   } else {
     if (amountMinor > f.usdCash) return 'Insufficient USD cash';
     const myr = Math.floor(amountMinor * fx * (1 - FX_SPREAD));
