@@ -1,9 +1,9 @@
 import { MapAppearance } from './MapAppearance';
-import { displayMinutes } from '../../engine/clock';
+import { displayMinutes, SPEEDS } from '../../engine/clock';
 import { EXCHANGES, nextOpen, sessionPhase } from '../../engine/market-calendar';
 import { formatKL } from '../../engine/time';
 import { useGame } from '../../store/game-store';
-import type { Exchange, GameSpeed } from '../../types/game';
+import type { Exchange } from '../../types/game';
 import { SaveMenu } from './SaveMenu';
 import { HudIcon } from './HudIcon';
 import { Districts } from './Districts';
@@ -35,7 +35,7 @@ export function SpeedControls() {
       <button className={btn(paused)} onClick={togglePause} disabled={ended} title="Pause / resume (Space)" data-testid="btn-pause" aria-pressed={paused}>
         {paused ? '▶' : '⏸'}
       </button>
-      {([1, 2, 3] as GameSpeed[]).map((sp) => (
+      {SPEEDS.map((sp) => (
         <button key={sp} className={btn(!paused && speed === sp)} onClick={() => setSpeed(sp)} disabled={ended} title={`${sp}× — ${sp * 20} game minutes per real second (key ${sp})`} data-testid={`btn-speed-${sp}`}>
           {sp}×
         </button>

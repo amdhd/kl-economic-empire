@@ -4,6 +4,7 @@ import { initialControls, validateControls } from '../engine/policy-controls';
 // Versioned save format. Saving never mutates game state or advances the clock.
 import { assertSafeMinor } from '../engine/util';
 import { createGame, SCHEMA_VERSION } from '../engine/game';
+import { SPEEDS } from '../engine/clock';
 import { COMMODITY_IDS } from '../data/world';
 import { COMPANIES } from '../data/companies';
 import { LEGACY_BASELINE, SECTOR_IDS } from '../data/economic-baseline';
@@ -228,7 +229,7 @@ export function deserialize(json: string): GameState {
   if (!nonnegative(s.clock.subHourMs) || s.clock.subHourMs >= 3_600_000) throw new Error('Corrupt save: clock out of range');
   if (![s.clock.hour, s.clock.startHour, s.clock.endHour].every(Number.isSafeInteger)
     || s.clock.endHour <= s.clock.startHour || s.clock.hour < s.clock.startHour || s.clock.hour > s.clock.endHour
-    || ![1, 2, 3].includes(s.clock.speed) || typeof s.clock.paused !== 'boolean') throw new Error('Corrupt save: invalid clock');
+    || !SPEEDS.includes(s.clock.speed) || typeof s.clock.paused !== 'boolean') throw new Error('Corrupt save: invalid clock');
   if (typeof s.scheduler.campaignEnded !== 'boolean' || (s.scheduler.campaignEnded && s.clock.hour !== s.clock.endHour)
     || ![s.scheduler.lastDay, s.scheduler.lastWeekDay, s.scheduler.lastMonthKey, s.scheduler.ticks].every(Number.isSafeInteger)) throw new Error('Corrupt save: invalid scheduler');
   if (!['a', 'b', 'c', 'd'].every((k) => {

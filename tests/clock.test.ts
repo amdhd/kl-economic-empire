@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { accumulate, displayMinutes, GAME_MS_PER_REAL_MS, MAX_FRAME_MS } from '../src/engine/clock';
+import { accumulate, displayMinutes, GAME_MS_PER_REAL_MS, MAX_FRAME_MS, SPEEDS } from '../src/engine/clock';
 import { advance, createGame, runHeadless, SCHEMA_VERSION } from '../src/engine/game';
 import { formatKL, klParts } from '../src/engine/time';
 import { deserialize, serialize } from '../src/persistence/save';
@@ -77,6 +77,36 @@ describe('game clock', () => {
     play(a, 3000 * 50, 16); // 50 hours at 1x
     play(b, 1000 * 50, 33); // 50 hours at 3x
     expect(a.clock.hour).toBe(b.clock.hour);
+    a.clock.speed = b.clock.speed;
+    a.clock.subHourMs = b.clock.subHourMs = 0;
+    expect(JSON.stringify(a)).toBe(JSON.stringify(b));
+  });
+
+  // D-081: 5× is the same clock run faster — no skip, no catch-up, identical results.
+  it('5x: 0.6 real seconds = 1 game hour; only Pause/1x/2x/3x/5x exist', () => {
+    expect([...SPEEDS]).toEqual([1, 2, 3, 5]);
+    const s = createGame(1);
+    s.clock.paused = false;
+    s.clock.speed = 5;
+    expect(play(s, 590, 10)).toBe(0);
+    expect(play(s, 10, 10)).toBe(1);
+    expect(play(s, 6000, 16.6667)).toBe(10);
+    // A clamped background frame is 25 game minutes at 5×, so it can never cross more than one tick.
+    expect(MAX_FRAME_MS * 5 * GAME_MS_PER_REAL_MS).toBeLessThan(3_600_000);
+  });
+
+  it('produces identical state at 1x and 5x for the same number of game hours, and saves speed 5', () => {
+    const a = createGame(8);
+    const b = createGame(8);
+    a.clock.paused = b.clock.paused = false;
+    b.clock.speed = 5;
+    play(a, 3000 * 40, 16); // 40 hours at 1x
+    play(b, 600 * 40, 16); // 40 hours at 5x
+    expect(a.clock.hour).toBe(b.clock.hour);
+    expect(deserialize(serialize(b)).clock.speed).toBe(5);
+    const bad = JSON.parse(serialize(b));
+    bad.state.clock.speed = 4;
+    expect(() => deserialize(JSON.stringify(bad))).toThrow(/clock/);
     a.clock.speed = b.clock.speed;
     a.clock.subHourMs = b.clock.subHourMs = 0;
     expect(JSON.stringify(a)).toBe(JSON.stringify(b));

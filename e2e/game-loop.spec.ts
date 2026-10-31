@@ -20,9 +20,21 @@ test('clock starts paused at 08:00 and runs at 3x (≤1 game hour per real secon
   await expect(page.getByTestId('clock-time')).toHaveText(paused!);
 });
 
-test('only Pause/1x/2x/3x exist — no skip or month-advance controls', async ({ page }) => {
+test('key 5 runs the clock at 5x (≤100 game minutes per real second, no catch-up)', async ({ page }) => {
   await startCampaign(page);
-  for (const s of [1, 2, 3]) await expect(page.getByTestId(`btn-speed-${s}`)).toBeVisible();
+  const t0 = Date.now();
+  await page.keyboard.press('5');
+  await expect(page.getByTestId('btn-speed-5')).toHaveClass(/bg-emerald-500/);
+  const minutes = async () => { const [h, m] = (await page.getByTestId('clock-time').textContent())!.split(':').map(Number); return h * 60 + m; };
+  await expect.poll(minutes, { timeout: 10_000 }).toBeGreaterThanOrEqual(11 * 60);
+  const elapsedS = (Date.now() - t0) / 1000;
+  expect((await minutes()) - 8 * 60).toBeLessThanOrEqual(100 * (Math.ceil(elapsedS) + 1));
+  await page.keyboard.press('Space');
+});
+
+test('only Pause/1x/2x/3x/5x exist — no skip or month-advance controls', async ({ page }) => {
+  await startCampaign(page);
+  for (const s of [1, 2, 3, 5]) await expect(page.getByTestId(`btn-speed-${s}`)).toBeVisible();
   await expect(page.getByTestId('btn-speed-4')).toHaveCount(0);
   await expect(page.getByRole('button', { name: /next month|skip|end turn|fast.?forward/i })).toHaveCount(0);
 });

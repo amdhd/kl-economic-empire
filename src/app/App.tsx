@@ -161,7 +161,7 @@ function NewGameModal() {
             <span className="font-semibold text-white">Term length</span>
             {CAMPAIGN_LENGTHS.map((m) => <button key={m} onClick={() => setMonths(m)} aria-pressed={months === m} data-testid={`term-${m}`}
               className={`rounded-md px-2.5 py-1 font-semibold ${months === m ? 'bg-emerald-500/20 text-emerald-200 ring-1 ring-emerald-400/50' : 'bg-slate-700/50 text-slate-300'}`}>{m / 12} years</button>)}
-            <span className="text-slate-400">≈ {((m) => `${(m * 0.205).toFixed(0)} hours at 3×`)(months)}</span>
+            <span className="text-slate-400">≈ {((m) => `${(m * 0.205).toFixed(0)} hours at 3×, ${(m * 0.123).toFixed(0)} at 5×`)(months)}</span>
           </div>
           <label className="mt-3 flex items-start gap-2 text-[12px] text-slate-300">
             <input type="checkbox" className="mt-0.5" checked={boom} onChange={(e) => setBoom(e.target.checked)} data-testid="boom-mode" />
@@ -190,7 +190,7 @@ function HelpModal() {
     <div className="fixed inset-0 z-[70] grid place-items-center bg-slate-950/60" onClick={() => setShowHelp(false)} role="dialog" aria-modal="true">
       <div className="glass w-[520px] rounded-2xl p-5 text-[13px] text-slate-300" onClick={(e) => e.stopPropagation()}>
         <div className="mb-2 text-[16px] font-bold text-white">How time works</div>
-        <p>The clock runs continuously: 1× = 20 game minutes per real second, 2× = 40, 3× = 60. There is no skip — a 2-year term takes ~4.9 hours of play at 3× (10 years ≈ 25 hours). The game auto-pauses when the tab is hidden and never catches up offline.</p>
+        <p>The clock runs continuously: 1× = 20 game minutes per real second, 2× = 40, 3× = 60, 5× = 100 (keys 1, 2, 3, 5). There is no skip — a 2-year term takes ~4.9 hours of play at 3× or ~2.9 at 5× (10 years ≈ 25 or 15 hours). The game auto-pauses when the tab is hidden and never catches up offline.</p>
         <div className="mb-1 mt-3 font-semibold text-white">Shortcuts</div>
         <ul className="space-y-0.5">
           <li><kbd className="chip bg-slate-700">Space</kbd> pause / resume</li>

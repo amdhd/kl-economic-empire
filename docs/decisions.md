@@ -574,3 +574,9 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   two-seed mean (both still pass), and one FX lever test's per-seed threshold reflects its measured 1.2–2.0% range.
   Combined with D-078, the sacrifice ratio's 4-seed mean moves from 4.19 to 4.51 (seeds 3.6–5.0; published 0.5–4), so its
   guard is now a two-seed mean ≤ 5.0. This widens D-078's documented gap; the user accepted it (1 Nov 2026).
+- **D-081 5× speed (user request, PROJECT_SPEC §25).** Overrides the 3× ceiling (§2/§3, AGENTS rule 4). `SPEEDS` is now
+  1/2/3/5; 5× = 100 game minutes per real second, button `5×` and key `5`. The clock still accumulates real time into
+  whole hourly ticks, so a 5× run produces the same state as 1× for the same game hours (tested), and the 250 ms frame
+  clamp still prevents catch-up (at 5× one clamped frame is 25 game minutes, below one tick). No 4× is added. The living
+  map's trains run at 3× visual pace at 5×. Engine cost is ~1.7 hourly ticks per real second; the browser sample is in
+  `docs/performance.md`. Saves accept speed 5 with no schema change; older builds would reject such a save.
