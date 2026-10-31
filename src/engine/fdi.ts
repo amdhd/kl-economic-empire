@@ -57,6 +57,7 @@ export function attractiveness(s: GameState, kind: FdiKind): number {
   if (kind === 'datacentre') x += 25 * Math.min(1, leverTarget(s, 'aiProgramme') / 5e9) + 6 * leverTarget(s, 'aiAdoptionCredit') - 40 * (s.sectors.util.price - 1);
   if (kind === 'semiconductor') x += 8 * Math.min(1, leverTarget(s, 'reskilling') / 2e9) + 6 * Math.min(1, leverTarget(s, 'aiProgramme') / 5e9);
   if (kind === 'renewables' || kind === 'ev') x += 20 * Math.min(1, leverTarget(s, 'greenIncentive') / 3e9) + 0.08 * leverTarget(s, 'carbonTax');
+  if (boomOn(s)) x += BOOM.fdiAttractiveness;
   return clamp(x, 5, 100);
 }
 export const overallAttractiveness = (s: GameState) => FDI_KIND_IDS.reduce((a, k) => a + attractiveness(s, k) * FDI_KINDS[k].weeklyHazard, 0) / FDI_KIND_IDS.reduce((a, k) => a + FDI_KINDS[k].weeklyHazard, 0);
@@ -70,7 +71,7 @@ function offer(s: GameState, kind: FdiKind, investor: TickerId, amount: number, 
   const name = investorName(investor);
   const pledge: FdiPledge = {
     id: s.fdi.nextId++, investor, kind, sector: k.sector, title: `${name} proposes a RM${(amount / 1e9).toFixed(1)}bn ${k.label.replace(/^[A-Z][a-z]/, (m) => m.toLowerCase())}`,
-    amount, ask, incentive: 0, jobs: Math.round((amount / 1e9) * k.jobsPerBn), buildMonths: k.buildMonths, offeredDay: today, decideByDay: today + DECIDE_DAYS,
+    amount, ask, incentive: 0, jobs: Math.round((amount / 1e9) * k.jobsPerBn), buildMonths: boomOn(s) ? BOOM.fdiBuildMonths : k.buildMonths, offeredDay: today, decideByDay: today + DECIDE_DAYS,
     startDay: -1, spent: 0, status: 'offered',
   };
   s.fdi.pledges.push(pledge);
@@ -106,7 +107,7 @@ export function weeklyFdi(s: GameState, today: number): void {
     const k = FDI_KINDS[kind];
     const draw = rand(s.fdi.rng), pick = rand(s.fdi.rng), size = rand(s.fdi.rng), askDraw = rand(s.fdi.rng); // fixed draw count per kind
     const boom = boomOn(s);
-    const hazard = k.weeklyHazard * Math.pow(attractiveness(s, kind) / 50, 2) * (boom ? BOOM.fdiHazard : 1);
+    const hazard = Math.min(0.9, k.weeklyHazard * Math.pow(attractiveness(s, kind) / 50, 2) * (boom ? BOOM.fdiHazard : 1));
     if (draw >= hazard) continue;
     const investor = k.investors[Math.min(k.investors.length - 1, Math.floor(pick * k.investors.length))];
     // Boom mode: mega-projects that grow with the campaign (D-079).
@@ -133,7 +134,7 @@ export function decidePledge(s: GameState, id: number, approve: boolean, incenti
   p.status = 'building';
   p.incentive = Math.round(incentive * 1000) / 1000;
   p.startDay = s.scheduler.lastDay + 1;
-  p.buildMonths = Math.round(FDI_KINDS[p.kind].buildMonths * (leverValue(s, 'fdiGreenLane') ? 0.75 : 1));
+  p.buildMonths = Math.max(1, Math.round(p.buildMonths * (leverValue(s, 'fdiGreenLane') ? 0.75 : 1)));
   s.fdi.mtd.approved += p.amount;
   news(s, { kind: 'fund', tone: 'good', title: `Investment approved: ${p.title.replace(' proposes', ' commits to')}`, body: `${(p.incentive * 100).toFixed(0)}% co-investment grant paid as it builds over ~${p.buildMonths} months; ~${p.jobs.toLocaleString('en-MY')} direct jobs once operating (simulated).` });
   return null;

@@ -974,3 +974,5 @@ GDP (housing: workforce and income per worker). Overload multiplies sector outpu
 Capacity grows only through player orders (+0.25 × 1, 2 or 4) paid over the build time (power 18 months, transport 24,
 housing 12) from the treasury's capex line; completion adds capacity. No randomness. Realistic campaigns have no
 `infra` and are bit-for-bit unchanged. Tests: `tests/infrastructure.test.ts`.
+
+**Boom FDI (D-087).** Boom pledges build in 1 month (`BOOM.fdiBuildMonths`), every kind gets +10 climate points (`BOOM.fdiAttractiveness`) and the weekly hazard is capped at 0.9. Realistic mode keeps the 9–30 month builds.
