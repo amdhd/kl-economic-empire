@@ -557,3 +557,5 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   inflation can overheat to about 8% before cooling. New public debt stops at RM85tn (`DEBT_LIMIT_MYR`) because integer-sen
   balances top out near RM90tn; ten-year treasury balances stay under RM30tn in tests. Bursa lunar holidays are listed only to
   2029. The realistic mode is unaffected (tested).
+
+- **D-080 GDP is displayed in US dollars (user request).** Every GDP amount shown to the player (HUD, economy charts, reports, objectives, sector value added, GDP explanation) is the MYR figure ÷ MYR/USD: nominal at that month's (or today's) rate, real GDP and the official history at the opening rate so real growth is not distorted by the ringgit. The engine, saves and ratios ("0f GDP") are unchanged and still MYR; budget, debt, treasury, FDI and trade stay in ringgit. Helper: `gdpUsd` in `src/utils/format.ts`.

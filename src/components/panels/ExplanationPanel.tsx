@@ -16,7 +16,7 @@ export function ExplanationPanel() {
     <p className="text-[14px] font-semibold text-white">{view.summary}</p>
     <Section title="Measured contributions">
       <p className="mb-2 text-[12px] text-cyan-200">{view.period}</p>
-      <dl className="metric-rows" data-testid="explanation-contributions">{view.parts.map(p => <div key={p.label}><dt>{p.label}</dt><dd className="num">{p.value >= 0 ? '+' : '−'}{p.unit.startsWith('MYR') ? `${money(Math.abs(p.value))}${p.unit.endsWith('/year') ? '/yr' : ''}` : `${Math.abs(p.value).toFixed(3)} ${p.unit}`}</dd></div>)}</dl>
+      <dl className="metric-rows" data-testid="explanation-contributions">{view.parts.map(p => <div key={p.label}><dt>{p.label}</dt><dd className="num">{p.value >= 0 ? '+' : '−'}{p.unit.startsWith('MYR') || p.unit.startsWith('USD') ? `${money(Math.abs(p.value), p.unit.startsWith('USD') ? 'USD' : 'MYR')}${p.unit.endsWith('/year') ? '/yr' : ''}` : `${Math.abs(p.value).toFixed(3)} ${p.unit}`}</dd></div>)}</dl>
       <p className="mt-2 text-[12px] text-slate-400">{view.caveat}</p>
     </Section>
     <Section title="How the model responds"><div className="text-[12.5px] text-slate-300">{showList(view.mechanisms, 'No additional mechanisms.')}</div></Section>

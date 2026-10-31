@@ -10,7 +10,7 @@ import { fuelPriceIndex } from './world';
 
 export type ExplainMetric = 'gdp' | 'unemployment' | 'inflation' | 'approval' | 'treasury';
 export const EXPLAIN_LABELS: Record<ExplainMetric, string> = { gdp: 'GDP', unemployment: 'Unemployment', inflation: 'Inflation', approval: 'Approval', treasury: 'Treasury' };
-export interface ExplanationPart { label: string; value: number; unit: 'pp' | 'CPI points' | 'MYR/year' | 'MYR'; }
+export interface ExplanationPart { label: string; value: number; unit: 'pp' | 'CPI points' | 'MYR/year' | 'USD/year' | 'MYR'; }
 const annual = (r: MonthlyReport) => 365 / daysInMonth(Math.floor(r.monthKey / 12), r.monthKey % 12 + 1);
 
 export function explainEconomy(s: GameState, metric: ExplainMetric) {
@@ -61,12 +61,13 @@ export function explainEconomy(s: GameState, metric: ExplainMetric) {
     caveat = 'Contributions are from the approval formula, not a claim that a recent policy alone caused the change.';
   } else if (metric === 'gdp') {
     period = last ? `${last.label} versus ${previous?.label ?? 'opening'}; nominal annual run rates` : 'Opening position; wait for the first monthly close';
-    summary = `Nominal GDP RM${(s.indicators.nominalGdpAnnual / 1e12).toFixed(3)}tn/year; real growth ${(s.indicators.realGrowthYoY * 100).toFixed(2)}% ${s.reports.length >= 12 ? 'year on year' : 'versus opening'}.`;
+    summary = `Nominal GDP US$${(s.indicators.nominalGdpAnnual / s.external.myrPerUsd / 1e9).toFixed(1)}bn/year; real growth ${(s.indicators.realGrowthYoY * 100).toFixed(2)}% ${s.reports.length >= 12 ? 'year on year' : 'versus opening'}.`;
     if (last) {
       const cal = calibrationFor(s);
-      for (const id of SECTOR_IDS) parts.push({ label: SECTORS[id].name, value: last.gdpBySector[id] * annual(last) - (previous ? previous.gdpBySector[id] * annual(previous) : cal.Y0[id] * cal.v[id] * 365), unit: 'MYR/year' });
-      const total = last.nominalGdp * annual(last) - (previous ? previous.nominalGdp * annual(previous) : s.baseline.nominalGdpAnnual);
-      parts.push({ label: 'Resources and net product taxes', value: total - parts.reduce((a, p) => a + p.value, 0), unit: 'MYR/year' });
+      const fxNow = s.external.myrPerUsd; // GDP contributions are shown in US dollars at today's rate
+      for (const id of SECTOR_IDS) parts.push({ label: SECTORS[id].name, value: (last.gdpBySector[id] * annual(last) - (previous ? previous.gdpBySector[id] * annual(previous) : cal.Y0[id] * cal.v[id] * 365)) / fxNow, unit: 'USD/year' });
+      const total = (last.nominalGdp * annual(last) - (previous ? previous.nominalGdp * annual(previous) : s.baseline.nominalGdpAnnual)) / fxNow;
+      parts.push({ label: 'Resources and net product taxes', value: total - parts.reduce((a, p) => a + p.value, 0), unit: 'USD/year' });
     }
     const demand = householdDemand(s, s.government.policies.budget.transfers * 12 / 365);
     mechanisms.push(`Households currently plan RM${(demand.spending / 1e9).toFixed(2)}bn/day of funded spending before separately granted credit. This assumes the configured transfers are paid.`,
