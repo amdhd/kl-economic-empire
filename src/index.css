@@ -30,14 +30,12 @@ body,
 .glass {
   background: linear-gradient(180deg, rgba(15, 23, 42, 0.86), rgba(11, 18, 32, 0.9));
   backdrop-filter: blur(14px) saturate(140%);
-  -webkit-backdrop-filter: blur(14px) saturate(140%);
   border: 1px solid rgba(148, 163, 184, 0.16);
   box-shadow: 0 10px 40px -12px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 .glass-soft {
   background: rgba(15, 23, 42, 0.62);
   backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
   border: 1px solid rgba(148, 163, 184, 0.14);
 }
 .num {
@@ -238,7 +236,6 @@ table.data tr.sel td {
   background: linear-gradient(135deg, rgba(37, 48, 61, .91), rgba(24, 35, 49, .86));
   border-color: rgba(170, 205, 225, .19);
   backdrop-filter: blur(18px) saturate(115%);
-  -webkit-backdrop-filter: blur(18px) saturate(115%);
   box-shadow: 0 8px 28px rgba(0, 0, 0, .2), inset 0 1px rgba(255,255,255,.04);
 }
 .game-overlay { padding: 12px 14px 0; gap: 12px; }
@@ -413,7 +410,7 @@ button:focus-visible, summary:focus-visible, a:focus-visible { outline: 2px soli
 
 /* ---- Economy window (tabbed, three columns) ---- */
 .econ-backdrop { position: absolute; inset: 64px 0 62px; display: grid; place-items: center; z-index: 30; padding: 0 16px; }
-.econ-window { display: flex; flex-direction: column; width: min(1180px, 100%); height: min(700px, 100%); background: linear-gradient(180deg, rgba(36, 58, 80, .62), rgba(22, 38, 56, .5)); backdrop-filter: blur(14px) saturate(1.15); -webkit-backdrop-filter: blur(14px) saturate(1.15); border: 1px solid rgba(160, 210, 235, .22); border-radius: 4px; box-shadow: 0 20px 50px rgba(4, 12, 22, .45), inset 0 1px 0 rgba(255, 255, 255, .06); overflow: hidden; }
+.econ-window { display: flex; flex-direction: column; width: min(1180px, 100%); height: min(700px, 100%); background: linear-gradient(180deg, rgba(36, 58, 80, .62), rgba(22, 38, 56, .5)); backdrop-filter: blur(14px) saturate(1.15); border: 1px solid rgba(160, 210, 235, .22); border-radius: 4px; box-shadow: 0 20px 50px rgba(4, 12, 22, .45), inset 0 1px 0 rgba(255, 255, 255, .06); overflow: hidden; }
 .econ-title { position: relative; text-align: center; font-size: 13px; letter-spacing: .12em; color: #7fd6f0; padding: 12px 0 6px; }
 .econ-close { position: absolute; right: 14px; top: 8px; font-size: 18px; color: #e2ebf2; padding: 2px 8px; border-radius: 4px; }
 .econ-close:hover { background: #ffffff1a; }
