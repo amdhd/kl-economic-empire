@@ -530,3 +530,18 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   buyer contracts are a new Deal Room kind `export` with a performance bond in escrow. Commodities are excluded from
   product deals (world prices). The score formula is unchanged; the standing board's current account now uses the ledger.
   Model-3 saves migrate by opening the ledger from today; earlier models keep it off. Magnitudes are documented assumptions.
+- **D-080 80 securities (user request, schema 14).** The player wanted more ways to make money in the market, so 20 real
+  names fill sector gaps: Bursa plantations (5285 SD Guthrie, 2445 KLK; realised palm price shares 0.75/0.45), gloves
+  (7113 Top Glove, 5168 Hartalega), hospitals (5878 KPJ), a REIT (5176 Sunway REIT, 95% payout, rate-sensitive), port and
+  shipping (5246 Westports, 3816 MISC) and E&E (7160 Pentamaster, 7204 D&O); US AI and chip names (ANET, KLAC, ADI, SMCI,
+  NOW) plus pharma (LLY), parcels (UPS), a logistics REIT (PLD), staples (KO) and machinery (CAT), all S&P 500 members
+  per knowledge as of mid-2026 (reconfirm). Names and tickers are real; every financial value is fictional seed data.
+  No map markers (none has a verified OSM point in KL; MISC's tower is not PETRONAS's). Logos follow D-060; six Bursa
+  names without a Wikipedia/Commons logo use monograms. **Migration** (v13 → v14): unlike D-043's fresh-game copy, each
+  newcomer opens at its baseline financials for the save's current month (month-to-date accruals pro rata), a price within
+  ±12% of today's fundamental and synthetic history on its exchange's existing bar dates. Its draws come from a stream
+  seeded by (campaign seed, ticker), so the save's `rng`, fund and existing companies are untouched; index divisors are
+  rescaled so index levels do not jump. New games draw for 80 securities each hour, so paths differ from 60-security
+  games; paired macro experiments move by up to ~0.1pp per seed with the draw path (dropping *any* three listings moves
+  them as much), so the multiplier harness's 4-quarter spending multiplier and residual-gap guards are now checked on the
+  two-seed mean (both still pass), and one FX lever test's per-seed threshold reflects its measured 1.2–2.0% range.

@@ -585,6 +585,14 @@ to households. Company revenue `× (1 + Σ s_c (p_c − 1))` for commodity-price
 Covered by `tests/phase7-world.test.ts` ("ten commodities", schema-6 migration).
 
 
+## Schema 14: 80 securities (D-080)
+Twenty more listings use the same company model. New producers' realised prices: SD Guthrie palm 0.75, KLK palm 0.45; Top
+Glove buys rubber (0.12 of costs), D&O copper (0.03), CAT steel (0.1). REITs (Sunway REIT, Prologis) pay out 90–95% and
+carry rate sensitivity 1.5–1.6. Older saves list them at the current month: `history` = 12 baseline months before the
+current one, `mtd = baseline monthly × elapsed share of the month`, price `= roundTick(FV × (0.88 + 0.24u))` with `u` from
+`seedRng(seed ⊕ fnv1a(ticker))`, and each exchange's divisor `×= cap_after / cap_before`. The MY index, and so the equity
+wealth effect and Tobin's q, now span 36 Bursa names. Covered by `tests/listings-migration.test.ts`.
+
 ## D-051: bounded household feedback and funded spending (31 October 2026)
 
 The correction applies to future ticks of all campaigns, including existing saves; it does not rewrite previous

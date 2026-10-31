@@ -14,6 +14,7 @@ import { initialWorld, validateCommodityPolicy, validateWorld } from '../engine/
 import { initialPolicy, validatePolicy } from '../engine/policy';
 import { initialFdi, validateFdi } from '../engine/fdi';
 import { initialTradeBook, validateTradeBook } from '../engine/trade-book';
+import { addMissingListings } from '../engine/stock-market';
 import type { GameState } from '../types/game';
 
 export interface SaveFile {
@@ -63,6 +64,12 @@ const MIGRATIONS: Record<number, Migration> = {
   12: state => {
     const s = state as unknown as GameState;
     s.tradeBook ??= initialTradeBook(s, !!s.fdi?.enabled && !!s.world?.enabled);
+    return state;
+  },
+  // v13 → v14: 20 more listed securities (D-080). Newcomers open at baseline financials for the current month and a
+  // fundamental price, with history on their exchange's existing dates; the save's rng and every existing account are untouched.
+  13: state => {
+    addMissingListings(state as unknown as GameState);
     return state;
   },
   // v11 → v12: central-bank monetary policy. Existing campaigns stay on the automatic rule with neutral settings.
