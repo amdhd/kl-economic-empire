@@ -508,3 +508,14 @@ modal/keyboard and save checks; profile browser play at 3×; verify and commit.
   government close, so reconciliation holds). Opening BNM dividends already sit in other public receipts, so this is extra. Reserves
   still cannot be spent on the budget. Stylised simulation, not real BNM policy.
 
+- **D-076 Economic accounting fixes from the PR 5-17 review (user request).** (1) **Corporate tax refunds** override part of
+  D-072: an instalment overpayment is now refunded at month close instead of kept, because firms' after-tax profits use the
+  statutory bill, so a kept overpayment was revenue nobody paid (a cut to 0% still booked ~RM9bn/month, decaying slowly).
+  The refund reduces the `taxCorporate` line, so revenue and reconciliation stay exact. (2) **Palm tax** posted by the SOE
+  close is no longer counted as a sector instalment (it had silently cancelled ~RM0.25bn/month of sector top-up).
+  (3) **BNM bills** cap is cumulative: outstanding bills at most 50% of reserves + bills (the per-order check let repeated
+  orders drain ~100% of reserves). (4) **Bill interest** is paid into bank reserves, not taken from deposits. (5) **Consumer
+  imports** (`importedConsumption`, ~RM7bn/month) are recorded in trade imports; the Trade panel says "Imports" rather than
+  "Imported inputs". The score is unchanged (standing uses exports only); the displayed trade balance and current account fall.
+  (6) **Startup liquidation** pays proceeds to the deal's owner (the SWF for startups) and realises the SWF gain or loss once;
+  it previously paid Khazanah.

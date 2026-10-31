@@ -255,6 +255,25 @@ describe('conditional rescues', () => {
   });
 });
 
+describe('startup liquidation', () => {
+  it('returns proceeds to the SWF that owns the stake, not Khazanah, and realises the loss once', () => {
+    const s = createGame(1753),
+      d = s.deals.items.find((d) => d.kind === 'startup')!;
+    expect(d.payer).toBe('fund');
+    expect(act(s, d.id, 'review').ok).toBe(true);
+    expect(act(s, d.id, 'sign').ok).toBe(true);
+    runHeadless(s, 24 * 30);
+    const cash = s.fund.myrCash, khazanah = s.soe.khazanah.cash, realized = s.fund.realizedMYR, invested = d.investedMinor!;
+    expect(applyCommand(s, { type: 'deal', id: d.id, action: 'liquidate' }, s.clock.hour * 60).ok).toBe(true);
+    expect(d.receivedMinor).toBeGreaterThan(0);
+    expect(s.fund.myrCash - cash).toBe(d.receivedMinor);
+    expect(s.soe.khazanah.cash).toBe(khazanah);
+    expect(s.fund.realizedMYR - realized).toBe(d.receivedMinor! - invested);
+    applyCommand(s, { type: 'deal', id: d.id, action: 'liquidate' }, s.clock.hour * 60);
+    expect(s.fund.realizedMYR - realized).toBe(d.receivedMinor! - invested);
+  });
+});
+
 describe('public ownership accounting', () => {
   it('does not create public wealth by distributing already-earned equity profits', () => {
     const s = createGame(1752),

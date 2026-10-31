@@ -263,14 +263,33 @@ export interface GovMonthClose {
   propertyLevy: number;
 }
 
-/** Month close: settle corporate tax & property levy, pay interest & principal, refinance, rate risk. */
-export function monthCloseGovernment(s: GameState): GovMonthClose {
+/** Returns an over-collected receipt: the treasury pays it back and the revenue line falls by the same amount, so
+ * reconciliation still holds. Bridge-financed if the cash has been spent. Returns the MYR refunded. */
+export function refundReceipt(s: GameState, kind: keyof GovMonthFlows, amountMYR: number): number {
+  const gov = s.government;
+  if (!isInflow(kind) || !(amountMYR > 0)) return 0;
+  if (treasuryMYR(gov) < amountMYR) issueDebt(s, amountMYR - treasuryMYR(gov), 'Financing tax refunds', true);
+  const minor = Math.min(toMinor(amountMYR), gov.treasury);
+  gov.treasury -= minor;
+  pushBounded(gov.ledger, { kind, amountMinor: -minor, balanceMinor: gov.treasury }, 800);
+  gov.mtd[kind] -= minor / 100;
+  return minor / 100;
+}
+
+/** Month close: settle corporate tax & property levy, pay interest & principal, refinance, rate risk.
+ * `otherCorporateTax` is corporate tax already posted this month outside the sector instalments (palm plantations);
+ * it is not a payment towards the sector bill. */
+export function monthCloseGovernment(s: GameState, otherCorporateTax = 0): GovMonthClose {
   const BASE_BUDGET = budgetFor(s);
   const gov = s.government;
   const pol = gov.policies;
   const corporateDue = SECTOR_IDS.reduce((sum,j) => sum + Math.max(0,s.sectors[j].mtd.taxableProfit)*sectorTax(s,j),0);
-  // Instalments already remitted this month count towards the bill; any overpayment simply stays with the treasury.
-  const corporateTax = gov.mtd.taxCorporate + post(gov, 'taxCorporate', Math.max(0, corporateDue - gov.mtd.taxCorporate));
+  // Instalments count towards the bill; the difference is settled either way, so firms pay exactly the bill in law.
+  // Firms' after-tax profits already use the bill, so keeping an overpayment would create revenue nobody paid.
+  const instalments = gov.mtd.taxCorporate - otherCorporateTax;
+  if (corporateDue >= instalments) post(gov, 'taxCorporate', corporateDue - instalments);
+  else refundReceipt(s, 'taxCorporate', instalments - corporateDue);
+  const corporateTax = gov.mtd.taxCorporate;
   s.controls.lastTaxReliefMYR = Math.max(0,(toMinor(SECTOR_IDS.reduce((sum,j)=>sum+Math.max(0,s.sectors[j].mtd.taxableProfit)*pol.tax.corporate,0))-toMinor(corporateDue))/100);
   const propertyLevy = post(gov, 'taxProperty', pol.tax.property * PROPERTY_LEVY_BASE * s.sectors.prop.mtd.nominalOutput);
 

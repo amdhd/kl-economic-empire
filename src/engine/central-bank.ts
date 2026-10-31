@@ -65,7 +65,8 @@ export function tradeBills(s: GameState, amountMYR: number, atMin: number): stri
   if (!Number.isFinite(amountMYR) || amountMYR === 0) return 'Enter an amount.';
   const minor = toMinor(Math.abs(amountMYR));
   if (amountMYR > 0) {
-    if (cb.bills / 100 + amountMYR > BILLS_MAX_SHARE * b.reserves + cb.bills / 100) return `Banks can lend BNM at most ${BILLS_MAX_SHARE * 100}% of their reserves.`;
+    // The cap is on the cumulative stock: outstanding bills may not exceed half of the reserves banks had before any were issued.
+    if (cb.bills / 100 + amountMYR > BILLS_MAX_SHARE * (b.reserves + cb.bills / 100)) return `Banks can lend BNM at most ${BILLS_MAX_SHARE * 100}% of their reserves.`;
     b.reserves -= amountMYR; cb.bills += minor; cb.myrCash += minor;
   } else {
     if (minor > cb.bills) return 'Fewer bills are outstanding than that.';
@@ -108,8 +109,8 @@ export function monthCloseCentralBank(s: GameState): void {
   cb.myrCash += gross;
   const paid = Math.min(billInterest, cb.myrCash);
   cb.myrCash -= paid;
-  // Banks receive the bill interest: deposits → capital, as with other interest income.
-  b.deposits -= paid / 100; b.capital += paid / 100;
+  // Banks receive the bill interest from BNM in reserves; it is their income (capital), not a charge on depositors.
+  b.reserves += paid / 100; b.capital += paid / 100;
   const net = gross - paid;
   cb.lastIncome = net;
   const remit = Math.min(cb.myrCash, Math.floor(Math.max(0, net) * cb.remitShare));

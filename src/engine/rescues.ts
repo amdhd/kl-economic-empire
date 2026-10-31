@@ -2,7 +2,7 @@ import type { GameState } from '../types/game';
 import type { Deal, PrivateEnterprise } from '../types/deals';
 import { addDeal, dealLog, releaseDeal } from './deals';
 import { signEnterprise, markValue } from './private-enterprises';
-import { toMinor, assertSafeMinor } from './util';
+import { toMinor, assertSafeMinor, pushBounded } from './util';
 import { klDay, klDayStartMin, klParts, klToEpochMin, daysInMonth } from './time';
 
 export function nextMonthDay(day: number): number {
@@ -147,7 +147,17 @@ export function liquidateEnterprise(s: GameState, d: Deal): string | null {
     equity = Math.max(0, remaining - privateDebtPaid);
   const recovery = loanRecovery + Math.round(equity * e.publicShare);
   assertSafeMinor(recovery);
-  s.soe.khazanah.cash += recovery / 100;
+  // Proceeds go to whichever public owner holds the stake: the SWF for its startups, Khazanah for strategic deals.
+  if (d.payer === 'fund') {
+    assertSafeMinor(s.fund.myrCash + recovery);
+    s.fund.myrCash += recovery;
+    // The loss (or gain) on the original outlay is realised once; `investedMinor` is cleared so a repeat call books nothing.
+    const gain = recovery - (d.investedMinor ?? 0);
+    s.fund.realized.MYR += gain;
+    s.fund.realizedMYR += gain;
+    d.investedMinor = 0;
+    pushBounded(s.fund.tx, { id: s.fund.nextId++, atMin: s.clock.hour * 60, type: 'private', currency: 'MYR', amountMinor: recovery, note: `${d.name}: liquidation proceeds` }, 400);
+  } else s.soe.khazanah.cash += recovery / 100;
   d.receivedMinor = (d.receivedMinor ?? 0) + recovery;
   releaseDeal(s, d);
   d.valueMinor = 0;

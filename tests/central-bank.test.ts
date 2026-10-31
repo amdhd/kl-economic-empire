@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { bankIdentityGap } from '../src/engine/banks';
-import { monetaryEffects } from '../src/engine/central-bank';
+import { monetaryEffects, monthCloseCentralBank } from '../src/engine/central-bank';
 import { applyCommand, createGame } from '../src/engine/game';
 import { reserveEquityChange } from '../src/engine/indicators';
 import { clone, runUntil, withoutEvents } from './helpers';
@@ -48,6 +48,26 @@ describe('central bank powers (D-075)', () => {
     expect(act(s, { type: 'cbBills', amountMYR: 1e12 }).ok).toBe(false);
     expect(act(s, { type: 'cbBills', amountMYR: -10e9 }).ok).toBe(true);
     expect(s.centralBank.bills).toBe(0);
+  });
+
+  it('caps outstanding bills at half of pre-issue reserves, however the orders are split', () => {
+    const s = createGame(84), reserves0 = s.bank.reserves;
+    for (let i = 0; i < 12; i++) act(s, { type: 'cbBills', amountMYR: Math.floor(0.49 * s.bank.reserves) });
+    expect(s.centralBank.bills / 100).toBeLessThanOrEqual(0.5 * reserves0 + 1);
+    expect(s.bank.reserves).toBeGreaterThanOrEqual(0.5 * reserves0 - 1);
+    expect(act(s, { type: 'cbBills', amountMYR: 0.02 * reserves0 }).ok).toBe(false);
+  });
+
+  it('pays bill interest to banks in reserves, not out of deposits', () => {
+    const s = createGame(84);
+    expect(act(s, { type: 'cbBills', amountMYR: 50e9 }).ok).toBe(true);
+    const b0 = { ...s.bank }, gap0 = bankIdentityGap(s);
+    monthCloseCentralBank(s);
+    const interest = (50e9 * s.external.opr) / 12;
+    expect(s.bank.reserves - b0.reserves).toBeCloseTo(interest, -2);
+    expect(s.bank.capital - b0.capital).toBeCloseTo(interest, -2);
+    expect(s.bank.deposits).toBe(b0.deposits);
+    expect(bankIdentityGap(s)).toBeCloseTo(gap0, 3);
   });
 
   it('bond buying lowers the 10y yield and weakens the ringgit, within the GDP cap', () => withoutEvents(() => {

@@ -165,7 +165,9 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
   const hh = s.households;
   const bank = s.bank;
   const tax = s.government.policies.tax;
-  const { wagesBy, wages, other, surcharge, incomeTax, householdTax, interestH, amortH, disposable, permanentIncome, consumption, spending, credit } = householdDemand(s, gov.transfersPaid);
+  const { wagesBy, wages, other, surcharge, incomeTax, householdTax, interestH, amortH, disposable, permanentIncome, consumption, importedConsumption, spending, credit } = householdDemand(s, gov.transfersPaid);
+  // Finished consumer imports leave the domestic sectors; they are still imports in the trade accounts.
+  s.trade.mtdImports += importedConsumption;
   post(s.government, 'taxHousehold', surcharge);
   post(s.government, 'taxIncome', incomeTax);
   bank.mtdInterestH += interestH;

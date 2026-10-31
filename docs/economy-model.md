@@ -734,7 +734,8 @@ harness-only oil event template sits outside `EVENTS`, so the weekly draws stay 
 Changes (all `NATIONAL_DEMAND`, model 3 only):
 - `desired = MPC·(0.2·YD + 0.8·P) + wealthSpend`; `P ← P·(1 + 0.059/365) + 0.002·(YD − P)`: permanent income expects
   trend nominal growth and adjusts with a ~1-year half-life.
-- 12% of the non-fuel cash basket buys finished imports (`importedConsumption`), also removed from calibrated `C0`.
+- 12% of the non-fuel cash basket buys finished imports (`importedConsumption`), also removed from calibrated `C0`; it is recorded in `trade.mtdImports`
+  with imported inputs (D-076), so the trade balance and current account include it.
   These imports are a demand leakage; they are not added to the reduced sector trade account.
 - Hiring moves 2% a week toward output-implied labour (labour hoarding); the workforce pull is 15% a month.
 - Investment `g −= 0.2·Δlending rate`; household credit demand `× clamp(1 − 4·Δrate, 0.2, 1.6)`.
@@ -876,7 +877,9 @@ remain disabled. All money claims are simulated, and no legal/real-market equiva
 ## Policy timing and corporate tax instalments (D-072)
 Tax, trade, commodity, development, partner-tariff and lever decisions take effect at the next 00:00 KL. Daily, companies
 remit `0.8 × last closed month's corporate tax / 30` (month one: `0.8 × Σ max(0, profit0) × corporate rate`). At month close the
-treasury posts `max(0, bill − instalments paid)`; an overpayment stays with the treasury. Tax relief forgone is measured against the
+treasury settles `bill − instalments paid` either way: a shortfall is posted, an overpayment is refunded (D-076; bridge-financed if the
+cash has been spent), so firms pay exactly the bill their after-tax profits assume. Palm-plantation corporate tax is posted on the same
+line by the SOE close and is excluded from the instalments credited against the sector bill. Tax relief forgone is measured against the
 full bill. BNM FX reserves are display-only and cannot fund budgets.
 
 ## Personal income tax and non-tax revenue (D-073)
@@ -892,4 +895,6 @@ shrinks by the same opening amount. Debt-history chart data is display-only (`OF
 `monetaryEffects`: `pen = max(0, 80 - credibility)`, `q = qeHoldings / nominalGDP`; inflation `+0.00025·pen + 0.1q`, yield `+0.0001·pen - 0.06q`,
 FX log `+0.0003·pen + 0.35q`. Banks: lending rate `+3(srr - 2%) + 2·bills/loans`. Bank identity: `reserves + bills + loans = deposits + capital`.
 Month close: `income = usd × 0.5 × UST10 / 12 × fx + bonds × debtRate / 12`; `net = income - bills × OPR / 12`; `remit = remitShare × max(0, net)`.
+Bills: outstanding `bills ≤ 0.5 × (reserves + bills)` (cumulative cap). Bill interest is paid to banks as `reserves += i; capital += i`
+(deposits unchanged).
 
