@@ -1059,3 +1059,11 @@ ledger at official 2025 levels (MITI/DOSM, pinned in `docs/data-sources.md`), ex
 deals with partners and export buyer contracts in the Deal Room. Buyers are fictional and everything after the opening is a
 simulation. The opening economy and the score formula are unchanged. See D-077 and `docs/economy-model.md`.
 
+## 24. User amendment — term length and Boom sandbox (1 November 2026)
+
+The user, playing for fun, asked to reach US$2tn GDP by year three and the world's largest economy by year ten. This
+overrides the fixed 24-month boundary (§21): new campaigns choose a 2-, 3-, 5- or 10-year term (default 2). It adds an
+opt-in **Boom mode** sandbox that removes realistic speed limits on growth. The realistic mode, its calibration and its
+validation are unchanged and remain the default. The continuous clock, pause/1×/2×/3×, no time skip and no offline catch-up
+all still apply, so a 10-year term is about 25 hours of play at 3×. See D-079 and `docs/economy-model.md`.
+

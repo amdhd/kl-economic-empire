@@ -33,6 +33,7 @@ import { hourlyMarket } from './stock-market';
 import { reconcileMonth } from './reconciliation';
 import { daysInMonth, klDay, klDayStartMin, klParts, monthKey, monthKeyLabel } from './time';
 import { surchargeEquivalent } from './income-tax';
+import { BOOM, boomOn } from '../data/boom';
 import { monthCloseTradeBook, prepareTradeDay, recordTradeDay } from './trade-book';
 import { clamp, news, pushBounded } from './util';
 
@@ -70,12 +71,25 @@ export function runHourTick(s: GameState): void {
   if (s.clock.hour >= s.clock.endHour) endCampaign(s);
 }
 
+/**
+ * Year-one inflation (D-078). Until twelve monthly reports exist there is no year-ago price level, so the missing months
+ * are filled with the opening inflation assumption (prices rising at `opening` a year before the campaign; index 100 at
+ * the opening). One month's price change is therefore not multiplied by twelve. At twelve months this is exactly the
+ * change since the opening, and from month thirteen the true year-on-year rate takes over.
+ */
+export function firstYearInflation(index: number, months: number, opening: number): number {
+  return (index / 100) * Math.pow(1 + opening, (12 - months) / 12) - 1;
+}
+
 /** Output gap vs the potential path from the baseline (last closed month): 3.5%/yr, or the model-3 trend. */
 export function outputGap(s: GameState): number {
   const r = s.reports[s.reports.length - 1];
   if (!r) return 0;
   const days = daysInMonth(Math.floor(r.monthKey / 12), (r.monthKey % 12) + 1);
-  const potential = (s.baseline.realGdpAnnual / 365) * Math.pow(1 + trendFor(s).potentialGrowth, s.reports.length / 12);
+  // Boom mode (D-079): potential output includes the boom's productivity and labour growth, so the central bank does not
+  // read the planned expansion itself as overheating.
+  const growth = trendFor(s).potentialGrowth + (boomOn(s) ? BOOM.productivity + BOOM.laborForceGrowth : 0);
+  const potential = (s.baseline.realGdpAnnual / 365) * Math.pow(1 + growth, s.reports.length / 12);
   return r.realGdp / days / potential - 1;
 }
 
@@ -153,7 +167,7 @@ function closeMonth(s: GameState, key: number, mods: AggregatedMods): void {
     ind.inflationYoY = ind.cpi / yearAgo.cpi - 1;
     ind.realGrowthYoY = ind.realGdpAnnual / ((yearAgo.realGdp * 365) / daysInMonth(Math.floor(yearAgo.monthKey / 12), (yearAgo.monthKey % 12) + 1)) - 1;
   } else {
-    ind.inflationYoY = Math.pow(ind.cpi / 100, 12 / months) - 1;
+    ind.inflationYoY = firstYearInflation(ind.cpi, months, BASELINE.inflationTarget);
     // First year: growth vs the starting level (annualising a few months exaggerates noise).
     ind.realGrowthYoY = ind.realGdpAnnual / s.baseline.realGdpAnnual - 1;
   }
@@ -164,7 +178,7 @@ function closeMonth(s: GameState, key: number, mods: AggregatedMods): void {
   // feel through the fuel bill (model 2); behavioural spending responses key off core inflation.
   const coreCpi = nationalV2(s) ? coreCpiOf(s) : ind.cpi;
   const coreYearAgo = yearAgo?.coreCpi;
-  const coreInflation = !nationalV2(s) ? ind.inflationYoY : coreYearAgo ? coreCpi / coreYearAgo - 1 : yearAgo ? ind.inflationYoY : Math.pow(coreCpi / 100, 12 / months) - 1;
+  const coreInflation = !nationalV2(s) ? ind.inflationYoY : coreYearAgo ? coreCpi / coreYearAgo - 1 : yearAgo ? ind.inflationYoY : firstYearInflation(coreCpi, months, BASELINE.inflationTarget);
 
   const hh = s.households;
   const cpiF = ind.cpi / 100;
@@ -228,7 +242,8 @@ function closeMonth(s: GameState, key: number, mods: AggregatedMods): void {
     score: ind.score,
   };
   report.notes = explainMonth(s, report, prev, govClose.corporateTax);
-  pushBounded(s.reports, report, 60);
+  // Long campaigns (D-079) keep every monthly report: months elapsed are counted from this list.
+  pushBounded(s.reports, report, 130);
   if (nationalV2(s)) updateFiscal(s, key, outputGap(s));
   monthCloseStanding(s, key, s.trade.mtdExports, days);
   ind.score = computeScore(s);

@@ -1,4 +1,4 @@
-// D-080: 20 more listed securities, and the schema-13 → 14 migration that lists them in older saves.
+// D-080: 20 more listed securities, and the schema-14 → 15 migration that lists them in older saves.
 import { describe, expect, it } from 'vitest';
 import { COMPANIES } from '../src/data/companies';
 import { LOGOS } from '../src/data/logos';
@@ -9,12 +9,12 @@ import type { TickerId } from '../src/types/game';
 const ADDED: TickerId[] = ['MY:5285', 'MY:2445', 'MY:7113', 'MY:5168', 'MY:5878', 'MY:5176', 'MY:5246', 'MY:3816', 'MY:7160', 'MY:7204',
   'US:ANET', 'US:KLAC', 'US:ADI', 'US:SMCI', 'US:NOW', 'US:LLY', 'US:UPS', 'US:PLD', 'US:KO', 'US:CAT'];
 
-/** A schema-13 save as written before D-080: no newcomers, index divisors for the 60-stock universe. */
+/** A schema-14 save as written before D-080: no newcomers, index divisors for the 60-stock universe. */
 function oldSave(seed: number, days: number) {
   const s = createGame(seed);
   runHeadless(s, 24 * days);
   const file = JSON.parse(serialize(s));
-  file.state.schemaVersion = 13;
+  file.state.schemaVersion = 14;
   for (const id of ADDED) { delete file.state.companies[id]; delete file.state.market.quotes[id]; }
   for (const ex of ['MY', 'US'] as const) {
     const cap = Object.keys(file.state.companies).filter((id) => id.startsWith(`${ex}:`)).reduce((a, id) => a + file.state.market.quotes[id].price * file.state.companies[id].shares, 0);
@@ -34,7 +34,7 @@ describe('80-security universe (D-080)', () => {
     expect(COMPANIES.filter((c) => ADDED.includes(c.id) && c.geo)).toHaveLength(0);
   });
 
-  it('lists the newcomers in schema-13 saves without touching the rng, existing accounts or index levels', () => {
+  it('lists the newcomers in schema-14 saves without touching the rng, existing accounts or index levels', () => {
     const { s, file } = oldSave(1801, 40);
     const t = deserialize(JSON.stringify(file));
     expect(t.schemaVersion).toBe(SCHEMA_VERSION);

@@ -585,7 +585,7 @@ to households. Company revenue `× (1 + Σ s_c (p_c − 1))` for commodity-price
 Covered by `tests/phase7-world.test.ts` ("ten commodities", schema-6 migration).
 
 
-## Schema 14: 80 securities (D-080)
+## Schema 15: 80 securities (D-080)
 Twenty more listings use the same company model. New producers' realised prices: SD Guthrie palm 0.75, KLK palm 0.45; Top
 Glove buys rubber (0.12 of costs), D&O copper (0.03), CAT steel (0.1). REITs (Sunway REIT, Prologis) pay out 90–95% and
 carry rate sensitivity 1.5–1.6. Older saves list them at the current month: `history` = 12 baseline months before the
@@ -930,3 +930,30 @@ talks 120/180 days; collapse on a tariff dispute or relations < 40; in-force dea
 withdrawal costs 15 (in force) or 5 (talks). Buyer contracts: 2% bond in escrow; buyer pays at most
 `1.04 − 0.002 × months × (1 − indexation)` × spot; delivery `clamp(1 − 2(util − 1), 0.5, 1)`; shortfall penalty 25% of the
 undelivered value from the bond, then the treasury; buyer exits if the contract price exceeds spot by 40%.
+
+## First-year inflation (D-078)
+Until twelve monthly reports exist, `inflationYoY = (CPI/100) × (1 + π0)^((12 − m)/12) − 1` (and the same for core CPI), with
+`m` the months elapsed and `π0` the 2% opening inflation assumption: the missing months of the year-ago comparison are
+filled at the opening rate. At `m = 12` it equals the change since the opening; from month 13 the true year-on-year rate
+applies. This replaces annualising the few months observed (`(CPI/100)^(12/m) − 1`), which multiplied one month's noise
+by up to twelve and fed it to wage expectations, the MPC rule, household confidence and the stability score.
+- **Validation after D-078** (`npm run multipliers`, 4 seeds): spending multiplier 0.80 / 0.75 (4q/8q), OPR +25bp −0.19%
+  after 8q, Okun 0.30, oil +10% −0.45% (4q), levy multiplier 0.84, oil +50% −1.84% after ~200 days, RON95 removal −0.26%.
+  **Known gap:** sacrifice ratio 4.19 (range 3.9–4.5 by seed) against the published 0.5–4, up from 3.3. The old annualised
+  year-one reading over-reacted to every price move, which made rate rises look more disinflationary than they are; with
+  anchored year-one expectations the same +100bp buys less disinflation. A wage–price recalibration would close it.
+
+## Term length and Boom sandbox (D-079)
+`mode.months ∈ {24, 36, 60, 120}`. With `mode.boom` (all values in `BOOM`, `src/data/boom.ts`):
+- **Investment:** desired capital growth adds `0.12 × min(1, month/12)`, capped at 60% a year (realistic cap 9%). Plans close
+  60% of the gap a month. Credit supply is `min(capital/0.05 − loans, 12% × loans) × willingness`.
+- **Productivity:** `productivity` and sector `capacity` both grow by an extra 28%/12 a month.
+- **Wages:** monthly growth adds `1.15 × 28%/12`, capped at 4% a month.
+- **Labour force:** adds 6% a year of trend growth and closes 50% of the gap to labour demand monthly. Population scales
+  with the labour force. Weekly hiring speed is 0.12.
+- **Exports:** `X_j × max(1, capacity_j/cap0_j)` (foreign demand follows capacity).
+- **Ringgit:** `ln(MYR/USD)` adds `−0.35 × ln(max(1, realGDP/realGDP0))`, floor 1.00.
+- **FDI:** pledge hazard ×4, size × (3 + 2 × years).
+- **Central bank:** the output gap measures against potential growth plus 34% (28% productivity + 6% labour), so the
+  central bank does not read the planned expansion as overheating.
+

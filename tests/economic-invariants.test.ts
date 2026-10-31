@@ -309,3 +309,26 @@ describe('project economics (balance rules)', () => {
     expect(pnw(true)).toBeLessThan(pnw(false));
   });
 });
+
+describe('first-year inflation (D-078)', () => {
+  it('does not multiply a single month by twelve, and equals the change since the opening at month twelve', async () => {
+    const { firstYearInflation } = await import('../src/engine/scheduler');
+    // A 0.5% rise in month one reads about 2.5% (opening 2% plus the month), not the ~6% an annualised month gives.
+    expect(firstYearInflation(100.5, 1, 0.02)).toBeCloseTo(1.005 * Math.pow(1.02, 11 / 12) - 1, 12);
+    expect(firstYearInflation(100.5, 1, 0.02)).toBeLessThan(0.03);
+    expect(firstYearInflation(103, 12, 0.02)).toBeCloseTo(0.03, 12);
+  });
+
+  it('reads steadily through year one and hands over to the true year-on-year rate', async () => {
+    const { createGame, runHeadless } = await import('../src/engine/game');
+    const { withoutEvents } = await import('./helpers');
+    withoutEvents(() => {
+      const s = createGame(7);
+      runHeadless(s, 24 * 400);
+      const series = s.reports.slice(0, 13).map((r) => r.inflationYoY);
+      for (let i = 1; i < series.length; i++) expect(Math.abs(series[i] - series[i - 1])).toBeLessThan(0.012);
+      expect(Math.min(...series)).toBeGreaterThan(-0.01);
+      expect(s.reports[12].inflationYoY).toBeCloseTo(s.reports[12].cpi / s.reports[0].cpi - 1, 12);
+    });
+  });
+});

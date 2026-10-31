@@ -173,7 +173,7 @@ Securities added (names/tickers real, financials fictional): Bursa 0166 Inari Am
 5005 Unisem, 3867 Malaysian Pacific Industries, 0208 Greatech; US TSM, ASML, ARM (ADRs), QCOM, INTC, MU, TXN, AMAT,
 LRCX, ORCL, CRM, ADBE, CSCO, IBM. Reconfirm listings before citing.
 
-Schema 14 additions (D-080, 1 Nov 2026; names/tickers real, financials fictional): Bursa 5285 SD Guthrie, 2445 Kuala
+Schema 15 additions (D-080, 1 Nov 2026; names/tickers real, financials fictional): Bursa 5285 SD Guthrie, 2445 Kuala
 Lumpur Kepong, 7113 Top Glove, 5168 Hartalega, 5878 KPJ Healthcare, 5176 Sunway REIT, 5246 Westports, 3816 MISC, 7160
 Pentamaster, 7204 D&O Green Technologies; US ANET, KLAC, ADI, SMCI, NOW, LLY, UPS, PLD, KO, CAT (S&P 500 members per
 knowledge as of mid-2026, not re-verified online). Reconfirm listings before citing.

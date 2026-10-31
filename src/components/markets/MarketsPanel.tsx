@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { COMPANY_BY_ID } from '../../data/companies';
+import { MY_COMPANIES } from '../../data/companies.my';
+import { US_COMPANIES } from '../../data/companies.us';
 import { displayMinutes } from '../../engine/clock';
 import { useGame, useGameState } from '../../store/game-store';
 import { PanelShell } from '../panels/PanelShell';
@@ -15,7 +17,7 @@ export function MarketsPanel() {
   const selected = selection?.kind === 'company' ? selection.id : null;
   const [tab, setTab] = useState<MarketTab>(() => (selected ? COMPANY_BY_ID[selected].exchange : 'MY'));
   return (
-    <PanelShell title="Stock markets" subtitle="20 Bursa Malaysia (MYR) + 20 S&P 500 (USD) names · fictional prices" width={1120} bodyLayout="fill" right={<ExchangeStatusChips game={g} nowMin={displayMinutes(g.clock)} />}>
+    <PanelShell title="Stock markets" subtitle={`${MY_COMPANIES.length} Bursa Malaysia (MYR) + ${US_COMPANIES.length} US-listed (USD) names · fictional prices`} width={1120} bodyLayout="fill" right={<ExchangeStatusChips game={g} nowMin={displayMinutes(g.clock)} />}>
       <MarketBrowser game={g} rev={rev} tab={tab} onTab={setTab} selected={selected} onSelect={(id) => select({ kind: 'company', id })} />
     </PanelShell>
   );

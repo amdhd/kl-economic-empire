@@ -1,4 +1,5 @@
 import { contractedSteel } from './supply-contracts';
+import { BOOM, boomOn } from '../data/boom';
 import { sectorTax } from './policy-controls';
 import { confidenceChannels, householdBehaviour, householdSpending } from './household-behavior';
 import { calibrationFor } from './calibration';
@@ -214,7 +215,9 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
       domesticNominal -= displaced[j];
       s.trade.mtdImports += displaced[j];
     }
-    const xReal = CAL.X0[j] * exportIndex(s, j) * (j === 'prop' ? mods.propDemand : 1) + fdiX[j] + (tradeX?.[j] ?? 0);
+    // Boom mode (D-079): a small open economy sells what it can make, so foreign demand scales with capacity.
+    const reach = boomOn(s) ? Math.pow(Math.max(1, sec.capacity / CAL.cap0[j]), BOOM.exportCapacityElasticity) : 1;
+    const xReal = CAL.X0[j] * exportIndex(s, j) * reach * (j === 'prop' ? mods.propDemand : 1) + fdiX[j] + (tradeX?.[j] ?? 0);
     exports[j] = xReal;
     if (j === 'cons') {
       // Visitors (the tourism share of consumer exports) pay the levy on top of the sector price.
@@ -371,7 +374,7 @@ export function weekly(s: GameState): void {
     // Hire toward the labour needed for demand that capital capacity can serve.
     // Higher labour costs (minimum wage, levy) trim labour demand with elasticity −0.3; reskilling speeds hiring.
     const need = sec.demandCapped / (CAL.laborProd0[j] * sec.productivity * productivityBoost(s, j)) / Math.pow(labourCostMultiplier(s, j), 0.3);
-    sec.employment += demandFor(s).hiringSpeed * (need > sec.employment ? hiringBoost(s) : 1) * (need - sec.employment);
+    sec.employment += (boomOn(s) ? BOOM.hiringSpeed : demandFor(s).hiringSpeed) * (need > sec.employment ? hiringBoost(s) : 1) * (need - sec.employment);
     total += sec.employment;
   }
   const maxEmp = hh.laborForce * 0.985;
@@ -393,6 +396,7 @@ export function monthClose(s: GameState, inflationYoY: number, unemployment: num
   const hh = s.households;
   const bank = s.bank;
   const confidence = confidenceChannels(hh.confidence);
+  const boom = boomOn(s);
 
 
   // Profits → distributions and internal funds (normalised to an average-length month)
@@ -412,12 +416,15 @@ export function monthClose(s: GameState, inflationYoY: number, unemployment: num
     const g = clamp(
       TREND.capitalGrowth + 0.12 * (rok - CAL.rok0[j]) - DEMAND.investmentRate * (bank.lendingRate - BASE_LEND_RATE) + 0.12 * (sec.avgUtil - NORMAL_UTIL) + confidence.investmentGrowth
         // Tobin's q (model 3, D-058): firms invest more when listed equity is valued above its opening level.
-        + DEMAND.tobinQ * Math.log(hh.equityIndex),
+        + DEMAND.tobinQ * Math.log(hh.equityIndex)
+        // Boom mode (D-079): an investment drive on top of the usual signals, with a much higher ceiling.
+        + (boom ? BOOM.capitalPush * Math.min(1, (s.reports.length + 1) / BOOM.pushRampMonths) : 0),
       -0.02,
-      0.09,
+      boom ? BOOM.maxCapitalGrowth : 0.09,
     );
-    // Partial adjustment: plans move 30% of the way toward the target each month.
-    desired[j] = 0.7 * sec.investmentMonthly + 0.3 * ((sec.capital * (BASELINE.depreciation + g)) / 12);
+    // Partial adjustment: plans move 30% of the way toward the target each month (60% in Boom mode).
+    const speed = boom ? BOOM.planSpeed : 0.3;
+    desired[j] = (1 - speed) * sec.investmentMonthly + speed * ((sec.capital * (BASELINE.depreciation + g)) / 12);
     internal[j] = sec.retained * 0.9;
   }
   hh.otherIncomeMonthly = distributed;
@@ -445,7 +452,9 @@ export function monthClose(s: GameState, inflationYoY: number, unemployment: num
     const matured = sec.pipeline.shift() ?? 0;
     sec.pipeline.push(sec.investmentMonthly / pInv / CAL.capitalPerCap[j]);
     sec.capacity += matured - (sec.capacity * BASELINE.depreciation) / 12;
-    sec.productivity *= 1 + TREND.productivity / 12;
+    // Boom mode: the productivity boom also lifts output per machine, not only per worker.
+    if (boom) sec.capacity *= 1 + BOOM.productivity / 12;
+    sec.productivity *= 1 + (TREND.productivity + (boom ? BOOM.productivity : 0)) / 12;
   }
   // Bank balance sheet: new loans create deposits; repayments destroy them.
   bank.loansF += newFirm - firmRepay;
@@ -458,14 +467,17 @@ export function monthClose(s: GameState, inflationYoY: number, unemployment: num
   hh.loans = bank.loansH;
 
   // Wages: expectations + trend productivity + Phillips-curve tightness
-  const wg = clamp((hh.expectedInflation + TREND.productivity + 0.6 * (TREND.naturalUnemployment - unemployment)) / 12, -0.003, 0.012);
+  // Boom mode: most of the extra productivity reaches pay, so real incomes and demand keep up with output.
+  const wg = clamp((hh.expectedInflation + TREND.productivity + (boom ? BOOM.wagePassThrough * BOOM.productivity : 0) + 0.6 * (TREND.naturalUnemployment - unemployment)) / 12, -0.003, boom ? BOOM.maxWageGrowthMonthly : 0.012);
   hh.wageIndex *= 1 + wg;
   hh.expectedInflation = clamp(0.82 * hh.expectedInflation + 0.1 * inflationYoY + 0.08 * BASELINE.inflationTarget, -0.02, 0.15);
   // Workforce (incl. commuters/migrants) grows on trend and partially follows labour demand.
-  hh.laborForce *= 1 + TREND.laborForce / 12;
+  const lf0 = hh.laborForce;
+  hh.laborForce *= 1 + (TREND.laborForce + (boom ? BOOM.laborForceGrowth : 0)) / 12;
   // AI task displacement adds mismatch unemployment unless reskilling keeps pace (schema 9).
-  hh.laborForce += DEMAND.laborForcePull * (hh.employed / (1 - TREND.naturalUnemployment - aiMismatch(s)) - hh.laborForce);
-  hh.population *= 1 + 0.012 / 12;
+  hh.laborForce += (boom ? BOOM.laborForcePull : DEMAND.laborForcePull) * (hh.employed / (1 - TREND.naturalUnemployment - aiMismatch(s)) - hh.laborForce);
+  // Boom mode: migrants and their families arrive with the jobs, so the population grows with the labour force.
+  hh.population *= boom ? Math.max(1, hh.laborForce / lf0) : 1 + 0.012 / 12;
 
   const behaviour = householdBehaviour(hh.confidence, hh.mpc, unemployment - TREND.naturalUnemployment, coreInflation, incomeTrend, s.external.riskAppetite);
   hh.confidence = behaviour.confidence;
@@ -476,8 +488,9 @@ export function monthClose(s: GameState, inflationYoY: number, unemployment: num
 export function creditSupply(s: GameState): number {
   const b = s.bank;
   const loans = b.loansH + b.loansF;
-  const headroom = Math.max(0, b.capital / 0.1 - loans);
-  return Math.min(headroom, loans * 0.03) * b.willingness;
+  const boom = boomOn(s);
+  const headroom = Math.max(0, b.capital / (boom ? BOOM.capitalRequirement : 0.1) - loans);
+  return Math.min(headroom, loans * (boom ? BOOM.creditShare : 0.03)) * b.willingness;
 }
 
 export function resetMonthToDate(s: GameState): void {

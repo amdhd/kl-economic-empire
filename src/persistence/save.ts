@@ -15,6 +15,7 @@ import { initialPolicy, validatePolicy } from '../engine/policy';
 import { initialFdi, validateFdi } from '../engine/fdi';
 import { initialTradeBook, validateTradeBook } from '../engine/trade-book';
 import { addMissingListings } from '../engine/stock-market';
+import { CAMPAIGN_LENGTHS } from '../data/boom';
 import type { GameState } from '../types/game';
 
 export interface SaveFile {
@@ -59,6 +60,12 @@ const MIGRATIONS: Record<number, Migration> = {
     for (const f of [s.government.mtd, ...s.reports.map(r => r.gov)]) { f.dealEscrowOut = 0; f.dealEscrowIn = 0; }
     return state;
   },
+  // v13 → v14: campaign length and Boom mode (D-079). Existing campaigns are realistic 24-month terms.
+  13: state => {
+    const s = state as unknown as GameState;
+    s.mode ??= { boom: false, months: 24 };
+    return state;
+  },
   // v12 → v13: trade-ministry ledger (D-077). Model-3 Malaysia saves open it from today at official 2025 levels; nothing
   // already settled changes. Earlier models keep it switched off.
   12: state => {
@@ -66,9 +73,9 @@ const MIGRATIONS: Record<number, Migration> = {
     s.tradeBook ??= initialTradeBook(s, !!s.fdi?.enabled && !!s.world?.enabled);
     return state;
   },
-  // v13 → v14: 20 more listed securities (D-080). Newcomers open at baseline financials for the current month and a
+  // v14 → v15: 20 more listed securities (D-080). Newcomers open at baseline financials for the current month and a
   // fundamental price, with history on their exchange's existing dates; the save's rng and every existing account are untouched.
-  13: state => {
+  14: state => {
     addMissingListings(state as unknown as GameState);
     return state;
   },
@@ -246,6 +253,7 @@ export function deserialize(json: string): GameState {
   validatePolicy(s.policy);
   validateFdi(s.fdi);
   validateTradeBook(s.tradeBook);
+  if (!s.mode || typeof s.mode.boom !== 'boolean' || !CAMPAIGN_LENGTHS.includes(s.mode.months)) throw new Error('Corrupt save: campaign mode');
   if (s.policy.enabled !== s.fdi.enabled || (s.policy.enabled && s.baseline.model !== 3)) throw new Error('Corrupt save: inconsistent policy generation');
   if (![1, 2, 3].includes(s.baseline.model) || !(s.households.equityIndex > 0)
     || (s.baseline.profile !== 'malaysia' || s.baseline.model === 1) !== !s.world.enabled) throw new Error('Corrupt save: inconsistent model generation');

@@ -50,7 +50,7 @@ export function ObjectivesPanel() {
     ['Public net worth', money(opening.netWorth), money(closing.netWorth)],
   ];
   return (
-    <PanelShell title={ended ? 'Economic Presidency Report' : 'Campaign objectives'} subtitle={ended ? 'Your 24-month term is complete.' : `Month ${g.reports.length} of 24 · victory: score ≥ ${VICTORY.score}, approval ≥ ${VICTORY.approval}, no insolvency`} width={700}>
+    <PanelShell title={ended ? 'Economic Presidency Report' : 'Campaign objectives'} subtitle={`${g.mode?.boom ? 'Boom sandbox · ' : ''}${ended ? `Your ${g.mode?.months ?? 24}-month term is complete.` : `Month ${g.reports.length} of ${g.mode?.months ?? 24} · victory: score ≥ ${VICTORY.score}, approval ≥ ${VICTORY.approval}, no insolvency`}`} width={700}>
       <div className={`rounded-2xl p-4 ${o.won ? 'bg-emerald-500/15 ring-1 ring-emerald-400/40' : 'bg-slate-900/50 ring-1 ring-slate-600/30'}`}>
         <div className="flex items-end justify-between">
           <div>
@@ -107,7 +107,7 @@ export function ObjectivesPanel() {
           <div className="mt-2 text-[11.5px] text-slate-400">SWF gain excluding net treasury transfers: {money(report.fundGain)} ({pct(report.fundReturn, 2, true)} of opening NAV). Net transfers {money(report.fundNetTransfers)}; costs paid {money(g.fund.feesPaidMYR)}. This simple cumulative measure includes dividends and FX.</div>
         </Section>
       )}
-      {g.deals.enabled && <Section title="Public agreements beyond the term"><div className="grid grid-cols-3 gap-2"><Stat label="Escrow" value={money(report.deals.escrow)} /><Stat label="Remaining commitments" value={money(report.deals.commitments)} /><Stat label="Maximum guarantees" value={money(report.deals.guarantees)} /><Stat label="Unpaid claims" value={money(report.deals.arrears)} /><Stat label="Private holdings" value={money(report.deals.holdings)} /><Stat label="Guarantee provision" value={money(report.deals.guaranteeReserve)} /></div><p className="mt-2 text-[12px] text-slate-400">Future services remain obligations after 24 months. Indexed supply costs can change. Guarantee provision projects current utilisation without predicting a future recovery.</p>{report.deals.unfinished.map(d=><p key={d.id} className="mt-1 text-[12px]">{d.name}: {d.status} · {money(d.remaining)} remaining</p>)}<button className="btn mt-2" onClick={()=>setPanel('deals')}>Inspect public exposure</button></Section>}
+      {g.deals.enabled && <Section title="Public agreements beyond the term"><div className="grid grid-cols-3 gap-2"><Stat label="Escrow" value={money(report.deals.escrow)} /><Stat label="Remaining commitments" value={money(report.deals.commitments)} /><Stat label="Maximum guarantees" value={money(report.deals.guarantees)} /><Stat label="Unpaid claims" value={money(report.deals.arrears)} /><Stat label="Private holdings" value={money(report.deals.holdings)} /><Stat label="Guarantee provision" value={money(report.deals.guaranteeReserve)} /></div><p className="mt-2 text-[12px] text-slate-400">Future services remain obligations after the term. Indexed supply costs can change. Guarantee provision projects current utilisation without predicting a future recovery.</p>{report.deals.unfinished.map(d=><p key={d.id} className="mt-1 text-[12px]">{d.name}: {d.status} · {money(d.remaining)} remaining</p>)}<button className="btn mt-2" onClick={()=>setPanel('deals')}>Inspect public exposure</button></Section>}
       {ended && (
         <Section title="Term fiscal accounts">
           <div className="grid grid-cols-3 gap-3" data-testid="term-fiscal">

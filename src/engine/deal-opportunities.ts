@@ -4,9 +4,20 @@ import { rescueOffers } from './rescues';
 import { takeoverOffers } from './takeovers';
 import { supplyOffers } from './supply-contracts';
 import { exportOffers } from './export-contracts';
+import { boomOn } from '../data/boom';
 
 /** Small successive fictional cohorts keep decisions available beyond the opening month. */
+/** Drop the oldest offers that were never signed once the room grows large; signed agreements are always kept. */
+export function pruneClosedDeals(s: GameState, limit = 120): void {
+  while (s.deals.items.length > limit) {
+    const i = s.deals.items.findIndex((d) => (d.status === 'rejected' || d.status === 'expired') && d.escrowMinor === 0 && d.arrearsMinor === 0);
+    if (i < 0) break;
+    s.deals.items.splice(i, 1);
+  }
+}
+
 export function periodicDealOffers(s: GameState, day: number): void {
+  pruneClosedDeals(s);
   if (
     !s.deals.enabled ||
     day - (s.deals.lastOfferDay ?? s.deals.startDay) < 90 ||
@@ -15,7 +26,8 @@ export function periodicDealOffers(s: GameState, day: number): void {
     return;
   s.deals.lastOfferDay = day;
   const episode = Math.floor((day - s.deals.startDay) / 90);
-  if (episode < 1 || episode > 7) return;
+  // Realistic campaigns run seven quarterly cohorts; Boom mode (D-079) keeps new cohorts coming for the whole campaign.
+  if (episode < 1 || (episode > 7 && !boomOn(s))) return;
   // Export buyers return every quarter with fresh offers for any contract that is not running (D-077).
   exportOffers(s);
   const first = s.deals.items.length;
@@ -49,7 +61,7 @@ export function periodicDealOffers(s: GameState, day: number): void {
   ];
   for (const [index, d] of s.deals.items.slice(first).entries()) {
     d.template = `${d.kind}:cohort-${episode}-${index}`;
-    d.name = `${names[episode - 1]} ${index + 1}: ${d.kind} opportunity`;
-    d.counterparty = `${names[episode - 1]} ${index + 1} stakeholders (fictional)`;
+    d.name = `${names[(episode - 1) % names.length]} ${index + 1}: ${d.kind} opportunity`;
+    d.counterparty = `${names[(episode - 1) % names.length]} ${index + 1} stakeholders (fictional)`;
   }
 }

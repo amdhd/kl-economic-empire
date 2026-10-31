@@ -9,18 +9,18 @@ test.describe('Phase 2 market UI (integrated)', () => {
     await expect(page.getByTestId('security-table')).toBeVisible();
   });
 
-  test('lists 26 Malaysian (RM) and 34 US ($) securities with no duplicates', async ({ page }) => {
+  test('lists 36 Malaysian (RM) and 44 US ($) securities with no duplicates', async ({ page }) => {
     const rows = page.getByTestId('security-row');
-    await expect(rows).toHaveCount(26);
+    await expect(rows).toHaveCount(36);
     const my = await rows.evaluateAll((els) => els.map((e) => e.getAttribute('data-ticker')));
     expect(my.every((t) => t!.startsWith('MY:'))).toBe(true);
     for (const p of await page.getByTestId('row-price').allTextContents()) expect(p).toMatch(/^RM \d/);
-    await page.getByRole('tab', { name: 'US 34' }).click();
-    await expect(rows).toHaveCount(34);
+    await page.getByRole('tab', { name: 'US 44' }).click();
+    await expect(rows).toHaveCount(44);
     const us = await rows.evaluateAll((els) => els.map((e) => e.getAttribute('data-ticker')));
     expect(us.every((t) => t!.startsWith('US:'))).toBe(true);
     for (const p of await page.getByTestId('row-price').allTextContents()) expect(p).toMatch(/^\$\d/);
-    expect(new Set([...my, ...us]).size).toBe(60);
+    expect(new Set([...my, ...us]).size).toBe(80);
   });
 
   test('ticker search, detail panel, chart resolutions and trade ticket', async ({ page }) => {
