@@ -5,12 +5,13 @@ import { bankIdentityGap } from '../src/engine/banks';
 import { standingBoard } from '../src/engine/standing';
 import { deserialize, findNonFinite, serialize } from '../src/persistence/save';
 import type { FdiPledge } from '../src/types/game';
-import { clone, withoutEvents } from './helpers';
+import { clone, infraAutopilot, withoutEvents } from './helpers';
 
 type S = ReturnType<typeof createGame>;
 const usdAt = (s: S, label: string) => { const r = s.reports.find((x) => x.label === label)!; return (r.nominalGdp * 365) / 31 / r.myrPerUsd; };
 function play(s: S) {
   runHeadless(s, 24 * 31 * 130, (g) => {
+    infraAutopilot(g);
     if (g.clock.hour % 24 === 9) for (const p of g.fdi.pledges) if (p.status === 'offered') applyCommand(g, { type: 'decidePledge', id: p.id, approve: true, incentive: Math.min(0.3, p.ask) }, g.clock.hour * 60);
   });
 }
@@ -43,7 +44,7 @@ describe('campaign length and Boom mode (D-079)', () => {
     expect(s.reports.every((r) => r.reconciliation!.cashResidualMinor === 0 && r.reconciliation!.debtResidualMinor === 0)).toBe(true);
     expect(Math.abs(bankIdentityGap(s))).toBeLessThan(1);
     expect(findNonFinite(s)).toBeNull();
-    expect(s.reports.slice(12).every((r) => r.inflationYoY > -0.06 && r.inflationYoY < 0.1)).toBe(true); // a year-two overheating hump peaks near 8%
+    expect(s.reports.slice(12).every((r) => r.inflationYoY > -0.06 && r.inflationYoY < 0.14)).toBe(true); // infrastructure bottlenecks (D-084) push the year-two overheating hump to about 11–12%
     expect(deserialize(serialize(s))).toEqual(s);
   }), 120_000);
 

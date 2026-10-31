@@ -9,7 +9,7 @@ test('closing Info views dismisses its inspector and reopening starts with categ
   await expect(launcher).toHaveAttribute('aria-expanded', 'false');
   await expect(categories).not.toBeVisible();
   await launcher.click();
-  await expect(categories.getByRole('button')).toHaveCount(24);
+  await expect(categories.getByRole('button')).toHaveCount(25);
   await page.getByTestId('nav-population').click();
   await expect(page.getByTestId('nav-population')).toHaveAttribute('aria-pressed', 'true');
   const inspector = page.getByRole('region', { name: 'Population', exact: true });
@@ -75,3 +75,13 @@ for (const viewport of [{ width: 1600, height: 900 }, { width: 1280, height: 720
     await expect(page.getByTestId('company-panel')).not.toBeVisible();
   });
 }
+
+test('the rival-economies board is always on screen with five rows and Malaysia in the middle', async ({ page }) => {
+  await page.addInitScript(() => sessionStorage.setItem('klDevNoSave', '1'));
+  await page.goto('/');
+  await page.getByTestId('start-campaign').click();
+  const board = page.getByTestId('rivals-board');
+  await expect(board).toBeVisible();
+  await expect(board.locator('tbody tr')).toHaveCount(5);
+  await expect(board.locator('tbody tr').nth(2)).toContainText('Malaysia');
+});
