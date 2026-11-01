@@ -55,6 +55,18 @@ export function demandIndices(s: GameState, c: CompanySeed) {
   return { kl, my, gl };
 }
 
+/** MYR of AI data-centre and semiconductor FDI that is operating, plus half of what is still being built (D-121). */
+export function aiFdiPipeline(s: GameState): number {
+  let total = 0;
+  for (const p of s.fdi?.pledges ?? []) {
+    if (p.kind !== 'datacentre' && p.kind !== 'semiconductor') continue;
+    total += p.status === 'operating' ? p.amount : p.status === 'building' ? p.amount / 2 : 0;
+  }
+  return total;
+}
+const AI_FDI_SCALE = 40e9;
+const AI_FDI_CAP = 1.5;
+
 /** Daily revenue & cost accrual (listing currency). */
 export function dailyCompanies(s: GameState, day = s.scheduler.lastDay): void {
   const BASELINE = baselineFor(s);
@@ -62,6 +74,7 @@ export function dailyCompanies(s: GameState, day = s.scheduler.lastDay): void {
   const fxf = s.external.myrPerUsd / BASELINE.myrPerUsd;
   const targets = companyEventTargets(s, day);
   const v2 = nationalV2(s);
+  const aiFdi = Math.min(AI_FDI_CAP, aiFdiPipeline(s) / AI_FDI_SCALE);
   for (const c of COMPANIES) {
     const st = s.companies[c.id];
     const t = targets.get(c.id) ?? { revenue: 1, sentiment: 0 };
@@ -78,7 +91,7 @@ export function dailyCompanies(s: GameState, day = s.scheduler.lastDay): void {
     // Producers' realised prices follow world commodity indices (e.g. aluminium for a smelter), model 2.
     let priceMix = 1;
     if (v2 && c.commodityRevenue) for (const [k, share] of Object.entries(c.commodityRevenue) as [CommodityId, number][]) priceMix += share * (s.world.prices[k] - 1);
-    const revenue = (c.revenue / 365) * mix * st.revenueShock * priceMix;
+    const revenue = (c.revenue / 365) * mix * st.revenueShock * priceMix * (1 + (c.fdiBeta ?? 0) * aiFdi);
     const opex0 = (c.revenue * (1 - c.ebitdaMargin)) / 365;
     const scale = FIXED_COST_SHARE + (1 - FIXED_COST_SHARE) * realVol;
     // Boom mode (D-110): wages rise with productivity, so a firm's labour cost per unit is wages ÷ its sector's productivity.

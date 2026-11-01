@@ -122,7 +122,7 @@ export function App() {
               ? <div className="flex h-full min-h-0 flex-col gap-1.5"><WindowTabs panel={panel} /><div className="min-h-0 flex-1"><ErrorBoundary label="Panel">{PANELS[panel]()}</ErrorBoundary></div></div>
               : panel && <ErrorBoundary label="Panel">{PANELS[panel]()}</ErrorBoundary>}
           </div>
-          <div className="ml-auto flex min-h-0 shrink-0 flex-col items-end gap-2">
+          <div className="ml-auto flex max-h-full min-h-0 shrink-0 flex-col items-end gap-2">
             <ErrorBoundary label="Rival economies"><RivalsBoard /></ErrorBoundary>
             {selection?.kind === 'company' && <div className="company-slot min-h-0"><ErrorBoundary label="Company panel"><CompanyPanel key={selection.id} id={selection.id} /></ErrorBoundary></div>}
           </div>
