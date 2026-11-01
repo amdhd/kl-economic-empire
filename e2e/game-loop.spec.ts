@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
-import { runHours, startCampaign } from './helpers';
+import type { GameState } from '../src/types/game';
+import { runHours, startCampaign, openPanel, openEconomyWindow } from './helpers';
 
 test('clock starts paused at 08:00 and runs at 3x (≤1 game hour per real second)', async ({ page }) => {
   await startCampaign(page);
@@ -92,17 +93,20 @@ test('SWF buys Maybank while Bursa is open: cash becomes shares', async ({ page 
   await page.getByTestId('trade-review').click();
   await page.getByTestId('confirm-btn').click();
   await expect(page.getByTestId('toast').first()).toContainText('Filled');
-  await page.getByTestId('nav-fund').click();
+  await openPanel(page, 'fund');
   await expect(page.getByTestId('panel')).toContainText('Maybank');
 });
 
 test('queue a tax change with an effective date and see the policy log', async ({ page }) => {
   await startCampaign(page);
-  await page.getByTestId('nav-policies').click();
-  await page.getByTestId('tax-corporate').fill('0.25');
-  await page.getByTestId('queue-tax').click();
-  await page.getByTestId('confirm-btn').click();
-  await expect(page.getByTestId('panel')).toContainText('from 02 Jan 2027');
+  await openEconomyWindow(page, 'taxation');
+  await page.getByTestId('econ-tax-corporate').click();
+  await page.getByTestId('econ-tax-slider').fill('0.25');
+  await page.getByTestId('econ-tax-apply').click();
+  const s = await page.evaluate(() => (window as unknown as { __klDev: { state: () => GameState } }).__klDev.state());
+  const queued = s.government.pending.find((p) => p.kind === 'tax' && (p.patch as { corporate?: number }).corporate === 0.25);
+  expect(queued).toBeTruthy();
+  expect(queued!.effectiveMin).toBeGreaterThan(s.clock.hour * 60); // takes effect from the next settled day
 });
 
 test('campaign ends after 24 months with the Economic Presidency Report', async ({ page }) => {

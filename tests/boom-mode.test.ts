@@ -40,7 +40,7 @@ describe('campaign length and Boom mode (D-079)', () => {
     expect(s.scheduler.campaignEnded).toBe(true);
     expect(s.reports).toHaveLength(36);
     expect(usdAt(s, 'Dec 2029')).toBeGreaterThan(1.6e12);
-    expect(usdAt(s, 'Dec 2029')).toBeLessThan(3e12);
+    expect(usdAt(s, 'Dec 2029')).toBeLessThan(4.5e12); // was 3e12 before FDI plants added capacity (D-112): the US$2tn aim is a floor, not a ceiling
     expect(s.reports.every((r) => r.reconciliation!.cashResidualMinor === 0 && r.reconciliation!.debtResidualMinor === 0)).toBe(true);
     expect(Math.abs(bankIdentityGap(s))).toBeLessThan(1);
     expect(findNonFinite(s)).toBeNull();

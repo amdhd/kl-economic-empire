@@ -1,11 +1,11 @@
 import { expect, test } from '@playwright/test';
-import { runHours, startCampaign } from './helpers';
+import { runHours, startCampaign, openPanel, openEconomyWindow } from './helpers';
 import type { GameState } from '../src/types/game';
 type Dev = {__klDev:{state:()=>GameState}};
 
 test('all four economic controls can be reviewed, applied and observed in simulation',async({page})=>{
   await startCampaign(page);
-  await page.getByTestId('nav-controls').click();
+  await openPanel(page, 'controls');
   await page.getByTestId('review-incentive').click();
   await expect(page.getByRole('dialog')).toContainText('5pp relief');
   await page.getByTestId('confirm-btn').click();
@@ -14,9 +14,9 @@ test('all four economic controls can be reviewed, applied and observed in simula
   await page.getByLabel('New debt term').selectOption('36');
   await page.getByRole('button',{name:'Review debt strategy',exact:true}).click();
   await page.getByTestId('confirm-btn').click();
-  await page.getByTestId('nav-debt').click();
+  await openPanel(page, 'debt');
   await expect(page.getByTestId('panel')).toContainText('4.00%');
-  await page.getByTestId('nav-controls').click();
+  await openPanel(page, 'controls');
   await page.getByLabel('Upper',{exact:true}).fill('4');
   await page.getByRole('button',{name:'Review & enable band',exact:true}).click();
   await page.getByTestId('confirm-btn').click();
@@ -36,16 +36,16 @@ test('all four economic controls can be reviewed, applied and observed in simula
 
 test('queuing a manual budget for a planned ministry warns, then replaces the plan',async({page})=>{
   await startCampaign(page);
-  await page.getByTestId('nav-controls').click();
+  await openPanel(page, 'controls');
   await page.getByRole('button',{name:'Review ministry plan',exact:true}).click();
   await page.getByTestId('confirm-btn').click();
   const s=await page.evaluate(()=>(window as unknown as Dev).__klDev.state());
   const cat=s.controls.plans.find(p=>p.everyMonths!==1)!.category;
-  await page.getByTestId('nav-policies').click();
-  await page.getByTestId(`budget-${cat}`).fill(String(Math.round(s.government.policies.budget[cat]*0.9/10e6)*10e6));
-  await page.getByTestId('queue-budget').click();
+  await openEconomyWindow(page, 'budget');
+  await page.getByTestId(`econ-budget-${cat}`).click();
+  await page.getByTestId('econ-budget-slider').fill('0.9');
   await expect(page.getByTestId(`plan-replaced-${cat}`)).toBeVisible();
-  await page.getByTestId('confirm-btn').click();
+  await page.getByTestId('econ-budget-apply').click();
   const after=await page.evaluate(()=>(window as unknown as Dev).__klDev.state());
   expect(after.controls.plans.some(p=>p.category===cat)).toBe(false);
   expect(after.government.pending.at(-1)?.label).toContain('ministry plan');
@@ -53,11 +53,11 @@ test('queuing a manual budget for a planned ministry warns, then replaces the pl
 
 test('inherited monthly budget steps never show up as player edits in an open budget panel',async({page})=>{
   await startCampaign(page);
-  await page.getByTestId('nav-policies').click();
-  await expect(page.getByTestId('queue-budget')).toBeDisabled();
+  await openEconomyWindow(page, 'budget');
+  await expect(page.getByTestId('econ-budget-apply')).toBeDisabled();
   const before=await page.evaluate(()=>(window as unknown as Dev).__klDev.state().government.policies.budget.health);
   await runHours(page,24*33);
   const after=await page.evaluate(()=>(window as unknown as Dev).__klDev.state().government.policies.budget.health);
   expect(after).toBeGreaterThan(before);
-  await expect(page.getByTestId('queue-budget')).toBeDisabled();
+  await expect(page.getByTestId('econ-budget-apply')).toBeDisabled();
 });

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { openPanel } from './helpers';
 import type { GameState } from '../src/types/game';
 type Dev = { __klDev: { state: () => GameState } };
 
@@ -23,7 +24,7 @@ test('Boom games have an Infrastructure panel: load rises with growth and capaci
   await page.getByTestId('boom-mode').check();
   await page.getByTestId('start-campaign').click();
   await page.getByTestId('info-views').click();
-  await page.getByTestId('nav-infra').click();
+  await openPanel(page, 'infra');
   await expect(page.getByTestId('infra-util-power')).toContainText('% used');
   await page.getByTestId('infra-build-power-2').click();
   const n = await page.evaluate(() => (window as unknown as Dev).__klDev.state().infra!.builds.length);
@@ -36,6 +37,6 @@ test('realistic games show no infrastructure limits', async ({ page }) => {
   await page.goto('/');
   await page.getByTestId('start-campaign').click();
   await page.getByTestId('info-views').click();
-  await page.getByTestId('nav-infra').click();
+  await openPanel(page, 'infra');
   await expect(page.getByTestId('panel')).toContainText('none');
 });

@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
-import { startCampaign, runHours } from './helpers';
+import { startCampaign, runHours, openPanel } from './helpers';
 test('Deal Room reviews, reserves and settles a signed agreement', async ({ page }) => {
   await startCampaign(page);
-  await page.getByTestId('nav-deals').click();
+  await openPanel(page, 'deals');
   await page.getByRole('button', { name: 'Review offer', exact: true }).first().click();
   await page.getByTestId('deals-tab-negotiations').click();
   await page.getByRole('button', { name: 'Review signature' }).first().click();
@@ -15,7 +15,7 @@ test('Deal Room reviews, reserves and settles a signed agreement', async ({ page
 });
 test('FDI investors accept revised terms and the signed version reserves its milestone grant', async ({ page }) => {
   await startCampaign(page);
-  await page.getByTestId('nav-deals').click();
+  await openPanel(page, 'deals');
   const offer = page.getByTestId('deal-2');
   await offer.getByRole('button', { name: 'Review offer', exact: true }).click();
   await page.getByTestId('deals-tab-negotiations').click();
@@ -31,7 +31,7 @@ test('FDI investors accept revised terms and the signed version reserves its mil
 });
 test('concessions disclose future payments and block duplicate public construction', async ({ page }) => {
   await startCampaign(page);
-  await page.getByTestId('nav-deals').click();
+  await openPanel(page, 'deals');
   const d = page.getByTestId('deal-3');
   await expect(d).toContainText('Private asset');
   await d.getByRole('button', { name: 'Review offer', exact: true }).click();
@@ -45,7 +45,7 @@ test('concessions disclose future payments and block duplicate public constructi
 });
 test('supply contracts show indexation terms and delivered volumes', async ({ page }) => {
   await startCampaign(page);
-  await page.getByTestId('nav-deals').click();
+  await openPanel(page, 'deals');
   const d = page.getByTestId('deal-5');
   await d.getByRole('button', { name: 'Review offer', exact: true }).click();
   await page.getByTestId('deals-tab-negotiations').click();
@@ -59,7 +59,7 @@ test('supply contracts show indexation terms and delivered volumes', async ({ pa
 });
 test('startup closing issues minority ownership and exposes holdings in the fund', async ({ page }) => {
   await startCampaign(page);
-  await page.getByTestId('nav-deals').click();
+  await openPanel(page, 'deals');
   const d = page.getByTestId('deal-7');
   await d.getByRole('button', { name: 'Review offer', exact: true }).click();
   await page.getByTestId('deals-tab-negotiations').click();
@@ -68,12 +68,12 @@ test('startup closing issues minority ownership and exposes holdings in the fund
   await runHours(page, 24 * 3);
   await page.getByTestId('deals-tab-active').click();
   await expect(d).toContainText('Public ownership 20.0%');
-  await page.getByTestId('nav-fund').click();
+  await openPanel(page, 'fund');
   await expect(page.getByTestId('panel')).toContainText('Private investment mandate');
 });
 test('secured rescue shows a real loan liability and a retained funding tranche', async ({ page }) => {
   await startCampaign(page);
-  await page.getByTestId('nav-deals').click();
+  await openPanel(page, 'deals');
   const d = page.getByTestId('deal-8');
   await d.getByRole('button', { name: 'Review offer', exact: true }).click();
   await page.getByTestId('deals-tab-negotiations').click();
@@ -87,7 +87,7 @@ test('secured rescue shows a real loan liability and a retained funding tranche'
 });
 test('takeover bidding discloses rival valuations and closes controlling ownership', async ({ page }) => {
   await startCampaign(page);
-  await page.getByTestId('nav-deals').click();
+  await openPanel(page, 'deals');
   const d = page.getByTestId('deal-10');
   await d.getByRole('button', { name: 'Review offer', exact: true }).click();
   await page.getByTestId('deals-tab-negotiations').click();
@@ -105,7 +105,7 @@ test('takeover bidding discloses rival valuations and closes controlling ownersh
 test('exposure fits a laptop viewport and clearly shows future obligations', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await startCampaign(page);
-  await page.getByTestId('nav-deals').click();
+  await openPanel(page, 'deals');
   const d = page.getByTestId('deal-3');
   await d.getByRole('button', { name: 'Review offer', exact: true }).click();
   await page.getByTestId('deals-tab-negotiations').click();
@@ -120,7 +120,7 @@ test('exposure fits a laptop viewport and clearly shows future obligations', asy
 
 test('offers show their type and deadline at the top right, an outlook, and a plain-language signing summary', async ({ page }) => {
   await startCampaign(page);
-  await page.getByTestId('nav-deals').click();
+  await openPanel(page, 'deals');
   await expect(page.getByTestId('deal-tag-1')).toContainText(/\d+ days? left/);
   await expect(page.getByTestId('deal-outlook-1')).toContainText('You pay:');
   await expect(page.getByTestId('deal-profit-2')).toContainText(/profit/i);

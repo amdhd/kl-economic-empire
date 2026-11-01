@@ -18,7 +18,7 @@ const GROUPS: { id: LeverGroup; title: string }[] = [
   { id: 'green', title: 'Industry & green transition' },
 ];
 const OTHER: { id: PanelId; label: string }[] = [
-  { id: 'policies', label: 'Taxes & budget' }, { id: 'controls', label: 'Sector relief, ministry plans, FX band' },
+  { id: 'finance', label: 'Taxes & budget (Finances window)' }, { id: 'controls', label: 'Sector relief, ministry plans, FX band' },
   { id: 'oil', label: 'Fuel subsidy & PETRONAS' }, { id: 'commodities', label: 'Food subsidy & commodity duties' }, { id: 'trade', label: 'Tariffs & export support' },
   { id: 'partners', label: 'Trade agreements' }, { id: 'debt', label: 'Borrowing' }, { id: 'fdi', label: 'Investment pledges' },
 ];

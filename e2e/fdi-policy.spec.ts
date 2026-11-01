@@ -1,12 +1,12 @@
 import { expect, test } from '@playwright/test';
-import { startCampaign } from './helpers';
+import { startCampaign, openPanel } from './helpers';
 import type { GameState } from '../src/types/game';
 type Dev = { __klDev: { state: () => GameState } };
 const state = (page: import('@playwright/test').Page) => page.evaluate(() => (window as unknown as Dev).__klDev.state());
 
 test('policy decisions: tick, slide, review and see the phase cycle', async ({ page }) => {
   await startCampaign(page);
-  await page.getByTestId('nav-decisions').click();
+  await openPanel(page, 'decisions');
   await page.getByTestId('lever-toggle-carbonTax').check();
   await page.getByTestId('lever-slider-carbonTax').fill('60');
   await page.getByTestId('decide-policies').click();
@@ -19,7 +19,7 @@ test('policy decisions: tick, slide, review and see the phase cycle', async ({ p
 
 test('investment pledges and the global standing board', async ({ page }) => {
   await startCampaign(page);
-  await page.getByTestId('nav-fdi').click();
+  await openPanel(page, 'fdi');
   const s0 = await state(page);
   const id = s0.fdi.pledges[0].id;
   await expect(page.getByTestId(`pledge-${id}`)).toContainText('Google (Alphabet)');

@@ -112,7 +112,9 @@ export const RESOURCE_EXPORT_SHARE = { oil: 0.6, palm: 0.8, rubber: 0.5 };
 // ------------------------------------------------------------------ fuel & food subsidies
 /** RON95 retail ceiling (RM/litre) and unsubsidised reference price at oil index 1 (APPROX). */
 export const FUEL_CEILING0 = 1.99;
-export const FUEL_MARKET0 = 2.6;
+// Calibrated so the opening RON95 bill is about RM12bn a year: the PM put blanket RON95 subsidy at RM20bn a year (Budget 2025
+// speech, Oct 2024) and the targeted scheme at about RM8bn less. Earlier value 2.6 gave about RM9bn, and a strong ringgit shrinks it further.
+export const FUEL_MARKET0 = 2.82;
 /** Share of the pump price that moves with crude (ASSUMPTION; the rest is taxes, margins, logistics). */
 export const FUEL_CRUDE_SHARE = 0.55;
 export const FUEL_VOLUME = 17e9; // litres/yr of RON95 (APPROX)
@@ -127,6 +129,19 @@ export const fuelSubsidyAnnual = (market: number, ceiling: number, eligible: num
   FUEL_VOLUME * eligible * Math.max(0, market - ceiling) * (1 + FUEL_LEAKAGE * Math.max(0, eligible - FUEL_ELIGIBLE0) / (1 - FUEL_ELIGIBLE0));
 /** Opening RON95 subsidy bill, carved out of the official operating budget's residual. */
 export const FUEL_SUBSIDY0 = fuelSubsidyAnnual(FUEL_MARKET0, FUEL_CEILING0, FUEL_ELIGIBLE0);
+
+/** OFFICIAL subsidy reference figures (RM bn a year) shown beside the modelled petrol and food subsidies. Sources: Ministry of Finance
+ * Budget 2025 and 2026 speeches and Revenue Estimates 2027; Auditor General 2025 report (LPG); PM statements, 2026. */
+export const SUBSIDY_REFERENCE = {
+  subsidiesAndAid2025Actual: 55.27,
+  subsidiesAndAid2026Budget: 74.47,
+  subsidiesAndAid2027Estimate: 72.73,
+  fuelBudget2026: 15,
+  fuelOutturn2026Pm: 40,
+  ron95Blanket2024: 20,
+  lpg2025: 2.63,
+  pensions2025Budget: 40.6,
+};
 
 /** Commodity shares of each sector's imported inputs (ASSUMPTION). Energy keeps its own share. */
 export const COMMODITY_IMPORT: Partial<Record<'fin' | 'prop' | 'util' | 'tech' | 'cons' | 'health' | 'ind', Partial<Record<CommodityId, number>>>> = {

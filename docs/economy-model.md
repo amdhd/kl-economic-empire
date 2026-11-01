@@ -1010,3 +1010,7 @@ Read-only presentation over the closed monthly reports; no simulation rule chang
 
 **Boom company earnings (D-110).** For Malaysian-listed companies in Boom mode: labour cost index = `wageIndex ÷ sector productivity` (realistic: `wageIndex`); foreign-sales revenue term and volume term × `exportReach(sector)`. US-listed firms and realistic campaigns are unchanged.
 
+**Petrol subsidy calibration (D-111).** `FUEL_MARKET0` = RM2.82/L (was 2.60), so the opening RON95 bill is about RM12bn a year; it is carved out of the Administration residual as before. The Economy window shows the modelled petrol and food bills beside official subsidy totals (`SUBSIDY_REFERENCE`).
+
+**Boom bottlenecks (D-112).** Weekly labour step: if labour demand exceeds 98.5% of the workforce, `laborForce += weeklyMigration × (demand ÷ 0.96 − laborForce)`. A finished FDI plant (`fdi.ts`, `investment-deals.ts`) adds `amount × exportRatio ÷ 365 ÷ fdiCapacityUtil` to its sector's capacity. Realistic mode keeps the labour cap and adds no plant capacity.
+

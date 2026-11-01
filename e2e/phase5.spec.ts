@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { GameState } from '../src/types/game';
-import { runHours } from './helpers';
+import { runHours, openPanel } from './helpers';
 
 type Dev = { __klDev: { state: () => GameState } };
 const state = (page: Page) => page.evaluate(() => (window as unknown as Dev).__klDev.state());
@@ -13,11 +13,11 @@ test('recession shocks explain their causes, propagation and lifecycle in live a
   await page.getByTestId('scenario-recession').click();
   await page.getByTestId('start-campaign').click();
   await page.getByTestId('info-views').click();
-  await page.getByTestId('nav-economy').click();
+  await openPanel(page, 'economy');
   await expect(page.getByTestId('event-2')).toContainText('Banking credit crunch');
   await expect(page.getByTestId('event-2')).toContainText('Active · strength 1.30×');
   await expect(page.getByTestId('event-2')).toContainText('New loans ↓ → investment ↓');
-  await page.getByTestId('nav-reports').click();
+  await openPanel(page, 'reports');
   await page.getByRole('button', { name: 'Event log', exact: true }).click();
   await expect(page.getByTestId('event-1')).toContainText('Global growth slowdown');
   await expect(page.getByTestId('event-1')).toContainText('Fictional scenario');
@@ -48,12 +48,12 @@ test('a credit crunch changes the economy view and the monthly lending/investmen
   expect(s.reports[0].events).toContain('Banking credit crunch');
   expect(s.reports[0].reconciliation!.cashResidualMinor).toBe(0);
   expect(s.reports[0].investment).toBeGreaterThan(0);
-  await page.getByTestId('nav-economy').click();
+  await openPanel(page, 'economy');
   await expect(page.getByTestId('panel')).toContainText('Banking (reduced form)');
   await expect(page.getByTestId('panel')).toContainText('Credit met');
   await expect(page.getByTestId('panel')).toContainText('External conditions & monetary signals');
   await expect(page.getByTestId('panel')).toContainText('US demand');
-  await page.getByTestId('nav-reports').click();
+  await openPanel(page, 'reports');
   await expect(page.getByTestId('panel')).toContainText('Global growth slowdown');
   await expect(page.getByTestId('panel')).toContainText('Banking credit crunch');
   await page.getByTestId('nav-markets').click();

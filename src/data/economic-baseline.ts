@@ -70,7 +70,7 @@ export const BUDGET_LABELS: Record<BudgetCategory, string> = {
   safety: 'Safety',
   development: 'Economic development',
   admin: 'Administration',
-  transfers: 'Household transfers',
+  transfers: 'Pensions & transfers',
 };
 
 export const TAX_LABELS: Record<keyof TaxPolicy, { label: string; min: number; max: number; hint: string }> = {

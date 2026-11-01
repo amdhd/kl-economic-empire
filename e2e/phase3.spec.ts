@@ -1,7 +1,7 @@
 // Phase 3 fund-desk checks, ported from the standalone desk to the integrated shell.
 // Playwright gives every test a fresh browser profile, so real saves are safe to exercise here.
 import { expect, test, type Page } from '@playwright/test';
-import { runHours } from './helpers';
+import { runHours, openPanel } from './helpers';
 
 type Dev = { __klDev: { runHours: (h: number) => void; state: () => any } }; // eslint-disable-line @typescript-eslint/no-explicit-any
 const state = (page: Page) => page.evaluate(() => (window as unknown as Dev).__klDev.state());
@@ -31,7 +31,7 @@ test('closed-market order queues and cancels; FX, treasury transfer, save/load',
   await page.getByRole('button', { name: 'Cancel', exact: true }).first().click();
   await expect(page.getByTestId('toast').last()).toContainText('cancelled');
 
-  await page.getByTestId('nav-fund').click();
+  await openPanel(page, 'fund');
   await page.getByTestId('fx-amount').fill('100');
   await page.getByTestId('fx-convert').click();
   await expect(page.getByTestId('toast').last()).toContainText('FX conversion complete');
@@ -74,7 +74,7 @@ test('open-market buy then full sale keeps realised return across save/load', as
   const s = await state(page);
   expect(s.fund.positions).toEqual({});
   expect(s.fund.realized.MYR).toBeLessThan(0); // round trip pays fees + spread
-  await page.getByTestId('nav-fund').click();
+  await openPanel(page, 'fund');
   await expect(page.getByTestId('fund-totals')).toContainText('Realised (MYR stocks)');
   await page.getByTestId('btn-save-menu').click();
   await page.getByTestId('save-slot2').click();
@@ -102,10 +102,10 @@ test('order review pauses the running clock; cancelling resumes it', async ({ pa
 test('settled monthly report reconciles cash and debt to zero sen; treasury journal shows postings', async ({ page }) => {
   await begin(page);
   await runHours(page, 24 * 31 + 1); // through the 1 Feb 2027 month close
-  await page.getByTestId('nav-reports').click();
+  await openPanel(page, 'reports');
   await expect(page.getByTestId('reconciliation')).toBeVisible();
   await expect(page.getByTestId('cash-residual')).toHaveText('RM 0.00');
   await expect(page.getByTestId('debt-residual')).toHaveText('RM 0.00');
-  await page.getByTestId('nav-debt').click();
+  await openPanel(page, 'debt');
   await expect(page.getByTestId('treasury-journal')).toContainText('Other public receipts');
 });

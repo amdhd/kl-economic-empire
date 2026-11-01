@@ -31,6 +31,6 @@ export function ExplanationPanel() {
     </Section>
     <Section title="Recent decisions · context, not causal attribution"><div className="text-[12px] text-slate-300">{showList(view.policies, 'No policy decisions yet.')}</div></Section>
     <Section title="Active shocks"><div className="text-[12px] text-slate-300">{showList(view.events, 'No active event shocks.')}</div></Section>
-    <div className="flex flex-wrap gap-2"><button className="btn" onClick={() => useGame.getState().setPanel('economy')}>Economy charts</button><button className="btn" onClick={() => useGame.getState().setPanel('policies')}>Taxes & budget</button><button className="btn" onClick={() => useGame.getState().setPanel('settings')}>Configure alerts</button></div>
+    <div className="flex flex-wrap gap-2"><button className="btn" onClick={() => useGame.getState().setPanel('economy')}>Economy charts</button><button className="btn" onClick={() => useGame.getState().setPanel('finance')}>Taxes & budget</button><button className="btn" onClick={() => useGame.getState().setPanel('settings')}>Configure alerts</button></div>
   </PanelShell>;
 }

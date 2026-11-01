@@ -20,6 +20,8 @@ import { InfrastructurePanel } from '../components/panels/InfrastructurePanel';
 import { Component, useEffect, useState, type ReactNode } from 'react';
 import { BottomBar } from '../components/hud/BottomBar';
 import { LeftRail } from '../components/hud/LeftRail';
+import { WindowTabs } from '../components/hud/WindowTabs';
+import { windowOf } from '../components/hud/windows';
 import { Toasts } from '../components/hud/Toasts';
 import { TopBar } from '../components/hud/TopBar';
 import { CompanyPanel } from '../components/markets/CompanyPanel';
@@ -29,7 +31,6 @@ import { DebtPanel } from '../components/panels/DebtPanel';
 import { EconomyPanel } from '../components/panels/EconomyPanel';
 import { ObjectivesPanel } from '../components/panels/ObjectivesPanel';
 import { OverviewPanel } from '../components/panels/OverviewPanel';
-import { PolicyPanel } from '../components/panels/PolicyPanel';
 import { ProjectsPanel } from '../components/panels/ProjectsPanel';
 import { TradePanel } from '../components/panels/TradePanel';
 import { TradeMinistryPanel } from '../components/panels/TradeMinistryPanel';
@@ -65,7 +66,6 @@ const PANELS: Record<PanelId, () => ReactNode> = {
   central: () => <CentralBankPanel />,
   sources: () => <SourcesPanel />,
   overview: () => <OverviewPanel />,
-  policies: () => <PolicyPanel />,
   projects: () => <ProjectsPanel />,
   debt: () => <DebtPanel />,
   markets: () => <MarketsPanel />,
@@ -117,7 +117,9 @@ export function App() {
         <div className="workspace flex min-h-0 flex-1 items-start gap-3">
           {menuOpen && <LeftRail />}
           <div className={`panel-slot min-h-0 ${panel === 'markets' ? 'panel-slot-wide' : ''}`}>
-            {panel && <ErrorBoundary label="Panel">{PANELS[panel]()}</ErrorBoundary>}
+            {panel && (windowOf(panel)?.tabs.length ?? 0) > 1
+              ? <div className="flex h-full min-h-0 flex-col gap-1.5"><WindowTabs panel={panel} /><div className="min-h-0 flex-1"><ErrorBoundary label="Panel">{PANELS[panel]()}</ErrorBoundary></div></div>
+              : panel && <ErrorBoundary label="Panel">{PANELS[panel]()}</ErrorBoundary>}
           </div>
           <div className="ml-auto flex min-h-0 shrink-0 flex-col items-end gap-2">
             <ErrorBoundary label="Rival economies"><RivalsBoard /></ErrorBoundary>

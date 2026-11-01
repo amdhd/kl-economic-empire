@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { runHours, startCampaign } from './helpers';
+import { runHours, startCampaign, openPanel } from './helpers';
 import type { GameState } from '../src/types/game';
 type Dev = { __klDev: { state: () => GameState } };
 const state = (page: import('@playwright/test').Page) => page.evaluate(() => (window as unknown as Dev).__klDev.state());
@@ -9,7 +9,7 @@ test('fiscal rules, commodities, partners and state enterprises can be reviewed 
   await startCampaign(page);
   await runHours(page, 24 * 40);
 
-  await page.getByTestId('nav-fiscal').click();
+  await openPanel(page, 'fiscal');
   await expect(page.getByTestId('fiscal-summary')).toContainText('Deficit');
   await expect(page.getByTestId('credibility')).toContainText('/100');
   await page.getByTestId('dev-budget').fill('70');
@@ -17,25 +17,25 @@ test('fiscal rules, commodities, partners and state enterprises can be reviewed 
   await expect(page.getByRole('dialog')).toContainText('RM70bn');
   await page.getByTestId('confirm-btn').click();
 
-  await page.getByTestId('nav-commodities').click();
+  await openPanel(page, 'commodities');
   await expect(page.getByTestId('commodity-prices')).toContainText('Crude oil');
-  await page.getByTestId('nav-oil').click();
+  await openPanel(page, 'oil');
   await page.getByRole('button', { name: 'Petrol subsidy' }).click();
   await page.getByTestId('fuel-ceiling').fill('2.3');
   await page.getByTestId('review-commodity').click();
   await expect(page.getByRole('dialog')).toContainText('RM2.30');
   await page.getByTestId('confirm-btn').click();
 
-  await page.getByTestId('nav-partners').click();
+  await openPanel(page, 'partners');
   await page.getByTestId('partner-US').click();
   await page.getByTestId('partner-tariff').fill('10');
   await page.getByTestId('review-partner-tariff').click();
   await expect(page.getByRole('dialog')).toContainText('United States');
   await page.getByTestId('confirm-btn').click();
 
-  await page.getByTestId('nav-soe').click();
+  await openPanel(page, 'soe');
   await expect(page.getByTestId('khazanah-table')).toContainText('Axiata');
-  await page.getByTestId('nav-oil').click();
+  await openPanel(page, 'oil');
   await expect(page.getByTestId('petronas-outlook')).toBeVisible();
   await page.getByTestId('petronas-dividend').fill('45');
   await page.getByTestId('review-petronas').click();

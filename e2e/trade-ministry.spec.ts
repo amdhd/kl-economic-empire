@@ -1,12 +1,12 @@
 import { expect, test } from '@playwright/test';
-import { runHours, startCampaign } from './helpers';
+import { runHours, startCampaign, openPanel } from './helpers';
 import type { GameState } from '../src/types/game';
 type Dev = { __klDev: { state: () => GameState } };
 
 test('trade ministry shows trillion-ringgit trade, signs a product deal and funds export promotion', async ({ page }) => {
   await startCampaign(page);
   await runHours(page, 32 * 24);
-  await page.getByTestId('nav-ministry').click();
+  await openPanel(page, 'ministry');
   const headline = page.getByTestId('ministry-headline');
   await expect(headline).toContainText('Exports · annual rate');
   await expect(headline).toContainText(/RM ?1\.\d+tn/);

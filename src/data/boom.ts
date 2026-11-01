@@ -10,6 +10,10 @@ export const BOOM = {
   /** Extra desired net capital growth a year, and the cap on total desired growth (realistic mode: +0 and 9%). */
   capitalPush: 0.12,
   maxCapitalGrowth: 0.6,
+  /** A finished FDI plant adds the capacity its exports need, at this target utilisation (D-112). */
+  fdiCapacityUtil: 0.85,
+  /** Share of a labour shortfall the workforce closes each week through migration (D-112). */
+  weeklyMigration: 0.25,
   /** The investment drive phases in over this many months, so demand does not run far ahead of new capacity at once. */
   pushRampMonths: 12,
   /** Investment plans close this share of the gap to their target each month (realistic: 0.3). */
