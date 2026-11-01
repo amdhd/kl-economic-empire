@@ -985,6 +985,8 @@ housing 12) from the treasury's capex line; completion adds capacity. No randomn
 
 - **Boom ledger:** trade-ledger product exports are multiplied by the same capacity reach the core uses (`exportReach`), so ledger and core trade stay consistent in Boom mode (D-091).
 
+**Boom supply limits (D-099).** Month-close capital and capacity additions are `investmentMonthly × investmentDelivery(s)`, where delivery = Σₖ IGₖ·pₖ·min(1, outputₖ/demandₖ) ÷ Σₖ IGₖ·pₖ over the closing month (IG = investment-goods shares). `exportReach` uses `capacity × infra.mult` ÷ opening capacity. The trade ledger ships each non-commodity product at `served[sector]` = output ÷ demand of that day, and adds operating FDI plants' exports (`fdiExports × price`) split across the sector's products by base exports. Realistic campaigns: delivery and served are 1 unless a sector rations, and `exportReach` stays 1.
+
 **Boom FX cap (D-093).** `BOOM.fxMaxDepreciationDaily` (0.0003) limits daily ringgit weakening in `updateExternal`.
 
 **Boom events (D-094).** `BOOM.upsideEventsOnly`, `upsideEvents` (ringgit rally), `eventFadeDays` (45): only good events start, they surge in over 7 days and fade out linearly over the last 45 days (`aggregateMods`).
