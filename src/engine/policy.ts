@@ -6,10 +6,11 @@ import { SECTOR_IDS } from '../data/economic-baseline';
 import type { GameState, LeverId, PolicyLever, PolicyState, SectorId } from '../types/game';
 import { leverRampDays } from '../data/boom';
 import { post } from './government';
+import { fiscalFx, householdTaxDaily } from './fiscal-levers';
 import { clamp, news, pushBounded } from './util';
 import { daysInMonth, klDayStartMin, klParts } from './time';
 
-export type LeverGroup = 'ai' | 'fdi' | 'labour' | 'capital' | 'green' | 'hub';
+export type LeverGroup = 'ai' | 'fdi' | 'labour' | 'capital' | 'green' | 'hub' | 'pension' | 'subsidy' | 'tax';
 export interface LeverSpec {
   group: LeverGroup;
   label: string;
@@ -18,7 +19,7 @@ export interface LeverSpec {
   max: number;
   step: number;
   initial: number;
-  unit: 'RMbnYr' | 'share' | 'RMmonth' | 'RMyear' | 'RMt' | 'toggle';
+  unit: 'RMbnYr' | 'share' | 'RMmonth' | 'RMyear' | 'RMt' | 'toggle' | 'years' | 'rate' | 'RMrelief';
   timing: 'tomorrow' | 'nextMonth';
   rampDays: number;
   /** Plain-language cycle: what happens first, what follows, and what it costs. */
@@ -68,6 +69,31 @@ export const LEVERS: Record<LeverId, LeverSpec> = {
     cycle: 'Marketing and event spending buy local services at once. Visitor numbers rise over a quarter, lifting tourism exports and consumer-sector sales.' },
   ringgitPush: { group: 'hub', label: 'Strong-ringgit programme (managed appreciation, reserve-currency push)', kind: 'slider', min: 0, max: 1, step: 0.1, initial: 0, unit: 'share', timing: 'tomorrow', rampDays: 90,
     cycle: 'Policy signals and reserve diversification pull the ringgit up by as much as 8% over a quarter. Imports and foreign debt cost less; exporters and tourism lose price competitiveness.' },
+  // Fiscal reforms (D-114). Fictional game-balance settings modelled on the pension, subsidy and tax debates in Europe and the US.
+  retirementAge: { group: 'pension', label: 'Statutory retirement age', kind: 'slider', min: 60, max: 67, step: 1, initial: 60, unit: 'years', timing: 'tomorrow', rampDays: 1095,
+    cycle: 'New retirees draw pensions later, so the pension bill falls by about 3% for every year added, phased in over three years. Older workers stay in the labour force (about +0.2pp unemployment a year), inequality edges up and approval falls.' },
+  pensionIndexation: { group: 'pension', label: 'Pension indexation (share of inflation passed to pensions)', kind: 'slider', min: 0, max: 1, step: 0.1, initial: 1, unit: 'share', timing: 'tomorrow', rampDays: 730,
+    cycle: 'Pensions lose real value each year prices rise, so the bill shrinks gradually over two years. Retirees spend less, poverty among the old rises and approval falls.' },
+  pensionMeansTest: { group: 'pension', label: 'Means-test pensions for high-income retirees', kind: 'slider', min: 0, max: 0.5, step: 0.05, initial: 0, unit: 'share', timing: 'tomorrow', rampDays: 365,
+    cycle: 'Share of top-income pensions withdrawn. It saves money and lowers inequality, but retirees who lose out vote against you and approval falls.' },
+  subsidyTargeting: { group: 'subsidy', label: 'Target fuel and food subsidies to lower-income households', kind: 'slider', min: 0, max: 1, step: 0.1, initial: 0, unit: 'share', timing: 'tomorrow', rampDays: 180,
+    cycle: 'Higher-income households lose the subsidy: up to 35% of the bill is saved. They pay it as higher pump and food prices, so inflation rises a little and spending on other goods falls. Approval drops unless cash aid compensates.' },
+  cashAid: { group: 'subsidy', label: 'Targeted cash aid for lower-income households', kind: 'slider', min: 0, max: 10e9, step: 0.5e9, initial: 0, unit: 'RMbnYr', timing: 'tomorrow', rampDays: 60,
+    cycle: 'Paid to households from tomorrow and mostly spent, which lifts demand and lowers inequality. It costs the treasury the full amount and softens the approval loss from subsidy targeting.' },
+  topBandSurcharge: { group: 'tax', label: 'Top income-tax bands: surcharge on income above RM100,000', kind: 'slider', min: 0, max: 0.1, step: 0.01, initial: 0, unit: 'rate', timing: 'tomorrow', rampDays: 90,
+    cycle: 'Adds percentage points to the rate on income above RM100,000 (new Malaysia campaigns with the progressive income tax). High earners avoid part of it, talent and investors weigh it, and inequality falls. Popular with most voters.' },
+  personalRelief: { group: 'tax', label: 'Tax-free allowance (personal and EPF relief)', kind: 'slider', min: 8000, max: 30000, step: 1000, initial: 13000, unit: 'RMrelief', timing: 'tomorrow', rampDays: 90,
+    cycle: 'A higher allowance takes lower earners out of tax, raising spending and cutting inequality, but costs revenue; a lower one does the opposite. Needs the progressive income tax.' },
+  capitalGainsTax: { group: 'tax', label: 'Capital-gains tax on shares', kind: 'slider', min: 0, max: 0.3, step: 0.025, initial: 0, unit: 'rate', timing: 'tomorrow', rampDays: 60,
+    cycle: 'Taxes realised equity gains, paid out of household savings. Holders delay selling, so receipts rise with the market and fall with the rate. Foreign investors hold back and the ringgit softens.' },
+  wealthTax: { group: 'tax', label: 'Net-wealth tax on the richest 1%', kind: 'slider', min: 0, max: 0.02, step: 0.0025, initial: 0, unit: 'rate', timing: 'tomorrow', rampDays: 180,
+    cycle: 'A yearly levy on very large fortunes. Evasion and relocation grow quickly with the rate, so receipts flatten; the ringgit weakens as money moves abroad and the investment climate worsens. Lowers inequality.' },
+  digitalLevy: { group: 'tax', label: 'Digital-services levy (platforms, streaming, advertising)', kind: 'slider', min: 0, max: 0.08, step: 0.01, initial: 0, unit: 'rate', timing: 'tomorrow', rampDays: 90,
+    cycle: 'Charged on domestic digital sales. Platforms pass half into prices, the rest cuts tech and consumer-sector profit (and corporate tax). Offshore sellers escape about 30%, and investors in the tech sector take notice.' },
+  propertyGainsTax: { group: 'tax', label: 'Property-gains tax on quick resales', kind: 'slider', min: 0, max: 0.3, step: 0.025, initial: 0, unit: 'rate', timing: 'tomorrow', rampDays: 60,
+    cycle: 'Taxes profits on property resold quickly. Fewer sales happen, and sellers pass part into prices and rents. Cools speculation at the cost of a little more housing inflation.' },
+  transactionTax: { group: 'tax', label: 'Financial-transaction tax on equity, bond and FX trades', kind: 'slider', min: 0, max: 0.005, step: 0.0005, initial: 0, unit: 'rate', timing: 'tomorrow', rampDays: 60,
+    cycle: 'A small charge on each trade. Trading volume migrates abroad as the rate rises, financial firms pass half into fees and prices, and the ringgit and investment climate weaken.' },
 };
 export const LEVER_IDS = Object.keys(LEVERS) as LeverId[];
 
@@ -79,9 +105,11 @@ const AI_ELASTICITY: Record<SectorId, number> = { fin: 0.5, prop: 0.1, util: 0.1
 const MIN_WAGE_BITE: Record<SectorId, number> = { fin: 0.02, prop: 0.4, util: 0.05, tech: 0.05, cons: 0.5, health: 0.2, ind: 0.35 };
 const FOREIGN_SHARE: Record<SectorId, number> = { fin: 0, prop: 0.3, util: 0.02, tech: 0.03, cons: 0.12, health: 0.03, ind: 0.2 };
 
+const EMPTY_MTD: PolicyState['mtd'] = { carbonTax: 0, workerLevy: 0, fdiGrants: 0, aiProgramme: 0, reskilling: 0, greenGrants: 0, hubFees: 0, hubSpend: 0, reformTax: 0, pensionSaved: 0, subsidySaved: 0, cashAid: 0 };
+
 export function initialPolicy(enabled: boolean): PolicyState {
   const levers = Object.fromEntries(LEVER_IDS.map(id => [id, { value: LEVERS[id].initial, from: LEVERS[id].initial, announcedDay: -1, effectiveDay: -1, rampDays: LEVERS[id].rampDays }])) as Record<LeverId, PolicyLever>;
-  const mtd = { carbonTax: 0, workerLevy: 0, fdiGrants: 0, aiProgramme: 0, reskilling: 0, greenGrants: 0, hubFees: 0, hubSpend: 0 };
+  const mtd = { ...EMPTY_MTD };
   return { enabled, levers, aiAdoption: AI_ADOPTION0, aiEffective: AI_ADOPTION0, greenCapital: 0, emissionsIndex: 1, foreignWorkers: FOREIGN_WORKERS0, mtd, lastMonth: { ...mtd } } as PolicyState;
 }
 
@@ -138,6 +166,9 @@ export function formatLever(id: LeverId, v: number): string {
   if (u === 'share') return `${(v * 100).toFixed(0)}%`;
   if (u === 'RMmonth') return `RM${v.toFixed(0)} a month`;
   if (u === 'RMyear') return `RM${v.toFixed(0)} a year per worker`;
+  if (u === 'years') return `${v.toFixed(0)} years`;
+  if (u === 'rate') return `${(v * 100).toFixed(2)}%`;
+  if (u === 'RMrelief') return `RM${v.toLocaleString('en-US', { maximumFractionDigits: 0 })} a year`;
   return `RM${v.toFixed(0)} per tonne CO₂`;
 }
 
@@ -217,7 +248,7 @@ export function capitalControls(s: GameState) {
   const hot = leverValue(s, 'hotMoneyControls');
   // Hub policies (D-098) pull the ringgit up as foreign money and reserve demand arrive.
   const hubFx = -0.03 * leverValue(s, 'financialHub') - 0.08 * leverValue(s, 'ringgitPush');
-  return { fxLevel: -0.04 * leverValue(s, 'exportConversion') + hubFx, fxDamping: 0.4 * hot, yieldPremium: 0.0015 * hot };
+  return { fxLevel: -0.04 * leverValue(s, 'exportConversion') + hubFx + fiscalFx(s), fxDamping: 0.4 * hot, yieldPremium: 0.0015 * hot };
 }
 
 // ---------------------------------------------------------------- settlement
@@ -251,6 +282,12 @@ export function dailyPolicy(s: GameState, purchases: Record<SectorId, number>): 
   p.mtd.hubSpend += spend(s, purchases, leverValue(s, 'tourismDrive'), { cons: 0.7, tech: 0.2, fin: 0.1 });
   const fees = (leverValue(s, 'financialHub') * 0.0025 + leverValue(s, 'goldenVisa') * 0.003) * gdp;
   if (fees > 0) p.mtd.hubFees += post(s.government, 'policyLevy', fees * PER_YEAR);
+  // Capital-gains and wealth tax (D-114) are paid by households out of savings; business-side levies are settled in the economy step.
+  const hhTax = post(s.government, 'policyLevy', householdTaxDaily(s));
+  if (hhTax > 0) {
+    p.mtd.reformTax += hhTax;
+    s.households.savings = Math.max(0, s.households.savings - hhTax);
+  }
 }
 
 /** Monthly: AI adoption, the foreign workforce and emissions. `operatingDataCentres` is MYR of operating FDI. */
@@ -276,7 +313,7 @@ export function monthClosePolicy(s: GameState, operatingDataCentres: number): vo
     hh.employed = Math.min(SECTOR_IDS.reduce((a, j) => a + s.sectors[j].employment, 0), hh.laborForce * 0.985);
   }
   p.lastMonth = { ...p.mtd };
-  p.mtd = { carbonTax: 0, workerLevy: 0, fdiGrants: 0, aiProgramme: 0, reskilling: 0, greenGrants: 0, hubFees: 0, hubSpend: 0 };
+  p.mtd = { ...EMPTY_MTD };
 }
 
 export function validatePolicy(p: PolicyState): void {

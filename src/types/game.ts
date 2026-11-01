@@ -818,7 +818,11 @@ export type LeverId =
   | 'minimumWage' | 'workerLevy' | 'workerFreeze'
   | 'exportConversion' | 'hotMoneyControls'
   | 'carbonTax' | 'greenIncentive'
-  | 'hqRegime' | 'financialHub' | 'freeZones' | 'goldenVisa' | 'tourismDrive' | 'ringgitPush';
+  | 'hqRegime' | 'financialHub' | 'freeZones' | 'goldenVisa' | 'tourismDrive' | 'ringgitPush'
+  // Fiscal reforms (D-114): pensions, subsidies and advanced taxes.
+  | 'retirementAge' | 'pensionIndexation' | 'pensionMeansTest'
+  | 'subsidyTargeting' | 'cashAid'
+  | 'topBandSurcharge' | 'personalRelief' | 'capitalGainsTax' | 'wealthTax' | 'digitalLevy' | 'propertyGainsTax' | 'transactionTax';
 
 /** A lever's current setting and its phase cycle: announced → effective → ramping → full effect. */
 export interface PolicyLever {
@@ -837,7 +841,9 @@ export interface PolicyState {
   greenCapital: number; // cumulative real green investment, MYR
   emissionsIndex: number; // 1 = opening CO2 per unit of real output × output
   foreignWorkers: number; // millions
-  mtd: { carbonTax: number; workerLevy: number; fdiGrants: number; aiProgramme: number; reskilling: number; greenGrants: number; hubFees: number; hubSpend: number };
+  mtd: { carbonTax: number; workerLevy: number; fdiGrants: number; aiProgramme: number; reskilling: number; greenGrants: number; hubFees: number; hubSpend: number;
+    /** Fiscal reforms (D-114), MYR this month: new-tax receipts, pension and subsidy bills saved, targeted cash aid paid. */
+    reformTax: number; pensionSaved: number; subsidySaved: number; cashAid: number };
   lastMonth: PolicyState['mtd'];
 }
 

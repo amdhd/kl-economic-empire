@@ -1,7 +1,10 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { formatLever, LEVER_IDS, LEVERS, leverPhase, leverValue, type LeverGroup, MIN_WAGE0, abatement, aiMismatch } from '../../engine/policy';
 import { leverRampDays } from '../../data/boom';
 import { overallAttractiveness } from '../../engine/fdi';
+import { ageingMismatch, pensionSavingShare, subsidyCut } from '../../engine/fiscal-levers';
+import { fuelPriceIndex } from '../../engine/world';
+import { leverEstimate } from '../../engine/policy-preview';
 import type { LeverId } from '../../types/game';
 import { useGame, useGameState, type PanelId } from '../../store/game-store';
 import { money, num, pct } from '../../utils/format';
@@ -9,14 +12,20 @@ import { Bar, Section } from '../ui';
 import { ConfirmDialog } from './ConfirmDialog';
 import { PanelShell } from './PanelShell';
 
-const GROUPS: { id: LeverGroup; title: string }[] = [
+export const GROUPS: { id: LeverGroup; title: string }[] = [
   { id: 'ai', title: 'AI investment & productivity' },
   { id: 'fdi', title: 'Foreign direct investment' },
   { id: 'labour', title: 'Labour market' },
   { id: 'capital', title: 'Capital & currency' },
   { id: 'hub', title: 'Hub & free-zone policies (Singapore / Dubai style)' },
   { id: 'green', title: 'Industry & green transition' },
+  { id: 'pension', title: 'Pensions & ageing' },
+  { id: 'subsidy', title: 'Subsidies & targeted aid' },
+  { id: 'tax', title: 'Advanced taxes' },
 ];
+/** The groups shown in the Policy window and in the Money & debt window (D-114). */
+const POLICY_GROUPS: LeverGroup[] = ['ai', 'fdi', 'labour', 'capital', 'hub', 'green'];
+export const FISCAL_GROUPS: LeverGroup[] = ['pension', 'subsidy', 'tax'];
 const OTHER: { id: PanelId; label: string }[] = [
   { id: 'finance', label: 'Taxes & budget (Finances window)' }, { id: 'controls', label: 'Sector relief, ministry plans, FX band' },
   { id: 'oil', label: 'Fuel subsidy & PETRONAS' }, { id: 'commodities', label: 'Food subsidy & commodity duties' }, { id: 'trade', label: 'Tariffs & export support' },
@@ -24,19 +33,32 @@ const OTHER: { id: PanelId; label: string }[] = [
 ];
 const PHASE_LABEL = { opening: 'Opening setting', announced: 'Announced', phasing: 'Phasing in', full: 'Full effect' } as const;
 
-const display = (id: LeverId, v: number) => (LEVERS[id].unit === 'RMbnYr' ? `RM${(v / 1e9).toFixed(2)}bn` : LEVERS[id].unit === 'share' ? pct(v, 0) : LEVERS[id].unit === 'toggle' ? (v ? 'On' : 'Off') : num(v));
+const display = (id: LeverId, v: number) => (LEVERS[id].unit === 'RMbnYr' ? `RM${(v / 1e9).toFixed(2)}bn` : LEVERS[id].unit === 'share' ? pct(v, 0) : LEVERS[id].unit === 'toggle' ? (v ? 'On' : 'Off') : ['years', 'rate', 'RMrelief'].includes(LEVERS[id].unit) ? formatLever(id, v) : num(v));
+
+const bn = (v: number) => `RM${(Math.abs(v) / 1e9).toFixed(1)}bn`;
+const estimateText = (id: LeverId, v: number) => {
+  const saving = ['retirementAge', 'pensionIndexation', 'pensionMeansTest', 'subsidyTargeting'].includes(id);
+  if (Math.abs(v) < 5e6) return 'Estimate at full effect: no change from the opening setting.';
+  return `Estimate at full effect, all else equal: ${v >= 0 ? (saving ? 'saves' : 'raises') : 'costs'} about ${bn(v)} a year for the treasury${id === 'personalRelief' ? ' (income tax)' : ''}. Second-round effects are not included.`;
+};
 
 export function DecisionsPanel() {
+  return <LeverPanel groups={POLICY_GROUPS} title="Policy decisions" subtitle="Tick to activate, slide to set the level, then decide. Each policy runs a cycle: announced → effective → phasing in → full effect, with second-round effects after." />;
+}
+
+/** Lever sliders for a set of groups with one draft and one review step; shared by Policy decisions and Fiscal reforms. */
+export function LeverPanel({ groups, title, subtitle, intro }: { groups: LeverGroup[]; title: string; subtitle: string; intro?: ReactNode }) {
   const g = useGameState();
   const command = useGame.getState().command;
   const [draft, setDraft] = useState<Partial<Record<LeverId, number>>>({});
   const [confirm, setConfirm] = useState(false);
-  if (!g.policy.enabled) return <PanelShell title="Policy decisions" subtitle="Toggle and slider policies"><p className="text-[13px] text-slate-300">These policies are modelled in new Malaysia campaigns (model 3). This save keeps its original rules.</p></PanelShell>;
+  if (!g.policy.enabled) return <PanelShell title={title} subtitle="Toggle and slider policies"><p className="text-[13px] text-slate-300">These policies are modelled in new Malaysia campaigns (model 3). This save keeps its original rules.</p></PanelShell>;
   const decided = (id: LeverId) => g.policy.levers[id].value;
   const shown = (id: LeverId) => draft[id] ?? decided(id);
   const changes = LEVER_IDS.filter(id => draft[id] !== undefined && Math.abs((draft[id] as number) - decided(id)) > 1e-9);
   // Drafts snap to the slider step so the review shows exactly what the engine will apply.
   const set = (id: LeverId, v: number) => setDraft({ ...draft, [id]: LEVERS[id].kind === 'toggle' ? v : Math.round(v / LEVERS[id].step) * LEVERS[id].step });
+  const est = (id: LeverId, v: number) => leverEstimate(g, id, v);
   const p = g.policy;
   const effects: Record<LeverGroup, string> = {
     ai: `AI adoption ${pct(p.aiAdoption)} (in productivity: ${pct(p.aiEffective)}). Mismatch unemployment +${(aiMismatch(g) * 100).toFixed(2)}pp. Programmes last month ${money(p.lastMonth.aiProgramme + p.lastMonth.reskilling)}.`,
@@ -44,11 +66,15 @@ export function DecisionsPanel() {
     labour: `Minimum wage ${pct(leverValue(g, 'minimumWage') / MIN_WAGE0 - 1, 1, true)} vs opening. Foreign workers ${p.foreignWorkers.toFixed(2)}m. Levy receipts last month ${money(p.lastMonth.workerLevy)}.`,
     capital: `Ringgit support ${pct(-leverValue(g, 'exportConversion') * 0.04, 1)} from conversion; swings damped ${pct(leverValue(g, 'hotMoneyControls') * 0.4, 0)}.`,
     hub: `Investment climate ${overallAttractiveness(g).toFixed(0)}/100. Hub fees last month ${money(p.lastMonth.hubFees)}; grants and promotion ${money(p.lastMonth.hubSpend)}. Ringgit ${g.external.myrPerUsd.toFixed(3)} per US$.`,
+    pension: `Pension bill ${money(p.lastMonth.pensionSaved)} lower last month (${pct(pensionSavingShare(g), 1)} of the transfers line now). Extra structural unemployment +${(ageingMismatch(g) * 100).toFixed(2)}pp.`,
+    subsidy: `Subsidy bill ${money(p.lastMonth.subsidySaved)} lower last month (${pct(subsidyCut(g), 1)} of the fuel and food bills now); targeted cash aid paid ${money(p.lastMonth.cashAid)}. Pump-price index ${(fuelPriceIndex(g) * 100).toFixed(1)} (opening = 100).`,
+    tax: `New-tax receipts last month ${money(p.lastMonth.reformTax)}. Investment climate ${overallAttractiveness(g).toFixed(0)}/100; Gini ${g.indicators.gini.toFixed(3)}; approval ${g.indicators.approval.toFixed(0)}/100. ${g.baseline.pit ? '' : 'The income-tax levers need the progressive income tax of new Malaysia campaigns.'}`,
     green: `Emissions ${(p.emissionsIndex * 100).toFixed(1)} (opening output mix = 100), abatement ${pct(abatement(g))}. Carbon tax last month ${money(p.lastMonth.carbonTax)}; green grants ${money(p.lastMonth.greenGrants)}.`,
   };
   return (
-    <PanelShell title="Policy decisions" subtitle="Tick to activate, slide to set the level, then decide. Each policy runs a cycle: announced → effective → phasing in → full effect, with second-round effects after." width={760}>
-      {GROUPS.map(group => (
+    <PanelShell title={title} subtitle={subtitle} width={760}>
+      {intro}
+      {GROUPS.filter(group => groups.includes(group.id)).map(group => (
         <Section key={group.id} title={group.title}>
           {LEVER_IDS.filter(id => LEVERS[id].group === group.id).map(id => {
             const spec = LEVERS[id], v = shown(id), on = spec.kind === 'toggle' ? v === 1 : Math.abs(v - spec.initial) > 1e-9;
@@ -68,6 +94,7 @@ export function DecisionsPanel() {
                   <span className="w-40 shrink-0 text-right">now {display(id, leverValue(g, id))}</span>
                 </div>
                 <p className="mt-1 text-[11px] leading-snug text-slate-400">{spec.cycle}</p>
+                {est(id, shown(id)) !== null && <p className="mt-0.5 text-[11px] text-cyan-200" data-testid={`estimate-${id}`}>{estimateText(id, est(id, shown(id)) as number)}</p>}
               </div>
             );
           })}
@@ -79,9 +106,9 @@ export function DecisionsPanel() {
         <button className="btn" disabled={!Object.keys(draft).length} onClick={() => setDraft({})}>Reset draft</button>
         <button className="btn btn-primary" disabled={!changes.length} onClick={() => setConfirm(true)} data-testid="decide-policies">Review & decide</button>
       </div>
-      <Section title="Other policy controls">
+      {groups.includes('ai') && <Section title="Other policy controls">
         <div className="flex flex-wrap gap-2">{OTHER.map(o => <button key={o.id} className="btn !text-[11.5px]" onClick={() => useGame.getState().setPanel(o.id)}>{o.label}</button>)}</div>
-      </Section>
+      </Section>}
       {confirm && (
         <ConfirmDialog title="Decide policies" confirmLabel="Decide" onCancel={() => setConfirm(false)} onConfirm={() => {
           for (const id of changes) command({ type: 'setLever', lever: id, value: draft[id] as number });
@@ -96,4 +123,10 @@ export function DecisionsPanel() {
       )}
     </PanelShell>
   );
+}
+
+/** Fiscal reforms tab of the Money & debt window (D-114): pensions, subsidies and advanced taxes. */
+export function FiscalReformsPanel() {
+  return <LeverPanel groups={FISCAL_GROUPS} title="Fiscal reforms" subtitle="Cut pension and subsidy bills or raise new taxes. Each reform saves or raises money and costs you something: approval, inequality, evasion, prices or investment."
+    intro={<p className="mb-2 text-[11.5px] text-slate-400" data-testid="reforms-intro">Fictional simulated policy levers modelled on debates in Europe and the US, not forecasts of any real programme. Estimates are annual and all else equal; the real result also depends on growth, prices and how households and investors react.</p>} />;
 }

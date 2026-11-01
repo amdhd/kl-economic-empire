@@ -1,7 +1,7 @@
 import { DealsPanel } from '../components/panels/DealsPanel';
 import { PopulationPanel } from '../components/panels/PopulationPanel';
 import { ExplanationPanel } from '../components/panels/ExplanationPanel';
-import { DecisionsPanel } from '../components/panels/DecisionsPanel';
+import { DecisionsPanel, FiscalReformsPanel } from '../components/panels/DecisionsPanel';
 import { FdiPanel } from '../components/panels/FdiPanel';
 import { StandingPanel } from '../components/panels/StandingPanel';
 import { SettingsPanel } from '../components/panels/SettingsPanel';
@@ -47,6 +47,7 @@ const PANELS: Record<PanelId, () => ReactNode> = {
   deals: () => <DealsPanel />,
   explain: () => <ExplanationPanel />,
   decisions: () => <DecisionsPanel />,
+  reforms: () => <FiscalReformsPanel />,
   fdi: () => <FdiPanel />,
   standing: () => <StandingPanel />,
   settings: () => <SettingsPanel />,

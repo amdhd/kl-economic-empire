@@ -1014,3 +1014,22 @@ Read-only presentation over the closed monthly reports; no simulation rule chang
 
 **Boom bottlenecks (D-112).** Weekly labour step: if labour demand exceeds 98.5% of the workforce, `laborForce += weeklyMigration × (demand ÷ 0.96 − laborForce)`. A finished FDI plant (`fdi.ts`, `investment-deals.ts`) adds `amount × exportRatio ÷ 365 ÷ fdiCapacityUtil` to its sector's capacity. Realistic mode keeps the labour cap and adds no plant capacity.
 
+
+**Fiscal reforms (D-114).** Module `src/engine/fiscal-levers.ts`; levers in `policy.ts`. All values are the lever's ramped setting (`leverValue`); investment-climate effects use the announced setting (`leverTarget`). Nothing happens unless the Malaysia policy model is on.
+
+| Lever | Range (opening) | Upside | Downside |
+| --- | --- | --- | --- |
+| `retirementAge` | 60–67 (60), ramp 3 y | Pension saving 0.6 × 5% × (age − 60) of the transfers line | Labour supply: structural unemployment +0.2pp per year added (`ageingMismatch`, enters the labour-force pull in `economy.ts`); trust −30 × (age−60)/7; Gini +0.01 × (age−60)/7 |
+| `pensionIndexation` | 0–1 (1), ramp 2 y | Saving 0.6 × 30% × (1 − x) | Lower retiree income (it comes out of `transfersPaid`, so household spending falls); trust −20 × (1 − x); Gini +0.015 × (1 − x) |
+| `pensionMeansTest` | 0–0.5 (0), ramp 1 y | Saving 0.6 × 30% × x | Trust −15 × x/0.5; Gini −0.01 × x/0.5 |
+| `subsidyTargeting` | 0–1 (0), ramp 180 d | Fuel and food subsidy bill × (1 − 0.35x) | The saving is charged back to households: pump price + `cut × bill ÷ FUEL_VOLUME` per litre (so `fuelPriceIndex` and CPI rise) and the food saving is added to `householdFuelBillDelta`; trust −20x, cut by up to 60% when cash aid reaches RM6bn |
+| `cashAid` | RM0–10bn (0) | Paid to households each day on top of transfers; Gini −0.02 × aid/RM10bn | Costs the treasury the full amount |
+| `topBandSurcharge` | 0–10pp (0) | Added to income above RM100,000 in `bandTax`, less avoidance `min(50%, 3 × rate)` | Investment climate −10 × x/0.1; trust −3 × x/0.1 (popular); Gini −0.03 × x/0.1. Needs the progressive income tax |
+| `personalRelief` | RM8k–30k (13k) | Lower allowance raises tax | Higher allowance costs revenue; Gini −0.015 × (relief − 13k)/17k |
+| `capitalGainsTax` | 0–30% (0), ramp 60 d | Receipts `r × 3% GDP × equityIndex × (1 − min(60%, 1.5r))`, paid out of household savings | Climate −12 × r/0.3; ringgit +1.5% log at 30%; trust −4 × r/0.3 |
+| `wealthTax` | 0–2% (0), ramp 180 d | Receipts `r × 60% GDP × (1 − min(70%, 25r))` out of savings | Climate −20 × r/0.02; ringgit +2% log at 2%; Gini −0.03; trust −3 (popular) |
+| `digitalLevy` | 0–8% (0) | Receipts `r × 4% GDP × 0.7`, split tech 70% / consumer 30% | A sector cost: half passed into that sector's price target (`÷ opening output`), half out of profit; climate −5 × r/0.08; trust −4 × r/0.08 |
+| `propertyGainsTax` | 0–30% (0) | Receipts `r × 1.2% GDP × (1 − min(50%, 1.2r))` | Property-sector cost (same pass-through, so rents rise); climate −3 × r/0.3; trust −5 × r/0.3 |
+| `transactionTax` | 0–0.5% (0) | Receipts `r × 120% GDP × (1 − min(80%, 150r))` | Financial-sector cost (same pass-through); climate −8 × r/0.005; ringgit +1% log at 0.5%; trust −2 |
+
+Settlement. Pension and aid: `dailyGovernment` pays `transfers × (1 − pensionSavingShare) + cashAid ÷ 365` through the same `opex` posting as before (saving capped at 40% of the transfers line). Household taxes (capital gains, wealth) post to `policyLevy` in `dailyPolicy` and reduce `households.savings`. Business levies are charged to sectors in the daily production step, subtracted from profit, and posted to `policyLevy` there, so the ledger still reconciles. Approval: `fiscalTrustPain` is added to the trust pain in `updateSatisfaction`. Inequality: `fiscalGini` is added to the monthly Gini. Monthly counters `policy.mtd.{reformTax, pensionSaved, subsidySaved, cashAid}` feed the panel summary. The panel's per-lever estimate (`leverEstimate` in `policy-preview.ts`) is the annual treasury effect at full effect, all else equal, before second-round effects. Save schema 17 adds the levers (neutral) and the four counters.

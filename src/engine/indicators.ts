@@ -6,6 +6,7 @@ import { baselineFor, trendFor } from '../data/economic-baseline';
 // Satisfaction, approval and campaign score. All weights/thresholds are transparent constants.
 import { EVENT_BY_ID } from '../data/events';
 import type { GameState, MonthlyReport, ScoreBreakdown } from '../types/game';
+import { fiscalTrustPain } from './fiscal-levers';
 import { debtMYR, revenueOf, treasuryMYR } from './government';
 import { nationalV2 } from '../data/economic-baseline';
 import { soeEquity } from './soe';
@@ -114,7 +115,7 @@ export function updateSatisfaction(s: GameState, realDispPerCap: number, rentBur
   const affordability = clamp(66 - 500 * (rentBurden - base.rentBurden), 0, 100);
   const services = clamp(s.government.serviceQuality * 100 * (1 - Math.min(0.5, s.government.daysInArrears / 60)), 0, 100);
   s.policyChurn *= 0.75;
-  const taxPain = 250 * Math.max(0, surchargeEquivalent(s) - 0.02) + 150 * Math.max(0, s.government.policies.tax.consumption - 0.04);
+  const taxPain = 250 * Math.max(0, surchargeEquivalent(s) - 0.02) + 150 * Math.max(0, s.government.policies.tax.consumption - 0.04) + fiscalTrustPain(s);
   const trust = clamp(70 - s.policyChurn - taxPain - (s.government.daysInArrears > 0 ? 15 : 0) - (s.government.insolvent ? 40 : 0) + 2 * (s.government.creditRating - 8), 0, 100);
   const infDev = Math.max(0, Math.abs(inflationYoY - 0.025) - 0.01);
   const stability = clamp(85 - 1500 * infDev - 300 * Math.max(0, u - 0.05) - 30 * (0.5 - s.external.riskAppetite), 0, 100);
