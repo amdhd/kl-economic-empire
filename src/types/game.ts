@@ -332,6 +332,8 @@ export interface GovernmentState {
   housingFactor: number;
   serviceBoost: number;
   mtdArrearsDays: number;
+  /** Development-programme capex paid this month (MYR), so reports can split capex from projects and infrastructure. */
+  mtdDevelopmentPaid?: number;
   pendingEmergency: number; // MYR of event damage to be paid as emergency outlays
 }
 
@@ -479,6 +481,8 @@ export interface MonthlyReport {
   wageIndex: number;
   realDisposablePerCapita: number;
   gov: GovMonthFlows;
+  /** Part of `gov.capex` that was the federal development programme; the rest is projects and infrastructure builds. */
+  developmentPaid?: number;
   treasury: number; // MYR
   debt: number; // MYR
   bondYield: number;

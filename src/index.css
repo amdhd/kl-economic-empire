@@ -448,6 +448,12 @@ button:focus-visible, summary:focus-visible, a:focus-visible { outline: 2px soli
 .econ-balance { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 10px; border-top: 1px solid #9bc9df26; font-size: 13px; font-weight: 700; letter-spacing: .05em; color: #f1f6f9; }
 .econ-balance small { display: block; font-size: 9.5px; font-weight: 500; letter-spacing: .02em; color: #8fa7b8; }
 .econ-balance .econ-amount { font-size: 14px; min-width: 150px; }
+.econ-total { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 2px 0 4px; font-size: 12.5px; font-weight: 700; letter-spacing: .05em; color: #f1f6f9; }
+.econ-total small { display: block; font-size: 9.5px; font-weight: 500; letter-spacing: .02em; color: #8fa7b8; }
+.econ-total .econ-amount { font-size: 14px; min-width: 150px; }
+.econ-annual { position: sticky; bottom: -8px; margin: auto -8px -8px; padding: 8px 18px 0; background: #122133; border-top: 1px solid #9bc9df40; box-shadow: 0 -8px 14px rgba(8, 16, 26, .45); }
+.econ-annual .econ-line { padding: 2px 0; font-size: 11.5px; }
+.econ-annual .econ-balance { margin-top: 0; padding: 6px 0; }
 .econ-detail { display: flex; flex-direction: column; gap: 14px; padding: 14px 16px; }
 .econ-detail-head { display: flex; justify-content: space-between; align-items: center; }
 .econ-detail-head h3 { font-size: 15px; font-weight: 700; letter-spacing: .05em; color: #fff; text-transform: uppercase; }

@@ -224,6 +224,7 @@ function closeMonth(s: GameState, key: number, mods: AggregatedMods): void {
     wageIndex: hh.wageIndex,
     realDisposablePerCapita: realDispPerCap,
     gov: g,
+    developmentPaid: s.government.mtdDevelopmentPaid ?? 0,
     reconciliation: reconcileMonth(prev, g, s.government.treasury, s.government.debt, { treasury: s.baseline.openingTreasury, debt: s.baseline.openingDebt }),
     treasury: treasuryMYR(s.government),
     debt: debtMYR(s.government),
@@ -267,6 +268,7 @@ function closeMonth(s: GameState, key: number, mods: AggregatedMods): void {
   s.world.mtd = { fuelSubsidy: 0, wheatSubsidy: 0, palmDuty: 0, steelDuty: 0, bilateralDuty: 0, resourceVa: 0 };
   resetMonthToDate(s);
   s.scheduler.mtdGdpNominal = 0;
+  s.government.mtdDevelopmentPaid = 0;
   s.scheduler.mtdGdpReal = 0;
   s.scheduler.mtdDays = 0;
 }

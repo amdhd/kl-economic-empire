@@ -240,6 +240,7 @@ export function dailyGovernment(s: GameState, today: number): GovDay {
   }
   if (developmentDue > 0) {
     const paid = post(gov, 'capex', developmentDue * paidFraction);
+    gov.mtdDevelopmentPaid = (gov.mtdDevelopmentPaid ?? 0) + paid;
     gov.publicAssets += paid * ASSET_CAPITALISATION;
     for (const [sec, sh] of Object.entries(DEVELOPMENT_PURCHASES)) purchases[sec as SectorId] += paid * sh;
     s.fiscal.publicCapital += paid / pCons;
