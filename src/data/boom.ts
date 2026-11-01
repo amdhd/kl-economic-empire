@@ -46,9 +46,9 @@ export const BOOM = {
   tradeNeedScale: 0.5,
   tradeOtherConcession: 0.9,
   tradeRounds: 6,
-  /** Max profit (D-090): no adverse random events; export buyers pay up to +30% over market for any contract; suppliers sell down
+  /** Max profit (D-090, D-092): no temporary macro events of any tone (they end in a cliff, e.g. a ringgit rally reversing); export buyers pay up to +30% over market for any contract; suppliers sell down
    * to 15% under market; shortfall penalties, buyer walk-aways, price-shock supplier failures and termination claims are off. */
-  noBadEvents: true,
+  noMacroEvents: true,
   exportMaxPrice: 1.3,
   supplyMinPrice: 0.85,
   fdiSizeBase: 3,

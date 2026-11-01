@@ -2,19 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { EVENTS } from '../src/data/events';
 import { applyCommand, createGame, runHeadless } from '../src/engine/game';
 import { buyerMaxPrice } from '../src/engine/export-contracts';
-import { runUntil } from './helpers';
+import { infraAutopilot, runUntil } from './helpers';
 
 const act = (s: ReturnType<typeof createGame>, cmd: Parameters<typeof applyCommand>[1]) => applyCommand(s, cmd, s.clock.hour * 60);
 
 describe('Boom max-profit rules (D-090)', () => {
-  it('never starts an adverse event, but realistic mode still does', () => {
+  it('starts no macro event of any tone, but realistic mode still does', () => {
     const boom = createGame(501, 'balanced', 'malaysia', { months: 36, boom: true }), real = createGame(501);
-    const bad = new Set(EVENTS.filter((e) => e.tone === 'bad').map((e) => e.id));
     runHeadless(boom, 24 * 365 * 2); runHeadless(real, 24 * 365 * 2);
-    const started = (s: typeof boom) => s.events.log.filter((e) => bad.has(e.templateId)).length;
-    expect(started(boom)).toBe(0);
-    expect(started(real)).toBeGreaterThan(0);
-    expect(boom.events.log.some((e) => !bad.has(e.templateId))).toBe(true); // good and neutral events still happen
+    const macro = (s: typeof boom) => s.events.log.filter((e) => !EVENTS.find((x) => x.id === e.templateId)!.company).length;
+    expect(macro(boom)).toBe(0); // a ringgit rally or tourism surge would end in a cliff (D-092)
+    expect(macro(real)).toBeGreaterThan(0);
   });
 
   it('export buyers pay up to 30% over market in Boom and keep the contract', () => {
@@ -37,4 +35,22 @@ describe('Boom max-profit rules (D-090)', () => {
     expect(act(s, { type: 'dealOffer', id: d.id, terms: { months: 12, priceFactor: 0.85, protection: 0 } }).ok).toBe(true);
     expect(d.terms.priceFactor).toBe(0.85);
   });
+
+  it('no month loses more than 3% of real GDP or 6% of US$ GDP in the first 18 months (no event cliffs, D-092)', () => {
+    const DAYS: Record<string, number> = { Jan: 31, Feb: 28, Mar: 31, Apr: 30, May: 31, Jun: 30, Jul: 31, Aug: 31, Sep: 30, Oct: 31, Nov: 30, Dec: 31 };
+    for (const seed of [20270101, 7, 99]) {
+      const s = createGame(seed, 'balanced', 'malaysia', { months: 36, boom: true });
+      runHeadless(s, 24 * 31 * 19, (g) => {
+        infraAutopilot(g);
+        if (g.clock.hour % 24 === 9) for (const p of g.fdi.pledges) if (p.status === 'offered') applyCommand(g, { type: 'decidePledge', id: p.id, approve: true, incentive: Math.min(0.3, p.ask) }, g.clock.hour * 60);
+      });
+      let real = 0, usd = 0;
+      for (const r of s.reports.slice(0, 18)) {
+        const days = DAYS[r.label.slice(0, 3)] + (r.label.startsWith('Feb 2028') ? 1 : 0);
+        const nr = (r.realGdp * 365) / days, nu = (r.nominalGdp * 365) / days / r.myrPerUsd;
+        if (real) { expect(nr / real - 1).toBeGreaterThan(-0.03); expect(nu / usd - 1).toBeGreaterThan(-0.06); }
+        real = nr; usd = nu;
+      }
+    }
+  }, 300_000);
 });
