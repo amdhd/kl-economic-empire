@@ -72,6 +72,8 @@ export interface CompanySeed {
   commodityCost?: Partial<Record<CommodityId, number>>;
   /** Share of revenue priced off a world commodity index (model 2; ASSUMPTION). */
   commodityRevenue?: Partial<Record<CommodityId, number>>;
+  /** Revenue lift per RM40bn of AI data-centre and semiconductor FDI building or operating (D-121; ASSUMPTION). */
+  fdiBeta?: number;
   geo?: GeoPoint;
 }
 

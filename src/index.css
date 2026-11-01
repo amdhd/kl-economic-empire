@@ -257,7 +257,7 @@ table.data tr.sel td {
 .category-button.is-active { background: #24b6e12a; border-color: #60d9ff77; color: white; }
 .category-button.is-active > span:first-child { color: #8ce8ff !important; }
 .panel-slot { height: 100%; max-width: 100%; flex-shrink: 1; overflow: hidden; }
-.company-slot { height: 100%; width: min(420px, 42vw); flex-shrink: 0; display: flex; }
+.company-slot { flex: 1 1 auto; min-height: 0; width: min(420px, 42vw); flex-shrink: 1; display: flex; }
 .company-slot > * { max-width: 100%; }
 .data-panel { border-radius: 5px; max-width: 100%; height: 100%; }
 .panel-slot:empty { display: none; }
