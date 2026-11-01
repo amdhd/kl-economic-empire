@@ -131,6 +131,16 @@ export function dailyExportContract(s: GameState, d: Deal, day: number): void {
   const daily = (d.volume ?? 0) / 365, share = deliveryShare(s, d);
   d.delivered = (d.delivered ?? 0) + daily * share;
   if (spec(d)?.hedge && s.soe.petronas.enabled) s.soe.petronas.cash += daily * share * (unit / spot - 1);
+  else if (!spec(d)?.hedge) {
+    // D-105: the gap between the contract price and spot on every delivered unit is income for the exporting sector (a
+    // terms-of-trade gain, or a loss when spot runs above a locked price). It adds to nominal value added, not to real output.
+    const premium = contractUnits(s, d, spot) * (unit - spot);
+    const sec = s.sectors[EXPORT_PRODUCTS[d.product!].sector];
+    sec.mtd.profit += premium;
+    sec.mtd.taxableProfit += premium;
+    sec.mtd.va += premium;
+    s.scheduler.mtdGdpNominal += premium;
+  }
   if (share < 1) {
     const penalty = boomOn(s) ? 0 : toMinor(daily * (1 - share) * SHORTFALL_PENALTY);
     const fromBond = spendDeal(s, d, penalty);
@@ -142,19 +152,33 @@ export function dailyExportContract(s: GameState, d: Deal, day: number): void {
   d.note = `${(d.delivered / 1e9).toFixed(2)}bn delivered, ${(share * 100).toFixed(0)}% of today's volume. Contract price ${unit.toFixed(3)} vs spot ${spot.toFixed(3)}.`;
 }
 
-/** Today's contract flows for the trade ledger (MYR/day): extra volume by product and partner, and LNG hedge gains. */
+/** Units delivered today, measured at the spot price when the contract was signed (so volume × spot is today's market value). */
+function contractUnits(s: GameState, d: Deal, spot: number): number {
+  return (d.volume ?? 0) / 365 * deliveryShare(s, d) / ((d.lockedPrice ?? spot) / d.terms.priceFactor);
+}
+
+/** Today's contract flows for the trade ledger (MYR/day) (D-105): `volume` is the extra real exports valued at spot, which
+ * is new demand for the sector; `price` is the contract-price gap on every delivered unit (the LNG hedge, and premiums or
+ * discounts on the other contracts), which is export value but not extra output. */
 export function exportContractFlows(s: GameState) {
   const volume = Object.fromEntries(EXPORT_PRODUCT_IDS.map((k) => [k, 0])) as Record<ExportProductId, number>;
-  const hedge = { ...volume };
+  const price = { ...volume };
   const byPartner = Object.fromEntries(PARTNER_IDS.map((k) => [k, 0])) as Record<PartnerId, number>;
   for (const d of s.deals?.items ?? []) {
     if (!live(s, d)) continue;
     const c = spec(d);
     if (!c) continue;
-    const daily = (d.volume ?? 0) / 365 * deliveryShare(s, d), spot = exportSpot(s, c.product);
-    const flow = c.hedge ? daily * (exportUnitPrice(s, d) / spot - 1) : daily * EXPORT_ADDITIONALITY * exportUnitPrice(s, d) / ((d.lockedPrice ?? spot) / d.terms.priceFactor);
-    (c.hedge ? hedge : volume)[c.product] += flow;
-    byPartner[c.partner] += flow;
+    const spot = exportSpot(s, c.product), unit = exportUnitPrice(s, d);
+    if (c.hedge) {
+      const gain = (d.volume ?? 0) / 365 * deliveryShare(s, d) * (unit / spot - 1);
+      price[c.product] += gain;
+      byPartner[c.partner] += gain;
+      continue;
+    }
+    const units = contractUnits(s, d, spot), extra = units * EXPORT_ADDITIONALITY * spot, gap = units * (unit - spot);
+    volume[c.product] += extra;
+    price[c.product] += gap;
+    byPartner[c.partner] += extra + gap;
   }
-  return { volume, hedge, byPartner };
+  return { volume, price, byPartner };
 }

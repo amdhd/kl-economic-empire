@@ -4,7 +4,8 @@ import { sectorTax, ministryOutcomes } from './policy-controls';
 import { baselineFor, budgetFor, nationalV2, trendFor } from '../data/economic-baseline';
 import { DEVELOPMENT_PURCHASES, KL_ECONOMY_SHARE, PUBLIC_CAPITAL_DEPRECIATION } from '../data/world';
 import { credibilityPremium } from './fiscal-rules';
-import { DEBT_LIMIT_MYR } from '../data/boom';
+import { DEBT_LIMIT_MYR, TREASURY_LIMIT_MYR } from '../data/boom';
+import { injectFund } from './sovereign-fund';
 import { FOREIGN_WORKERS0, WORKER_LEVY0 } from './policy';
 import { modelledResourceRevenue0 } from './soe';
 import { fuelSubsidyDaily, wheatSubsidyDaily, scheduleRetaliation } from './world';
@@ -77,7 +78,8 @@ export function issueDebt(s: GameState, amountMYR: number, reason: string, quiet
   if (!Number.isFinite(amountMYR) || !gov.marketAccess || amountMYR <= 0) return 0;
   // The integer-sen ledger tops out near RM90tn, so new debt also stops at DEBT_LIMIT_MYR (reachable only in Boom mode).
   const cap = Math.min(gov.policies.borrowing.maxDebtToGdp * gdpForRatios(s), DEBT_LIMIT_MYR);
-  const room = Math.max(0, cap - debtMYR(gov));
+  // Borrowed cash lands in the treasury, so issuance also stops at the treasury ceiling (D-101).
+  const room = Math.max(0, Math.min(cap - debtMYR(gov), TREASURY_LIMIT_MYR - treasuryMYR(gov)));
   const amt = Math.min(amountMYR, room);
   if (amt < 1e6) return 0;
   assertSafeMinor(gov.debt + toMinor(amt));
@@ -99,6 +101,18 @@ export function repayDebt(s: GameState, amountMYR: number): number {
   const posted = post(gov, 'principal', amt);
   gov.debt -= toMinor(posted);
   return posted;
+}
+
+/** Cash above TREASURY_LIMIT_MYR (D-101) buys back debt first, then goes to the sovereign fund, so the sen ledger never
+ * overflows. Only reachable late in a long Boom campaign. Returns the MYR moved. */
+export function sweepExcessCash(s: GameState): number {
+  const excess = treasuryMYR(s.government) - TREASURY_LIMIT_MYR;
+  if (!(excess > 0)) return 0;
+  const repaid = repayDebt(s, excess);
+  const rest = excess - repaid;
+  const toFund = rest >= 1 && !injectFund(s, rest) ? rest : 0;
+  news(s, { kind: 'policy', tone: 'neutral', title: 'Surplus cash put to work', body: `Treasury cash above RM${(TREASURY_LIMIT_MYR / 1e12).toFixed(0)}tn${repaid > 0 ? `: RM${(repaid / 1e9).toFixed(0)}bn of bonds bought back` : ''}${toFund > 0 ? `${repaid > 0 ? ',' : ':'} RM${(toFund / 1e9).toFixed(0)}bn moved to the sovereign fund` : ''}.` });
+  return repaid + toFund;
 }
 
 export interface GovDay {
@@ -318,6 +332,7 @@ export function monthCloseGovernment(s: GameState, otherCorporateTax = 0): GovMo
   const outlays = outlaysOf(gov.mtd);
   const target = Math.max(0,pol.borrowing.cashBufferMonths * outlays - repaid * (1-s.controls.debt.refinance));
   if (treasuryMYR(gov) < target) issueDebt(s, target - treasuryMYR(gov), repaid > 0 ? 'Refinancing maturing bonds and rebuilding the cash buffer' : 'Rebuilding the cash buffer');
+  sweepExcessCash(s);
 
   // Fiscal risk premium and rating
   const gdp = gdpForRatios(s);

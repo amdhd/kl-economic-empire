@@ -190,6 +190,26 @@ export function tourismLift(s: GameState): number {
   if (!s.policy?.enabled) return 0;
   return 0.05 * leverValue(s, 'goldenVisa') + 0.1 * Math.pow(Math.min(1, leverValue(s, 'tourismDrive') / 2e9), 0.7);
 }
+/** Free zones (D-103): share of each zone sector's activity inside the zones once the whole plan is open. Zone firms pay
+ * licence and land fees (0.2% of GDP a year in all) and are excused most corporate tax, so the lever trades tax for FDI. */
+const ZONE_SHARE: Partial<Record<SectorId, number>> = { ind: 0.3, tech: 0.3, fin: 0.15 };
+const ZONE_SHARE_TOTAL = 0.75;
+const ZONE_TAX_RELIEF = 0.8; // share of the corporate rate waived inside a zone
+/** Zone licence and land fees paid by sector j today (MYR); a business cost like the carbon tax. */
+export function zoneFeeDaily(s: GameState, j: SectorId): number {
+  if (!s.policy?.enabled) return 0;
+  return leverValue(s, 'freeZones') * 0.002 * s.indicators.nominalGdpAnnual / 365 * (ZONE_SHARE[j] ?? 0) / ZONE_SHARE_TOTAL;
+}
+/** Share of sector j's corporate tax rate waived by the free zones. */
+export function zoneTaxRelief(s: GameState, j: SectorId): number {
+  if (!s.policy?.enabled) return 0;
+  return leverValue(s, 'freeZones') * (ZONE_SHARE[j] ?? 0) * ZONE_TAX_RELIEF;
+}
+/** Golden-visa residents bid up housing (D-103): rents rise by up to 2% with the visa fully in force. */
+export function visaRentPressure(s: GameState): number {
+  if (!s.policy?.enabled) return 0;
+  return 0.02 * leverValue(s, 'goldenVisa');
+}
 /** Log FX effect (negative strengthens the ringgit) and volatility damping from capital controls. */
 export function capitalControls(s: GameState) {
   if (!s.policy?.enabled) return { fxLevel: 0, fxDamping: 0, yieldPremium: 0 };
@@ -222,12 +242,13 @@ export function dailyPolicy(s: GameState, purchases: Record<SectorId, number>): 
   const pInv = (s.sectors.ind.price + s.sectors.prop.price + s.sectors.tech.price) / 3;
   p.greenCapital = p.greenCapital * (1 - 0.04 * PER_YEAR) + green / pInv;
   p.mtd.workerLevy += post(s.government, 'policyLevy', leverValue(s, 'workerLevy') * p.foreignWorkers * 1e6 * PER_YEAR);
-  // Hub policies (D-098): grants and promotion buy local services; licence, land and visa fees are treasury receipts that grow with GDP.
+  // Hub policies (D-098): grants and promotion buy local services. Offshore licence and visa fees are paid by non-residents,
+  // a transfer from abroad; free-zone fees are charged to zone firms in the daily production step instead (D-103).
   const gdp = s.indicators.nominalGdpAnnual;
   p.mtd.hubSpend += spend(s, purchases, leverValue(s, 'hqRegime') * 0.004 * gdp, { fin: 0.5, prop: 0.3, cons: 0.2 });
   p.mtd.hubSpend += spend(s, purchases, leverValue(s, 'financialHub') * 0.0015 * gdp, { fin: 1 });
   p.mtd.hubSpend += spend(s, purchases, leverValue(s, 'tourismDrive'), { cons: 0.7, tech: 0.2, fin: 0.1 });
-  const fees = (leverValue(s, 'financialHub') * 0.0025 + leverValue(s, 'freeZones') * 0.002 + leverValue(s, 'goldenVisa') * 0.003) * gdp;
+  const fees = (leverValue(s, 'financialHub') * 0.0025 + leverValue(s, 'goldenVisa') * 0.003) * gdp;
   if (fees > 0) p.mtd.hubFees += post(s.government, 'policyLevy', fees * PER_YEAR);
 }
 

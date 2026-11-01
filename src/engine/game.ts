@@ -59,7 +59,9 @@ export function createGame(seed = 20270101, scenario: ScenarioId = 'balanced', p
   const base = profile === 'legacy-kl' ? LEGACY_BASELINE : BASELINE;
   const cal = profile === 'legacy-kl' ? LEGACY_CAL : CAL;
   const months = CAMPAIGN_LENGTHS.includes(options.months ?? 24) ? options.months ?? 24 : 24;
-  return createWithProfile(seed, scenario, profile, base, cal, { months, boom: profile === 'malaysia' && !!options.boom });
+  const boom = profile === 'malaysia' && !!options.boom;
+  // Boom mode starts no adverse events (D-094), so it also ignores the shock scenarios and opens balanced (D-104).
+  return createWithProfile(seed, boom ? 'balanced' : scenario, profile, base, cal, { months, boom });
 }
 
 function createWithProfile(seed: number, scenario: ScenarioId, profile: 'malaysia' | 'legacy-kl', BASELINE: typeof LEGACY_BASELINE, CAL: typeof LEGACY_CAL, mode: GameState['mode']): GameState {
