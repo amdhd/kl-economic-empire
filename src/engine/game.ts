@@ -8,6 +8,7 @@ import { syncInvestmentDeals } from './investment-deals';
 import type { Deal } from '../types/deals';
 import { initialDeals, addDeal, dealCommand, offerDeal } from './deals';
 import { exportOffers } from './export-contracts';
+import { initialHousing } from './housing';
 import { cancelInfra, initialInfra, orderInfra } from './infrastructure';
 import type { NetworkId } from '../data/infrastructure';
 import { initialTradeBook, setProgramme, tradeDealCommand, type TradeDealAction } from './trade-book';
@@ -50,7 +51,7 @@ import { seedRng } from './rng';
 import { klDay, klParts, klToEpochMin, monthKey } from './time';
 import { clamp, news, pushBounded, toMinor } from './util';
 
-export const SCHEMA_VERSION = 17;
+export const SCHEMA_VERSION = 18;
 export const START = { year: 2027, month: 1, day: 1, hour: 8 };
 export const CAMPAIGN_MONTHS = 24;
 
@@ -179,6 +180,7 @@ function createWithProfile(seed: number, scenario: ScenarioId, profile: 'malaysi
   s.indicators.cpi = computeCpi(s);
   s.tradeBook = initialTradeBook(s, s.fdi.enabled && s.world.enabled);
   if (mode.boom) s.infra = initialInfra(s.baseline.realGdpAnnual, s.households.laborForce);
+  s.housing = initialHousing(s);
   s.scheduler.startNav = navMYR(s);
   s.soe.openingEquity = soeEquity(s);
   if (s.world.enabled) seedWorldHistory(s.world, seed, startDay);

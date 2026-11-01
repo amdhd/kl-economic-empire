@@ -6,13 +6,15 @@ import { debtMYR, outlaysOf, ratingLabel, revenueOf, treasuryMYR } from '../../e
 import { estimateTaxChange } from '../../engine/policy-preview';
 import { useGame, useGameState, type PanelId } from '../../store/game-store';
 import type { BudgetCategory, GameState, GovMonthFlows, SectorId, TaxPolicy } from '../../types/game';
-import { daysInMonth, formatKL } from '../../engine/time';
-import { fullMoneyMinor, gdpUsd, money, num as numFmt, pct } from '../../utils/format';
+import { daysInMonth, formatKL, monthKeyLabel } from '../../engine/time';
+import { FICTIONAL_LABEL, fullMoneyMinor, gdpUsd, money, num as numFmt, pct } from '../../utils/format';
 import { NON_TAX_REVENUE_2027 } from '../../data/non-tax-revenue';
 import { householdDemand } from '../../engine/economy';
 import { activeTaxKeys, effectiveIncomeTaxRate, employmentOf, INCOME_TAX_BANDS } from '../../engine/income-tax';
 import { HudIcon } from '../hud/HudIcon';
 import { StatsStrip } from '../hud/StatsStrip';
+import { TimeChart } from '../charts/TimeChart';
+import { housingStatus } from '../../engine/housing';
 
 type Tab = 'summary' | 'loans' | 'production';
 const TABS: { id: Tab; label: string }[] = [
@@ -136,6 +138,24 @@ function AnnualBalance({ g, balance, label, total, other, bare }: { g: GameState
 
 const go = (id: PanelId) => () => useGame.getState().setPanel(id);
 
+const HOUSING_TONE = { good: 'text-emerald-300', watch: 'text-amber-300', bad: 'text-rose-300' } as const;
+/** House price index readout (D-118): one number, a plain label and a small trend. Information only. */
+function HousingCard({ g }: { g: GameState }) {
+  const st = housingStatus(g);
+  const data = g.reports.filter((r) => r.housingIndex !== undefined).map((r) => ({ t: r.monthKey, hpi: r.housingIndex as number }));
+  if (!data.length) data.push({ t: g.scheduler.lastMonthKey, hpi: g.housing.index });
+  return (
+    <Detail title="Housing">
+      <div data-testid="housing-card">
+        <div className="flex items-baseline gap-2"><span className="num text-[20px] font-semibold text-white" data-testid="housing-index">{g.housing.index.toFixed(1)}</span><span className="label">house price index, start = 100</span></div>
+        <div className={`text-[12px] font-semibold ${HOUSING_TONE[st.tone]}`} data-testid="housing-status" data-tone={st.tone}>{st.label} · prices are {st.ratio.toFixed(2)}× incomes vs the start</div>
+        <TimeChart data={data} xKey="t" xFormat={(v) => monthKeyLabel(Number(v))} series={[{ key: 'hpi', name: 'House price index', color: '#e8b06a' }]} yFormat={(v) => v.toFixed(0)} unit="index, start = 100 · monthly" dataLabel={FICTIONAL_LABEL} height={90} />
+        <p className="econ-note">Rises with incomes, jobs, investment and scarce homes; falls with higher rates, a higher property levy and oversupply. Unaffordable homes shave a little off approval. Simulated, not real market data.</p>
+      </div>
+    </Detail>
+  );
+}
+
 function Summary({ g, balance, label }: { g: GameState; balance: number; label: string }) {
   const { flows } = monthFlows(g);
   return (
@@ -155,6 +175,7 @@ function Summary({ g, balance, label }: { g: GameState; balance: number; label: 
           <Line label="Borrowing" value={money(flows.borrowing)} />
           <Balance balance={balance} label={label} />
         </Detail>
+        <HousingCard g={g} />
         <Detail title="More views">
           <div className="econ-links">
             {([['fiscal', 'Fiscal rules'], ['debt', 'Treasury & debt'], ['fund', 'Sovereign fund'], ['commodities', 'Commodities'], ['economy', 'Economy analysis'], ['objectives', 'Objectives & score']] as [PanelId, string][]).map(([id, l]) => <button key={id} className="btn" onClick={go(id)}>{l}</button>)}

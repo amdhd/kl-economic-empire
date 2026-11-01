@@ -57,3 +57,14 @@ test('queued tax and budget changes are listed in the Fiscal control tab and can
   await expect(page.getByTestId('queued-policies').first()).toContainText('Nothing queued.');
   expect((await state(page)).government.pending).toHaveLength(0);
 });
+
+test('the Economy window Summary shows the simulated housing readout with a plain label (D-118)', async ({ page }) => {
+  await startCampaign(page);
+  await runHours(page, 24 * 70);
+  await page.getByTestId('bottom-treasury').click();
+  const card = page.getByTestId('housing-card');
+  await expect(card).toBeVisible();
+  await expect(page.getByTestId('housing-index')).toHaveText(/^\d+\.\d$/);
+  await expect(page.getByTestId('housing-status')).toHaveAttribute('data-tone', /good|watch|bad/);
+  await expect(card).toContainText('not real market data');
+});

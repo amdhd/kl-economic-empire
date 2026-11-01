@@ -1042,3 +1042,26 @@ Read-only presentation over the closed monthly reports; no simulation rule chang
 Settlement. Pension and aid: `dailyGovernment` pays `transfers × (1 − pensionSavingShare) + cashAid ÷ 365` through the same `opex` posting as before (saving capped at 40% of the transfers line). Household taxes (capital gains, wealth) post to `policyLevy` in `dailyPolicy` and reduce `households.savings`. Business levies are charged to sectors in the daily production step, subtracted from profit, and posted to `policyLevy` there, so the ledger still reconciles. Approval: `fiscalTrustPain` is added to the trust pain in `updateSatisfaction`. Inequality: `fiscalGini` is added to the monthly Gini. Monthly counters `policy.mtd.{reformTax, pensionSaved, subsidySaved, cashAid}` feed the panel summary. The panel's per-lever estimate (`leverEstimate` in `policy-preview.ts`) is the annual treasury effect at full effect, all else equal, before second-round effects. Save schema 17 adds the levers (neutral) and the four counters.
 
 **Credit rating inputs (D-115).** `ratingBreakdown(s, debt/GDP, deficit, arrears)` returns the four terms of the rating score: debt `−15 × max(0, debt/GDP − 0.6)`, deficit `−40 × max(0, deficit − 0.045)` (0.025 outside model 2), arrears `−3`, credibility `(credibility − 60) ÷ 40`; `ratingScore` is `clamp(9 + terms, 0, 10)`. The Fiscal control tab shows the same terms next to the controls that move them.
+
+## House price index (D-118)
+
+A one-number readout, not a market: `state.housing.index` (opening 100) in `src/engine/housing.ts`. It has no levers and uses no randomness, so it is deterministic for a seed in both realistic and Boom modes.
+
+Each monthly close (before approval is updated) the index moves 10% of the way toward a **fair value**, by at most 2% of itself in a month, within 50–250. Fair value is 100 times:
+
+- **Incomes:** wage index ^ 0.8.
+- **Jobs:** 1 − 1.5 × (unemployment − opening unemployment).
+- **Interest rates:** exp(−5 × (OPR − opening OPR)); +1pp of OPR is about −5%.
+- **Property levy:** 1 − 2.5 × (levy − 4%); the 4% base is the opening commercial property levy.
+- **FDI:** 1 + 3 × (trailing-12-month realised FDI ÷ GDP), capped at +8%.
+- **Scarcity:** 1 + 0.6 × (property-sector utilisation − opening) + in Boom mode 0.6 × (housing load ÷ capacity − opening), the sum held to −12%…+15%. Overbuilt housing capacity pushes prices down; a full network pushes them up.
+
+The opening references (OPR, unemployment, utilisation, housing load ÷ capacity) are stored in the state, so a new campaign starts exactly at fair value. The monthly report records `housingIndex` for the trend chart.
+
+**Affordability** is price ÷ income against the opening: index/100 ÷ wage index. Up to 1.10× is "Affordable" (good), to 1.30× "Stretched" (watch), above that "Unaffordable" (bad). It is shown in the Economy window Summary ("Housing" card) with a small trend chart.
+
+**Effect on play (mild by design):** when the ratio is above 1.30× the Affordability satisfaction component loses 30 points per 1.00 of excess, capped at 5 points. With the 0.15 weight that is at most 0.75 points of target satisfaction, so approval and the score move only slightly. Nothing else reads the index; rents, CPI, banks and the property sector are unchanged.
+
+**Saves:** schema 18. Migration 17 → 18 gives older saves an index of 100 with today's OPR, unemployment, utilisation and housing load as references; older reports have no `housingIndex` and the chart starts from the upgrade.
+
+All values are fictional game-balance numbers, not real market data.
