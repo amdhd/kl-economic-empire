@@ -57,6 +57,8 @@ export const BOOM = {
   eventFadeDays: 45,
   exportMaxPrice: 1.3,
   supplyMinPrice: 0.85,
+  /** FDI investors in the Deal Room (D-095): they want only this share of the grant they would ask in a realistic game (realistic: 0.85). */
+  investorAskScale: 0.15,
   fdiSizeBase: 3,
   fdiSizePerYear: 2,
 };

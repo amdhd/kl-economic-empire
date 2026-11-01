@@ -8,6 +8,7 @@ import { dealOutlook } from '../src/engine/deal-outlook';
 import { gdpHistory } from '../src/engine/gdp-history';
 import { bnTick } from '../src/utils/format';
 import { withoutEvents } from './helpers';
+import { investorAsk } from '../src/engine/investment-deals';
 
 describe('looser Deal Room negotiation and outlook (D-086)', () => {
   it('takeover sellers want only 0–6% over market, accept down to a 0.9 bid with a counter, and allow six rounds', () => {
@@ -83,5 +84,16 @@ describe('axis labels in trillions', () => {
     expect(bnTick(12.5)).toBe('RM12.5bn');
     expect(bnTick(0.5)).toBe('RM500m');
     expect(bnTick(2400, 'US$')).toBe('US$2.4tn');
+  });
+});
+
+describe('Boom investors settle for a small grant (D-095)', () => {
+  const ask = (boom: boolean) => {
+    const s = createGame(7, 'balanced', 'malaysia', { boom });
+    const d = s.deals.items.find((x) => x.kind === 'investment')!;
+    return investorAsk(s, d);
+  };
+  it('asks far less than in a realistic game', () => {
+    expect(ask(true)).toBeLessThan(ask(false) * 0.3);
   });
 });
