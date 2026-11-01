@@ -132,7 +132,7 @@ function TradeTicket({ id }: { id: TickerId }) {
       <button className={`btn w-full ${side === 'buy' ? 'btn-primary' : 'btn-danger'}`} disabled={!!err && !queuedErrOk} onClick={() => setConfirm(true)} data-testid="trade-review">
         Review {side} order
       </button>
-      <div className="mt-1 text-[10.5px] text-slate-500">Limits: no leverage, no shorting, max {MAX_POSITION_PCT * 100}% of NAV per stock, ≤25% of daily liquidity per order, board lot {lot}.</div>
+      <div className="mt-1 text-[10.5px] text-slate-500">Limits: no leverage, no shorting, max {MAX_POSITION_PCT * 100}% of NAV per stock, ≤200% of daily liquidity per order, board lot {lot}.</div>
       {queued.length > 0 && (
         <div className="mt-2 space-y-1">
           {queued.map((o) => (
