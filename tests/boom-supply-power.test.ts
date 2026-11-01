@@ -39,7 +39,10 @@ describe('Boom build times and infrastructure cost (D-109)', () => {
       expect(applyCommand(b, { type: 'startProject', templateId: id }, 0).ok).toBe(true);
       expect(applyCommand(r, { type: 'startProject', templateId: id }, 0).ok).toBe(true);
     }
-    for (const p of b.government.projects) expect(p.durationDays).toBeGreaterThanOrEqual(30), expect(p.durationDays).toBeLessThanOrEqual(60);
+    for (const p of b.government.projects) {
+      expect(p.durationDays).toBeGreaterThanOrEqual(30);
+      expect(p.durationDays).toBeLessThanOrEqual(60);
+    }
     expect(r.government.projects.find((p) => p.templateId === 'brt')!.durationDays).toBe(270);
   });
 

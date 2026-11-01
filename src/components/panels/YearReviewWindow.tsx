@@ -15,7 +15,7 @@ export function YearReviewWindow({ year }: { year: number }) {
   const close = useGame.getState().closeYearReview;
   const command = useGame.getState().command;
   const pausing = useGame((s) => s.pauseOnDialogs);
-  const review = useMemo(() => yearReview(g, year), [g, year, g.reports.length]);
+  const review = useMemo(() => yearReview(g, year), [g, year]);
   const now = currentBudget(g);
   const base = budgetFor(g);
   const [edits, setEdits] = useState<Partial<BudgetPolicy>>({});
