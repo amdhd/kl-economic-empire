@@ -5,6 +5,7 @@
 import { SECTOR_IDS } from '../data/economic-baseline';
 import type { GameState } from '../types/game';
 import { calibrationFor } from './calibration';
+import { leverValue } from './policy';
 
 /** Upper bound of each band (chargeable income, RM/year) and its statutory rate. */
 export const INCOME_TAX_BANDS: { upTo: number; rate: number }[] = [
@@ -19,8 +20,13 @@ const DECILE_RAW = [0.28, 0.42, 0.55, 0.68, 0.82, 0.98, 1.18, 1.5, 2.1, 4.0];
 const DECILE_MEAN = DECILE_RAW.reduce((a, b) => a + b, 0) / DECILE_RAW.length;
 const DECILES = DECILE_RAW.map((m) => m / DECILE_MEAN);
 
-/** Annual tax on chargeable income with every band rate multiplied by `scale`. */
-export function bandTax(chargeable: number, scale = 1): number {
+/** Income above this is charged the top-band surcharge (D-114). */
+export const TOP_BAND_FROM = 100_000;
+/** Share of the surcharge base that high earners avoid (shifting income, deferral, relocation) per unit of surcharge. */
+const SURCHARGE_AVOIDANCE = 3;
+
+/** Annual tax on chargeable income with every band rate multiplied by `scale`, plus `surcharge` on income above RM100,000. */
+export function bandTax(chargeable: number, scale = 1, surcharge = 0): number {
   let tax = 0;
   let lower = 0;
   for (const b of INCOME_TAX_BANDS) {
@@ -28,13 +34,14 @@ export function bandTax(chargeable: number, scale = 1): number {
     tax += (Math.min(chargeable, b.upTo) - lower) * b.rate * scale;
     lower = b.upTo;
   }
+  if (surcharge > 0 && chargeable > TOP_BAND_FROM) tax += (chargeable - TOP_BAND_FROM) * surcharge * (1 - Math.min(0.5, SURCHARGE_AVOIDANCE * surcharge));
   return tax;
 }
 
 /** Average tax as a share of earnings across the distribution, for workers averaging `avgAnnualWage`. */
-export function effectiveIncomeTaxRate(avgAnnualWage: number, scale = 1): number {
+export function effectiveIncomeTaxRate(avgAnnualWage: number, scale = 1, surcharge = 0, relief = INCOME_TAX_RELIEF): number {
   if (!(avgAnnualWage > 0)) return 0;
-  const tax = DECILES.reduce((a, m) => a + bandTax(Math.max(0, m * avgAnnualWage - INCOME_TAX_RELIEF), scale), 0);
+  const tax = DECILES.reduce((a, m) => a + bandTax(Math.max(0, m * avgAnnualWage - relief), scale, surcharge), 0);
   return tax / DECILES.reduce((a, m) => a + m * avgAnnualWage, 0);
 }
 
@@ -49,10 +56,10 @@ function levelFactor(s: GameState): number {
 }
 
 /** Daily personal income tax receipts (MYR) for the day's wage bill; 0 unless the campaign uses the income tax. */
-export function incomeTaxDaily(s: GameState, wages: number, scale = s.government.policies.tax.incomeTax): number {
+export function incomeTaxDaily(s: GameState, wages: number, scale = s.government.policies.tax.incomeTax, surcharge = leverValue(s, 'topBandSurcharge'), relief = leverValue(s, 'personalRelief')): number {
   if (!s.baseline.pit) return 0;
   const jobs = employmentOf(s);
-  return jobs > 0 ? levelFactor(s) * wages * effectiveIncomeTaxRate((wages * 365) / jobs, scale) : 0;
+  return jobs > 0 ? levelFactor(s) * wages * effectiveIncomeTaxRate((wages * 365) / jobs, scale, surcharge, relief) : 0;
 }
 
 /** The old flat-surcharge equivalent of the household burden, for approval and inequality effects. */

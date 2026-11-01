@@ -8,6 +8,7 @@ import { DEBT_LIMIT_MYR, TREASURY_LIMIT_MYR } from '../data/boom';
 import { injectFund } from './sovereign-fund';
 import { FOREIGN_WORKERS0, WORKER_LEVY0 } from './policy';
 import { modelledResourceRevenue0 } from './soe';
+import { cashAidDaily, pensionSavingShare, subsidyCut } from './fiscal-levers';
 import { fuelSubsidyDaily, wheatSubsidyDaily, scheduleRetaliation } from './world';
 // Government treasury, debt, budgets, projects and tax settlement.
 // Every treasury movement goes through post(), which rounds to whole sen and records the exact
@@ -172,7 +173,10 @@ export function dailyGovernment(s: GameState, today: number): GovDay {
   const cats = Object.keys(BUDGET_PURCHASES) as Exclude<BudgetCategory, 'transfers'>[];
   const fleetDelta=fleetAdjustment(s,today);
   const opexDue = fleetDelta + cats.reduce((a, c) => a + pol.budget[c] * PER_DAY, 0);
-  const transfersDue = pol.budget.transfers * PER_DAY;
+  // Pension reforms (D-114) shrink the pension bill; targeted cash aid is paid on top of the transfers line.
+  const pensionCut = pol.budget.transfers * PER_DAY * pensionSavingShare(s);
+  const aidDue = cashAidDaily(s);
+  const transfersDue = pol.budget.transfers * PER_DAY - pensionCut + aidDue;
   // Construction is priced at today's property & construction price index: if it rises, projects
   // cost more in ringgit (escalation) for the same real work.
   const pCons = s.sectors.prop.price;
@@ -212,6 +216,11 @@ export function dailyGovernment(s: GameState, today: number): GovDay {
   purchases.ind += maintPaid * 0.4;
   const operatingPaid = post(gov, 'opex', opexPaid + maintPaid + arrearsDue * paidFraction);
   const transfersPaid = post(gov, 'opex', transfersDue * paidFraction);
+  if (s.policy?.enabled) {
+    s.policy.mtd.pensionSaved += pensionCut * paidFraction;
+    s.policy.mtd.cashAid += aidDue * paidFraction;
+    s.policy.mtd.subsidySaved += (fuelDue + wheatDue) * subsidyCut(s) / (1 - subsidyCut(s)) * paidFraction;
+  }
   for (const { id, amt } of capexDueBy) {
     const p = gov.projects.find((x) => x.id === id)!;
     const paid = post(gov, 'capex', amt * paidFraction);

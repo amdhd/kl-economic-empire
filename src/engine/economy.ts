@@ -6,6 +6,7 @@ import { calibrationFor, exportReach } from './calibration';
 import { baselineFor, demandFor, nationalV2, trendFor } from '../data/economic-baseline';
 import { COMMODITY_IMPORT, UTILITY_FUEL_PASSTHROUGH, FUEL_CPI_WEIGHT, HOUSEHOLD_EQUITY0, PUBLIC_CAPITAL_ELASTICITY, WEALTH_MPC } from '../data/world';
 import { publicCapitalFactor } from './fiscal-rules';
+import { ageingMismatch, LEVY_PASS_THROUGH, sectorTaxDaily } from './fiscal-levers';
 import { aiMismatch, aiProductivity, carbonCost, EMISSION_INTENSITY, greenFuelSaving, hiringBoost, labourCostMultiplier, tourismLift, visaRentPressure, wageMultiplier, zoneFeeDaily, abatement } from './policy';
 import { fdiExports } from './fdi';
 import { infraCapacityMult } from './infrastructure';
@@ -247,7 +248,7 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
   let tariffReceipts = 0;
   let steelDutyReceipts = 0;
   let bilateralReceipts = 0;
-  let carbonTax = 0, zoneFees = 0, emissions = 0, emissions0 = 0;
+  let carbonTax = 0, zoneFees = 0, reformLevies = 0, emissions = 0, emissions0 = 0;
   let wheatImports = 0;
   let riceImports = 0;
   let inputImports = 0;
@@ -291,7 +292,10 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
     emissions0 += EMISSION_INTENSITY[j] * CAL.Y0[j];
     const zoneFee = zoneFeeDaily(s, j); // free-zone licence and land fees (D-103)
     zoneFees += zoneFee;
-    const profit = va - labourCost - dep - interest - propLevy - carbon - zoneFee;
+    // Digital, property-gains and transaction levies (D-114): firms pay them, half is passed into prices below.
+    const reformLevy = sectorTaxDaily(s, j);
+    reformLevies += reformLevy;
+    const profit = va - labourCost - dep - interest - propLevy - carbon - zoneFee - reformLevy;
     sec.mtd.output += out;
     sec.mtd.nominalOutput += gross;
     sec.mtd.va += va;
@@ -309,6 +313,7 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
   if (s.policy?.enabled) {
     s.policy.mtd.carbonTax += post(s.government, 'policyLevy', carbonTax);
     s.policy.mtd.hubFees += post(s.government, 'policyLevy', zoneFees);
+    s.policy.mtd.reformTax += post(s.government, 'policyLevy', reformLevies);
     s.policy.emissionsIndex = emissions * (1 - abatement(s)) / Math.max(1e-9, emissions0);
   }
   const steelDutyPaid = post(s.government, 'commodityDuty', steelDutyReceipts);
@@ -335,6 +340,7 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
     target += CAL.v[j] * (ls * ulc + (1 - ls) * markup * cpiIdx);
     if (j === 'prop') target *= 1 + 0.5 * (tax.property - BASE_TAX.property);
     target += carbonCost(s, j);
+    target += LEVY_PASS_THROUGH * sectorTaxDaily(s, j) / CAL.Y0[j];
     nextP[j] = sec.price + PRICE_SPEED * (target - sec.price);
   }
   for (const j of SECTOR_IDS) s.sectors[j].price = clamp(nextP[j], 0.3, 5);
@@ -489,7 +495,7 @@ export function monthClose(s: GameState, inflationYoY: number, unemployment: num
   const lf0 = hh.laborForce;
   hh.laborForce *= 1 + (TREND.laborForce + (boom ? BOOM.laborForceGrowth : 0)) / 12;
   // AI task displacement adds mismatch unemployment unless reskilling keeps pace (schema 9).
-  hh.laborForce += (boom ? BOOM.laborForcePull : DEMAND.laborForcePull) * (hh.employed / (1 - TREND.naturalUnemployment - aiMismatch(s)) - hh.laborForce);
+  hh.laborForce += (boom ? BOOM.laborForcePull : DEMAND.laborForcePull) * (hh.employed / (1 - TREND.naturalUnemployment - aiMismatch(s) - ageingMismatch(s)) - hh.laborForce);
   // Boom mode: migrants and their families arrive with the jobs, so the population grows with the labour force.
   hh.population *= boom ? Math.max(1, hh.laborForce / lf0) : 1 + 0.012 / 12;
 
