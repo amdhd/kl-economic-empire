@@ -43,7 +43,7 @@ export const BOOM = {
   /** Trade deals (D-088): export gain by chapter depth (realistic 10% / 20%), talks and phase-in days, how much of the partner's
    * demand we must meet (realistic 1×), the worth of a non-preferred concession (realistic 0.6) and negotiation rounds (realistic 3). */
   tradeDealGain: [0, 0.25, 0.5],
-  tradeTalkDays: [0, 30, 45],
+  tradeTalkDays: [0, 30, 30],
   tradeRampDays: 60,
   tradeNeedScale: 0.5,
   tradeOtherConcession: 0.9,
@@ -57,8 +57,6 @@ export const BOOM = {
   eventFadeDays: 45,
   exportMaxPrice: 1.3,
   supplyMinPrice: 0.85,
-  /** FDI investors in the Deal Room (D-095): they want only this share of the grant they would ask in a realistic game (realistic: 0.85). */
-  investorAskScale: 0.15,
   fdiSizeBase: 3,
   fdiSizePerYear: 2,
 };

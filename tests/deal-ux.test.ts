@@ -11,17 +11,14 @@ import { withoutEvents } from './helpers';
 import { investorAsk } from '../src/engine/investment-deals';
 
 describe('looser Deal Room negotiation and outlook (D-086)', () => {
-  it('takeover sellers want only 0–6% over market, accept down to a 0.9 bid with a counter, and allow six rounds', () => {
+  it('takeover sellers accept any bid from 0.9× market, even below the rival, and allow six rounds (D-097)', () => {
     const s = createGame(7);
     takeoverOffers(s);
     const d = s.deals.items.at(-1)!;
     d.status = 'negotiating';
-    expect(d.rivalPriceFactor).toBeGreaterThanOrEqual(1);
-    expect(d.rivalPriceFactor).toBeLessThanOrEqual(1.06);
     expect(DEAL_ROUNDS).toBe(6);
-    expect(offerDeal(s, d.id, { priceFactor: 0.9 })).toBeNull(); // now a legal bid; sellers counter at the rival price
-    expect(d.terms.priceFactor).toBeGreaterThanOrEqual(d.rivalPriceFactor!);
-    expect(d.terms.priceFactor).toBeLessThanOrEqual(1.07);
+    expect(offerDeal(s, d.id, { priceFactor: 0.9 })).toBeNull();
+    expect(d.terms.priceFactor).toBe(0.9); // accepted as offered: no counter at the rival's price
     for (let i = 1; i < DEAL_ROUNDS; i++) expect(offerDeal(s, d.id, { priceFactor: 1.1 })).toBeNull();
     expect(d.rounds).toBe(DEAL_ROUNDS);
     expect(offerDeal(s, d.id, { priceFactor: 1.1 })).toMatch(/closed/i);
@@ -87,13 +84,12 @@ describe('axis labels in trillions', () => {
   });
 });
 
-describe('Boom investors settle for a small grant (D-095)', () => {
-  const ask = (boom: boolean) => {
-    const s = createGame(7, 'balanced', 'malaysia', { boom });
-    const d = s.deals.items.find((x) => x.kind === 'investment')!;
-    return investorAsk(s, d);
-  };
-  it('asks far less than in a realistic game', () => {
-    expect(ask(true)).toBeLessThan(ask(false) * 0.3);
+describe('investors accept any grant (D-097)', () => {
+  it('ask nothing in every mode', () => {
+    for (const boom of [false, true]) {
+      const s = createGame(7, 'balanced', 'malaysia', { boom });
+      const d = s.deals.items.find((x) => x.kind === 'investment')!;
+      expect(investorAsk(s, d)).toBe(0);
+    }
   });
 });
