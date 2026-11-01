@@ -254,7 +254,7 @@ export function completeProject(s: GameState, id: number, today: number): void {
   p.completedDay = today;
   // KL projects on the KL map: in model-2 national campaigns their economy-wide effects are scaled by
   // KL's share of national output, so a city rail line cannot lift every Malaysian sector (D-035).
-  const k = nationalV2(s) ? KL_ECONOMY_SHARE : 1;
+  const k = nationalV2(s) && !t.national ? KL_ECONOMY_SHARE : 1;
   const gains: string[] = [];
   for (const [sec, boost] of Object.entries(t.productivity)) {
     const st = s.sectors[sec as SectorId];

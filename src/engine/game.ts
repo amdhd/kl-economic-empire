@@ -16,7 +16,7 @@ import { CAMPAIGN_LENGTHS, type CampaignMonths } from '../data/boom';
 import { initialControls, controlCommand } from './policy-controls';
 import { COMPANIES } from '../data/companies';
 import { BASE_TAX, BASELINE, LEGACY_BASELINE, LEGACY_BUDGET, LEGACY_TREND, NATIONAL_TREND, BUDGET_LABELS, SECTOR_IDS, SECTORS, TAX_LABELS } from '../data/economic-baseline';
-import { BASE_BUDGET as nationalBudget } from '../data/economic-baseline';
+import { BASE_BUDGET as nationalBudget, nationalV2 } from '../data/economic-baseline';
 import { initialCentralBank, interveneFx } from './trade-fx';
 import { setMonetaryPolicy, tradeBills, tradeBonds } from './central-bank';
 import { DEVELOPMENT_ANNUAL0, RESOURCE_VA0 } from '../data/world';
@@ -447,6 +447,7 @@ function dispatch(s: GameState, cmd: Command, atMin: number): CommandResult {
     case 'startProject': {
       const t = PROJECT_BY_ID[cmd.templateId];
       if (!t) return { ok: false, message: 'Unknown project' };
+      if (t.national && !nationalV2(s)) return { ok: false, message: 'Regional projects need a national Malaysia campaign.' };
       if (gov.projects.some((p) => p.templateId === t.id && p.status !== 'cancelled')) return { ok: false, message: `${t.name} has already been commissioned.` };
       gov.projects.push({ id: gov.nextId++, templateId: t.id, name: t.name, kind: t.kind, cost: t.cost, spent: 0, work: 0, startDay: klDay(atMin), durationDays: t.durationDays, status: 'building' });
       logPolicy(s, atMin, atMin, `Commissioned ${t.name} (RM ${(t.cost / 1e9).toFixed(1)}bn over ${Math.round(t.durationDays / 30)} months)`);

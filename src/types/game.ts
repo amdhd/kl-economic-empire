@@ -245,7 +245,7 @@ export interface PendingPolicy {
   label: string;
 }
 
-export type ProjectKind = 'transport' | 'connectivity' | 'housing' | 'resilience' | 'health';
+export type ProjectKind = 'transport' | 'connectivity' | 'housing' | 'resilience' | 'health' | 'zone' | 'port' | 'industrial' | 'energy';
 export interface ProjectState {
   concessionDealId?: number;
   id: number;
