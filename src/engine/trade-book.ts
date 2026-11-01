@@ -159,7 +159,7 @@ export function prepareTradeDay(s: GameState, day: number, purchases: Record<Sec
   for (const id of EXPORT_PRODUCT_IDS) {
     const p = EXPORT_PRODUCTS[id];
     const won = base[id] * (gains.promotion[id] + gains.deals[id]) + contracts.volume[id];
-    exports[id] = base[id] + won + contracts.hedge[id] + fdi[id];
+    exports[id] = base[id] + won + contracts.price[id] + fdi[id];
     policyExports += won;
     // Extra exports carry imported parts: only the domestic content becomes new demand for the supplying sector.
     importedContent += won * (1 - p.domesticContent);
@@ -173,7 +173,7 @@ export function prepareTradeDay(s: GameState, day: number, purchases: Record<Sec
   for (const j of SECTOR_IDS) tb.displacement[j] = Math.min(0.05, tb.displacement[j]);
 
   // Goods exports by partner: opening destination shares, moved by each partner's access, plus deal and contract gains.
-  const goodsBase = GOODS_PRODUCT_IDS.reduce((a, id) => a + base[id] * (1 + gains.promotion[id]) + contracts.hedge[id] + fdi[id], 0);
+  const goodsBase = GOODS_PRODUCT_IDS.reduce((a, id) => a + base[id] * (1 + gains.promotion[id]) + contracts.price[id] + fdi[id], 0);
   const weights = Object.fromEntries(PARTNER_IDS.map((k) => [k, partnerExportShare(k) * partnerAccessTerm(s, k) / tb.base.access[k]])) as Record<PartnerId, number>;
   const wSum = PARTNER_IDS.reduce((a, k) => a + weights[k], 0);
   const partners = zeroBy(PARTNER_IDS);

@@ -4,6 +4,7 @@ import type { Command } from './game';
 import { klDay, klParts, klToEpochMin, monthKey } from './time';
 import { clamp, pushBounded } from './util';
 import { interveneFx } from './trade-fx';
+import { zoneTaxRelief } from './policy';
 
 export const initialControls = (): GameState['controls'] => ({ lastTaxReliefMYR: 0, incentives: [], plans: [], outcomes: { health: 62, services: 62, safety: 62 }, debt: { newTermMonths: 120, averageMonths: 120, refinance: 1 }, fxBand: { enabled: false, lower: 3.8, upper: 4.5, dailyUSD: 100e6, reserveFloorUSD: 80e9, status: 'Disabled' } });
 export function validateControls(c: GameState['controls']) {
@@ -18,7 +19,8 @@ export function validateControls(c: GameState['controls']) {
 }
 export function sectorTax(s: GameState, sector: SectorId, atMin = s.clock.hour * 60 - 1, statutoryRate = s.government.policies.tax.corporate): number {
   const incentive = s.controls.incentives.find(i => i.sector === sector && i.startMin <= atMin && atMin < i.endMin);
-  return Math.max(0, statutoryRate - (incentive?.cut ?? 0));
+  // Free-zone firms (D-103) are excused most corporate tax on the zone share of the sector.
+  return Math.max(0, statutoryRate - (incentive?.cut ?? 0)) * (1 - zoneTaxRelief(s, sector));
 }
 export function controlCommand(s: GameState, cmd: Command, atMin: number) {
   const c = structuredClone(s.controls), p = klParts(atMin);

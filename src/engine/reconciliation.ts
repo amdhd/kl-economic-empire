@@ -11,8 +11,9 @@ export function reconcileMonth(
   debt: number,
   opening = { treasury: BASELINE.treasury, debt: BASELINE.debt },
 ): NonNullable<MonthlyReport['reconciliation']> {
-  const openingTreasuryMinor = toMinor(previous?.treasury ?? opening.treasury);
-  const openingDebtMinor = toMinor(previous?.debt ?? opening.debt);
+  // Carry last month's closing balances in sen (D-102): the report's ringgit floats cannot hold every sen above about RM35tn.
+  const openingTreasuryMinor = previous?.reconciliation?.closingTreasuryMinor ?? toMinor(previous?.treasury ?? opening.treasury);
+  const openingDebtMinor = previous?.reconciliation?.closingDebtMinor ?? toMinor(previous?.debt ?? opening.debt);
   const netCashMinor = (Object.keys(flows) as (keyof GovMonthFlows)[]).reduce(
     (total, kind) => total + toMinor(flows[kind]) * (isInflow(kind) ? 1 : -1),
     0,

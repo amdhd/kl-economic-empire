@@ -67,3 +67,7 @@ export const campaignMonths = (s: Pick<GameState, 'mode'>) => s.mode?.months ?? 
 /** Money is stored in sen with exact integer accounting, which caps any balance at about RM90 trillion. New public debt
  * stops at this level so a runaway boom cannot overflow the ledger. */
 export const DEBT_LIMIT_MYR = 85e12;
+/** Treasury cash has the same sen ceiling (D-101). Borrowing cannot lift cash above this level, and any cash above it at a
+ * month close first buys back debt, then moves to the sovereign fund. About two-thirds of the ceiling, so a month of
+ * surpluses still fits. */
+export const TREASURY_LIMIT_MYR = 60e12;
