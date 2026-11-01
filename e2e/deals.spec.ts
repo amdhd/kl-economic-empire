@@ -132,3 +132,23 @@ test('offers show their type and deadline at the top right, an outlook, and a pl
   await expect(summary).toContainText('You get:');
   await expect(summary).not.toContainText('Concession service payments');
 });
+test('Deal Room category chips show per-tab counts and filter the list (D-119)', async ({ page }) => {
+  await startCampaign(page);
+  await openPanel(page, 'deals');
+  const count = async (id: string) => Number(await page.getByTestId(`deal-cat-count-${id}`).innerText());
+  const all = await count('all');
+  expect(all).toBeGreaterThan(0);
+  await expect(page.getByTestId('deals-tab-badge-opportunities')).toHaveText(String(all));
+  const fdi = await count('fdi');
+  expect(fdi).toBeGreaterThan(0);
+  expect(fdi).toBeLessThan(all);
+  await page.getByTestId('deal-cat-fdi').click();
+  await expect(page.locator('[data-testid^="deal-tag-"]')).toHaveCount(fdi);
+  await expect(page.locator('[data-testid^="deal-tag-"]').first()).toContainText('Foreign investment');
+  await page.getByTestId('deal-cat-all').click();
+  await expect(page.locator('[data-testid^="deal-tag-"]')).toHaveCount(all);
+  // counts follow the tab: nothing is under negotiation yet
+  await page.getByTestId('deals-tab-negotiations').click();
+  await expect(page.getByTestId('deal-cat-count-all')).toHaveText('0');
+  await expect(page.getByTestId('deal-cat-count-fdi')).toHaveText('0');
+});
