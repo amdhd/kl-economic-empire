@@ -15,8 +15,8 @@ test('shows full cash balances beside month close and exposes dated national sou
   // The money readout opens the Economy window, whose summary carries the full cash positions.
   await cash.click();
   await expect(page.getByTestId('economy-window')).toBeVisible();
-  await expect(page.getByTestId('bottom-fund-cash')).toContainText('RM 15,000,000,000');
-  await expect(page.getByTestId('bottom-fund-cash')).toContainText('$2,500,000,000');
+  await expect(page.getByTestId('bottom-fund-cash')).toContainText('RM 60,000,000,000');
+  await expect(page.getByTestId('bottom-fund-cash')).toContainText('$9,800,000,000');
   await page.getByTestId('economy-window').getByRole('button', { name: 'Treasury & debt' }).click();
   await expect(page.getByTestId('panel')).toContainText('Treasury & public debt');
   await openPanel(page, 'sources');

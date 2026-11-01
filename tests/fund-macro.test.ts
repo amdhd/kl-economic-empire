@@ -17,12 +17,12 @@ describe('sovereign fund macro effects (model 3)', () => {
     expect(act(s, { type: 'fx', from: 'MYR', amountMinor: myr }).ok).toBe(true);
     const usdBn = s.fund.usdCash / 100 / 1e9 - base.fund.usdCash / 100 / 1e9;
     expect(s.centralBank.pressure - base.centralBank.pressure).toBeCloseTo(0.003 * usdBn, 12);
-    // Rotating the fund's ~RM15bn of ringgit cash abroad weakens the ringgit by about 1% at the next fixing.
+    // Rotating the fund's ~RM15bn of ringgit cash abroad weakens the ringgit by about 4% at the next fixing (RM60bn, D-120).
     runUntil(s, 2027, 1, 5, 1);
     runUntil(base, 2027, 1, 5, 1);
     const weaker = s.external.myrPerUsd / base.external.myrPerUsd - 1;
-    expect(weaker).toBeGreaterThan(0.008);
-    expect(weaker).toBeLessThan(0.02);
+    expect(weaker).toBeGreaterThan(0.03);
+    expect(weaker).toBeLessThan(0.06);
     // Repatriating the same dollars reverses the pressure (minus the spread).
     const before = s.centralBank.pressure;
     expect(act(s, { type: 'fx', from: 'USD', amountMinor: s.fund.usdCash - base.fund.usdCash }).ok).toBe(true);
@@ -33,7 +33,7 @@ describe('sovereign fund macro effects (model 3)', () => {
     expect(Math.abs(s.centralBank.pressure)).toBeLessThan(Math.abs(p) * 0.4);
   }));
 
-  it('rotating the whole ~RM25bn fund abroad weakens the ringgit by 1–2% at peak', () => withoutEvents(() => {
+  it('rotating the whole ~RM100bn fund abroad weakens the ringgit by 4–6% at peak', () => withoutEvents(() => {
     const s = createGame(902);
     runUntil(s, 2027, 1, 4, 10);
     const base = clone(s);
@@ -44,8 +44,8 @@ describe('sovereign fund macro effects (model 3)', () => {
     runUntil(s, 2027, 1, 5, 1);
     runUntil(base, 2027, 1, 5, 1);
     const weaker = s.external.myrPerUsd / base.external.myrPerUsd - 1;
-    expect(weaker).toBeGreaterThan(0.01);
-    expect(weaker).toBeLessThan(0.025);
+    expect(weaker).toBeGreaterThan(0.04);
+    expect(weaker).toBeLessThan(0.07);
   }));
 
   it('lets part of a domestic purchase persist in sentiment, lifting the price, then fading', () => withoutEvents(() => {

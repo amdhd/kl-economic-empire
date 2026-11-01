@@ -200,7 +200,7 @@ describe('target allocation rebalance', () => {
       expect(positionValueMYR(s, id as 'MY:1155') / nav1).toBeLessThanOrEqual(0.2001);
     }
     const myShare = Object.keys(s.fund.positions).filter((id) => id.startsWith('MY:')).reduce((a, id) => a + positionValueMYR(s, id as 'MY:1155'), 0) / nav1;
-    expect(myShare).toBeGreaterThan(0.01); // one session of liquidity on a ~RM 26bn fund
+    expect(myShare).toBeGreaterThan(0.003); // one session of liquidity on a ~RM 100bn fund
     expect(myShare).toBeLessThan(0.41);
     // A second rebalance in the same session cannot exceed the cumulative liquidity cap.
     const again = planRebalance(s, 0.4, 0.3).legs.filter((l) => l.ticker.startsWith('MY:') && l.side === 'buy');
