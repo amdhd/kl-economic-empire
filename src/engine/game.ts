@@ -1,3 +1,4 @@
+import { money } from '../utils/format';
 import { takeoverOffers } from './takeovers';
 import { rescueOffers } from './rescues';
 import { enterpriseOffers } from './private-enterprises';
@@ -384,7 +385,7 @@ function dispatch(s: GameState, cmd: Command, atMin: number): CommandResult {
       const pending = gov.pending.filter(p => p.kind === 'trade').at(-1)?.patch;
       const current = { ...s.trade.policy, ...pending };
       if (patch.tariff === current.tariff && patch.exportBudgetMonthly === current.exportBudgetMonthly) return { ok: false, message: 'No change to queue.' };
-      return queue(s, 'trade', patch, `Trade: tariff ${(patch.tariff * 100).toFixed(1)}%, export support RM ${(patch.exportBudgetMonthly / 1e6).toFixed(0)}m/month`, tomorrowStart(atMin), atMin);
+      return queue(s, 'trade', patch, `Trade: tariff ${(patch.tariff * 100).toFixed(1)}%, export support ${money(patch.exportBudgetMonthly)}/month`, tomorrowStart(atMin), atMin);
     }
     case 'setLever': {
       const err = setLever(s, cmd.lever, cmd.value, atMin);
@@ -421,7 +422,7 @@ function dispatch(s: GameState, cmd: Command, atMin: number): CommandResult {
         const val = Math.round(v / 1e6) * 1e6;
         if (val === cur) continue;
         patch[k] = val;
-        parts.push(`${BUDGET_LABELS[k]} RM ${(cur / 1e6).toFixed(0)}m → RM ${(val / 1e6).toFixed(0)}m/month`);
+        parts.push(`${BUDGET_LABELS[k]} ${money(cur)} → ${money(val)}/month`);
         if (val < cur && (k === 'transfers' || k === 'health' || k === 'services')) s.policyChurn += ((cur - val) / cur) * 10;
       }
       if (!parts.length) return { ok: false, message: 'No change to queue.' };
@@ -472,7 +473,7 @@ function dispatch(s: GameState, cmd: Command, atMin: number): CommandResult {
       const p = gov.projects.find((x) => x.id === cmd.id);
       if (!p || p.status !== 'building') return { ok: false, message: 'Project not under construction.' };
       p.status = 'cancelled';
-      logPolicy(s, atMin, atMin, `Cancelled ${p.name} (RM ${(p.spent / 1e6).toFixed(0)}m sunk)`);
+      logPolicy(s, atMin, atMin, `Cancelled ${p.name} (${money(p.spent)} sunk)`);
       s.policyChurn += 3;
       return { ok: true, message: `${p.name} cancelled. Spent funds are sunk; no benefits.` };
     }
@@ -480,26 +481,26 @@ function dispatch(s: GameState, cmd: Command, atMin: number): CommandResult {
       if (!Number.isFinite(cmd.amount) || !(cmd.amount > 0)) return { ok: false, message: 'Amount must be positive and finite' };
       const got = issueDebt(s, cmd.amount, 'Discretionary issuance');
       if (got <= 0) return { ok: false, message: gov.marketAccess ? 'Debt cap reached — raise the cap or repay debt first.' : 'No market access.' };
-      logPolicy(s, atMin, atMin, `Issued RM ${(got / 1e6).toFixed(0)}m bonds`);
-      return { ok: true, message: `Issued RM ${(got / 1e6).toFixed(0)}m of bonds: treasury and debt both up.` };
+      logPolicy(s, atMin, atMin, `Issued ${money(got)} bonds`);
+      return { ok: true, message: `Issued ${money(got)} of bonds: treasury and debt both up.` };
     }
     case 'repayDebt': {
       if (!Number.isFinite(cmd.amount) || !(cmd.amount > 0)) return { ok: false, message: 'Amount must be positive and finite' };
       if (cmd.amount > treasuryMYR(gov)) return { ok: false, message: 'Treasury cash is insufficient.' };
       const paid = repayDebt(s, cmd.amount);
-      logPolicy(s, atMin, atMin, `Repaid RM ${(paid / 1e6).toFixed(0)}m of debt`);
-      return { ok: true, message: `Repaid RM ${(paid / 1e6).toFixed(0)}m: treasury and debt both down.` };
+      logPolicy(s, atMin, atMin, `Repaid ${money(paid)} of debt`);
+      return { ok: true, message: `Repaid ${money(paid)}: treasury and debt both down.` };
     }
     case 'fundInject': {
       const err = injectFund(s, cmd.amount);
       if (err) return { ok: false, message: err };
-      logPolicy(s, atMin, atMin, `Injected RM ${(cmd.amount / 1e6).toFixed(0)}m into the SWF`);
+      logPolicy(s, atMin, atMin, `Injected ${money(cmd.amount)} into the SWF`);
       return { ok: true, message: 'Transfer complete: treasury → SWF. Public net worth unchanged.' };
     }
     case 'fundWithdraw': {
       const err = withdrawFund(s, cmd.amount);
       if (err) return { ok: false, message: err };
-      logPolicy(s, atMin, atMin, `Withdrew RM ${(cmd.amount / 1e6).toFixed(0)}m from the SWF`);
+      logPolicy(s, atMin, atMin, `Withdrew ${money(cmd.amount)} from the SWF`);
       return { ok: true, message: 'Transfer complete: SWF → treasury. This is a transfer, not revenue.' };
     }
     case 'setDividendTransfer': {

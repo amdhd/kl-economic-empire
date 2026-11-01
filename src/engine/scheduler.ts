@@ -1,3 +1,4 @@
+import { money } from '../utils/format';
 import { dailyDeals } from './deals';
 import { applyPlans, automaticFx } from './policy-controls';
 import { recentIncomeTrend } from './household-behavior';
@@ -289,15 +290,15 @@ function explainMonth(s: GameState, r: MonthlyReport, prev: MonthlyReport | unde
         best = j;
       }
     }
-    notes.push(`Real output ${dGdp >= 0 ? 'rose' : 'fell'} ${(Math.abs(dGdp) * 100).toFixed(1)}% on the month (partly calendar length); the biggest mover was ${best} (${bestD >= 0 ? '+' : '−'}RM ${(Math.abs(bestD) / 1e6).toFixed(0)}m value added).`);
-    if (Math.abs(r.gov.taxCorporate - prev.gov.taxCorporate) > 0.08 * prev.gov.taxCorporate) notes.push(`Corporate tax receipts ${r.gov.taxCorporate > prev.gov.taxCorporate ? 'rose' : 'fell'} to RM ${(corporateTax / 1e6).toFixed(0)}m at a ${(s.government.policies.tax.corporate * 100).toFixed(0)}% rate.`);
+    notes.push(`Real output ${dGdp >= 0 ? 'rose' : 'fell'} ${(Math.abs(dGdp) * 100).toFixed(1)}% on the month (partly calendar length); the biggest mover was ${best} (${bestD >= 0 ? '+' : '−'}${money(Math.abs(bestD))} value added).`);
+    if (Math.abs(r.gov.taxCorporate - prev.gov.taxCorporate) > 0.08 * prev.gov.taxCorporate) notes.push(`Corporate tax receipts ${r.gov.taxCorporate > prev.gov.taxCorporate ? 'rose' : 'fell'} to ${money(corporateTax)} at a ${(s.government.policies.tax.corporate * 100).toFixed(0)}% rate.`);
     if (r.investment < prev.investment * 0.97) notes.push(`Private investment plans were cut ${(100 - (r.investment / prev.investment) * 100).toFixed(1)}% — after-tax returns, credit (${(s.bank.firmCreditRatio * 100).toFixed(0)}% of demand met) or lending rates (${(s.bank.lendingRate * 100).toFixed(2)}%) weighed.`);
     if (r.investment > prev.investment * 1.03) notes.push(`Private investment plans rose ${((r.investment / prev.investment - 1) * 100).toFixed(1)}% on stronger returns and capacity pressure.`);
   }
   if (e.oil > 1.15) notes.push(`Oil is ${((e.oil - 1) * 100).toFixed(0)}% above normal, pushing utility and transport costs into CPI.`);
   if (e.myrPerUsd > BASELINE.myrPerUsd * 1.04) notes.push(`A weaker ringgit (${e.myrPerUsd.toFixed(2)}/USD) raises import prices but lifts the MYR value of US holdings.`);
   if (s.government.daysInArrears > 0) notes.push('The treasury is in arrears: unpaid obligations are eroding services and trust.');
-  if (r.gov.borrowing > 0) notes.push(`RM ${(r.gov.borrowing / 1e6).toFixed(0)}m of bonds were issued at ~${(s.government.bondYield * 100).toFixed(2)}%.`);
+  if (r.gov.borrowing > 0) notes.push(`${money(r.gov.borrowing)} of bonds were issued at ~${(s.government.bondYield * 100).toFixed(2)}%.`);
   if (r.fundReturnMoM !== 0) notes.push(`SWF return ${r.fundReturnMoM >= 0 ? '+' : ''}${(r.fundReturnMoM * 100).toFixed(2)}% for the month (market moves, FX, dividends and fees; treasury transfers excluded).`);
   return notes;
 }

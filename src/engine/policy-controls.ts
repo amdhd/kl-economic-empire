@@ -1,3 +1,4 @@
+import { money } from '../utils/format';
 import { BUDGET_LABELS, budgetFor, SECTOR_IDS } from '../data/economic-baseline';
 import type { GameState, SectorId } from '../types/game';
 import type { Command } from './game';
@@ -37,7 +38,7 @@ export function controlCommand(s: GameState, cmd: Command, atMin: number) {
     if (!(cmd.category in BUDGET_LABELS) || !Number.isFinite(cmd.monthly) || cmd.monthly < 0 || cmd.monthly > 50e9 || !Number.isFinite(cmd.growth) || cmd.growth < -.1 || cmd.growth > .15 || !Number.isInteger(cmd.years) || cmd.years < 1 || cmd.years > 5 || cmd.monthly*Math.pow(1+Math.max(0,cmd.growth),cmd.years-1)>50e9) return { ok:false,message:'Plan: RM0–50bn/month, annual growth −10% to15%, duration1–5 years; every year must fit the budget limit.' };
     c.plans = c.plans.filter(p => p.category !== cmd.category);
     c.plans.push({category:cmd.category, monthly:cmd.monthly, growth:cmd.growth, remaining:cmd.years, nextMonth:monthKey(klParts(next).year,klParts(next).month)});
-    label = `${BUDGET_LABELS[cmd.category]}: ${cmd.years}-year plan, RM${(cmd.monthly/1e6).toFixed(0)}m/month, ${(cmd.growth*100).toFixed(1)}% annual escalation, from next month`;
+    label = `${BUDGET_LABELS[cmd.category]}: ${cmd.years}-year plan, ${money(cmd.monthly)}/month, ${(cmd.growth*100).toFixed(1)}% annual escalation, from next month`;
   } else if (cmd.type === 'cancelMinistryPlan') { c.plans = c.plans.filter(p => p.category !== cmd.category); label = 'Cancelled future budget escalations; current appropriation retained';
   } else if (cmd.type === 'debtStrategy') { c.debt.newTermMonths = cmd.termMonths; c.debt.refinance = cmd.refinance; label = `New debt amortises over ${cmd.termMonths/12} years; refinance ${(cmd.refinance*100).toFixed(0)}% of principal paid`;
   } else if (cmd.type === 'fxBand') { c.fxBand = {enabled:cmd.enabled,lower:cmd.lower,upper:cmd.upper,dailyUSD:cmd.dailyUSD,reserveFloorUSD:cmd.reserveFloorUSD,status:cmd.enabled?'Armed for next daily fixing':'Disabled'}; label = `Automatic FX band ${cmd.enabled?'enabled':'disabled'}: ${cmd.lower}–${cmd.upper} MYR/USD`;

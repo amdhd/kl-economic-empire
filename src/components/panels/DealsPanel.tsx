@@ -112,12 +112,14 @@ export function DealsPanel() {
       {items.map((d) => {
         const open = ['opportunity', 'negotiating'].includes(d.status);
         const daysLeft = d.deadline - g.scheduler.lastDay;
+        const fdiAmount = g.fdi.pledges.find((p) => p.id === d.pledgeId)?.amount ?? 0;
         const urgency = daysLeft <= 3 ? 'bg-rose-500/25 text-rose-200' : daysLeft <= 7 ? 'bg-amber-500/25 text-amber-200' : 'bg-slate-600/40 text-slate-200';
         const outlook = open ? dealOutlook(g, d) : null;
         return (
         <Section key={d.id} title={d.name} right={<span className="flex flex-wrap items-center justify-end gap-1.5" data-testid={`deal-tag-${d.id}`}>
           <span className="rounded-full bg-cyan-500/25 px-2.5 py-1 text-[11.5px] font-bold uppercase tracking-wider text-cyan-100">{DEAL_TAGS[d.kind]?.tag ?? d.kind}</span>
-          {open && <span className={`rounded-full px-2.5 py-1 text-[11.5px] font-bold ${urgency}`} data-testid={`deal-deadline-${d.id}`}>⏰ {daysLeft > 0 ? `${daysLeft} day${daysLeft === 1 ? '' : 's'} left` : 'closes today'} · {klDayLabel(d.deadline)}</span>}
+          {d.kind === 'investment' && fdiAmount > 0 && <span className="rounded-full bg-emerald-400 px-3 py-1 text-[13px] font-extrabold tracking-wide text-slate-950" data-testid={`deal-fdi-${d.id}`}>{money(fdiAmount)} FDI</span>}
+          {open && <span className={`rounded-full px-2.5 py-1 text-[11.5px] font-bold ${urgency}`} data-testid={`deal-deadline-${d.id}`}>⏰ {daysLeft > 0 ? `${daysLeft} day${daysLeft === 1 ? '' : 's'} left` : 'closes today'}</span>}
         </span>}>
           <div data-testid={`deal-${d.id}`} className="space-y-2 text-[12.5px]">
             <p className="text-slate-300">{DEAL_TAGS[d.kind]?.plain}</p>

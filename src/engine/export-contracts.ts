@@ -11,6 +11,7 @@ import { addDeal, dealLog, releaseDeal, reserveDeal, spendDeal, DEAL_ROUNDS } fr
 import { post } from './government';
 import { boomOn } from '../data/boom';
 import { toMinor } from './util';
+import { exportBuyer, flavourScale } from './deal-flavour';
 
 export const EXPORT_ADDITIONALITY = 0.5;
 export const BOND_SHARE = 0.02;
@@ -57,15 +58,19 @@ export function exportOffers(s: GameState): void {
   for (const template of EXPORT_CONTRACT_IDS) {
     if (s.deals.items.some((d) => d.template === template && ['opportunity', 'negotiating', 'agreed', 'active'].includes(d.status))) continue;
     const c = EXPORT_CONTRACTS[template];
-    const d = addDeal(s, template, 'export', c.name, 'treasury', c.volume * BOND_SHARE, EXPORT_PRODUCTS[c.product].sector);
-    d.counterparty = c.counterparty;
+    // D-113: the buyer, its backstory and the contracted volume come from the campaign seed; the product, partner and
+    // term limits stay with the template. A returning buyer in a later quarter is a different firm from the same pool.
+    const round = s.deals.items.filter((x) => x.template === template).length, b = exportBuyer(s, template, round);
+    const volume = Math.round((c.volume * flavourScale(s, `export:${template}:${round}`, 0.25)) / 1e8) * 1e8;
+    const d = addDeal(s, template, 'export', b ? c.name.replace(/:.*$/, `: ${b.descriptor}`) : c.name, 'treasury', volume * BOND_SHARE, EXPORT_PRODUCTS[c.product].sector);
+    d.counterparty = `${b?.counterparty ?? c.counterparty.replace(/ \(fictional\)$/, '')} (fictional)`;
     d.product = c.product;
-    d.volume = c.volume;
+    d.volume = volume;
     d.terms.months = 24;
     d.terms.priceFactor = 1;
     d.terms.protection = 0.5;
     d.deadline = s.scheduler.lastDay + 60;
-    d.note = c.note;
+    d.note = b ? `${c.note.replace(/RM[\d.]+bn/, `RM${(volume / 1e9).toFixed(1)}bn`)} ${b.counterparty} is ${b.backstory}.` : c.note;
   }
 }
 /** The buyer pays more only for shorter or more indexed contracts (it bears the risk of a fixed price). */

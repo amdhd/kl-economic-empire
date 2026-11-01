@@ -4,45 +4,41 @@ import { addDeal, dealLog, DEAL_ROUNDS } from './deals';
 import { signEnterprise, markValue } from './private-enterprises';
 import { rand } from './rng';
 import { toMinor } from './util';
+import { flavourScale, kindRound, takeoverTarget } from './deal-flavour';
 
 export function takeoverOffers(s: GameState): void {
   if (!s.deals.enabled) return;
-  const d = addDeal(
-    s,
-    'takeover:nusa',
-    'takeover',
-    'Nusa Logistics: controlling acquisition',
-    'strategic',
-    113.827e6,
-    'ind',
-  );
-  d.counterparty = 'Nusa Logistics shareholders (fictional)';
-  d.assetCostMinor = toMinor(140e6);
+  // D-113: target and size come from the campaign seed (every balance-sheet figure scales together).
+  const round = kindRound(s, 'takeover'), t = takeoverTarget(s, round), k = flavourScale(s, `takeover:${round}`, 0.25);
+  const d = addDeal(s, 'takeover:nusa', 'takeover', `${t.name}: controlling acquisition`, 'strategic', 113.827e6 * k, 'ind');
+  d.counterparty = `${t.name} shareholders (fictional)`;
+  d.assetCostMinor = toMinor(140e6 * k);
   d.terms.stake = 0.7;
   d.terms.priceFactor = 1.15;
   d.terms.months = 6;
   d.rivalPriceFactor = 1.0 + rand(s.deals.rng) * 0.06; // looser sellers (D-086): was 1.08–1.25
   d.rivalBidMinor = Math.round((d.assetCostMinor ?? 0) * d.terms.stake * d.rivalPriceFactor);
   d.enterprise = {
-    cashMinor: toMinor(20e6),
-    capitalMinor: toMinor(200e6),
-    debtMinor: toMinor(80e6),
+    cashMinor: toMinor(20e6 * k),
+    capitalMinor: toMinor(200e6 * k),
+    debtMinor: toMinor(80e6 * k),
     payablesMinor: 0,
     publicShare: 0,
     privateShare: 1,
     publicLoanMinor: 0,
-    revenueAnnualMinor: toMinor(480e6),
-    costAnnualMinor: toMinor(420e6),
+    revenueAnnualMinor: toMinor(480e6 * k),
+    costAnnualMinor: toMinor(420e6 * k),
     pendingCapexMinor: 0,
     openedDay: -1,
     nextRoundDay: -1,
     roundDone: true,
     quality: 0.5 + rand(s.deals.rng),
     unpaidDays: 0,
-    buyerCashMinor: toMinor(250e6),
+    buyerCashMinor: toMinor(250e6 * k),
     sellerCashMinor: 0,
   };
   d.note =
+    `${t.name} is ${t.what}. Fictional and simulated. ` +
     'A competing private bidder is interested. Buying shares transfers ownership, not cash into the company. Control premiums and integration can destroy value.';
 }
 export function offerTakeover(s: GameState, d: Deal, terms: Partial<Deal['terms']>): string | null {

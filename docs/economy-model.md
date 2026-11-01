@@ -786,8 +786,8 @@ at their deadline. A daily settlement cursor prevents repeated payments; histori
 saves migrate with empty disabled deals, zero new financing flows and unchanged clocks, balances and RNG.
 
 ## Deal Room phase B: negotiated FDI
-Existing standard approvals and signed projects retain schema-9 behaviour. Reviewing an eligible data-centre, hub
-or renewable pledge in Deal Room activates negotiated terms. Three counteroffer rounds price additional domestic
+Existing standard approvals and signed projects retain schema-9 behaviour. Every offered pledge (data centre, semiconductor, EV and battery, solar and storage, hub; D-113 lifted the earlier
+limit to three kinds, which left semiconductor and EV pledges with no way to negotiate) is mirrored in the Deal Room. Reviewing a pledge in Deal Room activates negotiated terms. Three counteroffer rounds price additional domestic
 sourcing/training and faster delivery into the requested grant. Signing reserves the full grant without borrowing;
 funds release at 25/50/75/100% build milestones. The external investor prefunds its project; grants reimburse costs
 and do not add a second construction purchase. Domestic sourcing reallocates the existing project spend, and up to
@@ -859,6 +859,13 @@ are rejected. Integration takes 3–12 negotiated months with 5% temporary opera
 then produces either company costs −6%/sales +3% or costs +8%/sales −5%/capital impairment 10%, once. These affect the
 sample company's earned cash flow, not economy-wide productivity. Earned dividends reduce the equity claim; exits
 require outside buyer cash. Private ownership plus public ownership remains exactly one.
+
+## Deal Room variety by campaign seed (D-113)
+- Counterparties, notes and headline sizes are pure hashes of `state.seed` (`deal-flavour.ts`): one seed always gives the same Deal Room, other seeds give different ones, and no rng stream is consumed. Nothing new is saved.
+- A campaign theme (six kinds) ranks start-up sectors, biases the opening FDI pledge and tags each quarterly cohort note.
+- Per-seed draws: start-up archetype and name, rescue and takeover targets, export buyer and its home market, fuel and steel supplier, opening pledge kind/investor/size/ask, and a 60% investor subset per FDI kind. Later quarters use the next name in that campaign's order.
+- Money and term limits are unchanged: start-up price is still 25.25% of its asset value (20% stake, 1% fee); balance sheets scale together (start-up ×0.75-1.30, takeover ×0.75-1.25); export volume ×0.75-1.25 with the 2% bond; supply volume ×0.75-1.25, opening price factor 0.97-1.09 inside the 0.85-1.20 range; opening pledges stay inside each FDI kind's amount and ask ranges.
+- All names are fictional and simulated; none is market data.
 
 ## Deal Room integration and campaign safeguards
 20% of rescue principal funds a scheduled equipment/rehabilitation programme; it enters the existing investment

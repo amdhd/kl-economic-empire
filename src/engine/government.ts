@@ -1,3 +1,4 @@
+import { money } from '../utils/format';
 import { NON_TAX_ANNUAL_2027 } from '../data/non-tax-revenue';
 import { fleetAdjustment } from './supply-contracts';
 import { sectorTax, ministryOutcomes } from './policy-controls';
@@ -89,7 +90,7 @@ export function issueDebt(s: GameState, amountMYR: number, reason: string, quiet
   gov.debt += toMinor(posted);
   const coupon = newIssueCoupon(s);
   gov.avgDebtRate = (before * gov.avgDebtRate + posted * coupon) / (before + posted);
-  if (!quiet) news(s, { kind: 'policy', tone: 'neutral', title: `KL bonds issued: RM ${(posted / 1e6).toFixed(0)}m`, body: `${reason}. Coupon ≈ ${(coupon * 100).toFixed(2)}%.` });
+  if (!quiet) news(s, { kind: 'policy', tone: 'neutral', title: `KL bonds issued: ${money(posted)}`, body: `${reason}. Coupon ≈ ${(coupon * 100).toFixed(2)}%.` });
   return posted;
 }
 
