@@ -22,7 +22,7 @@ test('investment pledges and the global standing board', async ({ page }) => {
   await openPanel(page, 'fdi');
   const s0 = await state(page);
   const id = s0.fdi.pledges[0].id;
-  await expect(page.getByTestId(`pledge-${id}`)).toContainText('Google (Alphabet)');
+  await expect(page.getByTestId(`pledge-${id}`)).toContainText(s0.fdi.pledges[0].title);
   await page.getByTestId(`pledge-approve-${id}`).click();
   await page.getByTestId('confirm-btn').click();
   expect((await state(page)).fdi.pledges[0].status).toBe('building');

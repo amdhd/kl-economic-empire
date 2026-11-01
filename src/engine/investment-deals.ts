@@ -12,7 +12,6 @@ export function syncInvestmentDeals(s: GameState): void {
     if (
       !d &&
       p.status === 'offered' &&
-      ['hq', 'renewables', 'datacentre'].includes(p.kind) &&
       s.deals.items.length < 180
     ) {
       d = addDeal(s, `fdi:${p.id}`, 'investment', p.title, 'treasury', p.amount * p.ask, p.sector);

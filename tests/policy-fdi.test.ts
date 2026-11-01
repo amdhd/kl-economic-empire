@@ -1,7 +1,7 @@
 // D-059: policy levers with phase cycles, AI adoption, foreign direct investment and the global standing board.
 import { describe, expect, it } from 'vitest';
 import { RIVALS } from '../src/data/countries';
-import { attractiveness, overallAttractiveness } from '../src/engine/fdi';
+import { attractiveness, FDI_KINDS, overallAttractiveness } from '../src/engine/fdi';
 import { applyCommand, createGame, runHeadless } from '../src/engine/game';
 import { leverPhase, leverValue, MIN_WAGE0 } from '../src/engine/policy';
 import { rivalGdpUsd, standingBoard, standingComponents } from '../src/engine/standing';
@@ -99,9 +99,10 @@ describe('policy effects (paired, events off)', () => {
 describe('foreign direct investment', () => {
   it('opens with a headline pledge; approval builds, pays grants, supports the ringgit and adds exports', () => withoutEvents(() => {
     const s = createGame(1201);
-    const google = s.fdi.pledges.find(p => p.investor === 'US:GOOGL')!;
+    const google = s.fdi.pledges[0]; // D-116: the opening investor, kind and size are drawn from the campaign seed
     expect(google.status).toBe('offered');
-    expect(google.amount).toBe(10e9);
+    expect(google.amount).toBeGreaterThanOrEqual(FDI_KINDS[google.kind].amount[0]);
+    expect(google.amount).toBeLessThanOrEqual(FDI_KINDS[google.kind].amount[1]);
     runUntil(s, 2027, 1, 4, 10);
     const base = clone(s);
     expect(act(s, { type: 'decidePledge', id: google.id, approve: true, incentive: google.ask }).ok).toBe(true);

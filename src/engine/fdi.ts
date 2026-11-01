@@ -11,6 +11,7 @@ import { hubClimate, leverTarget, leverValue, LEVERS, MIN_WAGE0, WORKER_LEVY0 } 
 import { rand, seedRng } from './rng';
 import { clamp, news, pushBounded } from './util';
 import { BOOM, boomOn } from '../data/boom';
+import { dealTheme, flavourDraw, flavourPick, flavourShuffle } from './deal-flavour';
 
 interface KindSpec {
   label: string;
@@ -94,9 +95,22 @@ export function prunePledges(f: FdiState, limit = 120): void {
   }
 }
 
-/** New campaigns open with one headline pledge, so the mechanic is visible early (no RNG). */
+/** The investors this campaign's pledges draw from: a seeded shuffle of the kind's list, keeping about 60% of it (D-116). */
+export function campaignInvestors(s: GameState, kind: FdiKind): TickerId[] {
+  const all = FDI_KINDS[kind].investors;
+  return all.length < 3 ? all : flavourShuffle(s, `investors:${kind}`, all).slice(0, Math.max(2, Math.ceil(all.length * 0.6)));
+}
+const OPENING_KINDS: FdiKind[] = ['datacentre', 'renewables', 'hq'];
+/** New campaigns open with one headline pledge, so the mechanic is visible early. D-116: its kind, investor, size and ask come
+ * from the campaign seed (hash draws, no RNG); the kinds on offer build within 18 months so the opening decision pays off. */
 export function openingPledge(s: GameState, today: number): void {
-  if (s.fdi?.enabled) offer(s, 'datacentre', 'US:GOOGL', 10e9, 0.08, today);
+  if (!s.fdi?.enabled) return;
+  const theme = dealTheme(s), pool = theme.id === 'green' ? ['renewables', 'renewables', 'datacentre', 'hq'] : theme.id === 'digital' ? ['datacentre', 'datacentre', 'hq', 'renewables'] : OPENING_KINDS;
+  const kind = flavourPick(s, 'opening:kind', pool as FdiKind[]), k = FDI_KINDS[kind];
+  const investor = flavourPick(s, 'opening:investor', campaignInvestors(s, kind));
+  const amount = Math.round((k.amount[0] + (0.25 + 0.5 * flavourDraw(s, 'opening:size')) * (k.amount[1] - k.amount[0])) / 1e9 * 10) * 1e8;
+  const ask = Math.round((k.askRange[0] + (0.3 + 0.4 * flavourDraw(s, 'opening:ask')) * (k.askRange[1] - k.askRange[0])) * 100) / 100;
+  offer(s, kind, investor, amount, ask, today);
 }
 
 /** Weekly arrivals from the FDI stream, and expiry of undecided offers. */
@@ -112,7 +126,7 @@ export function weeklyFdi(s: GameState, today: number): void {
     const boom = boomOn(s);
     const hazard = Math.min(0.9, k.weeklyHazard * Math.pow(attractiveness(s, kind) / 50, 2) * (boom ? BOOM.fdiHazard : 1));
     if (draw >= hazard) continue;
-    const investor = k.investors[Math.min(k.investors.length - 1, Math.floor(pick * k.investors.length))];
+    const pool = campaignInvestors(s, kind), investor = pool[Math.min(pool.length - 1, Math.floor(pick * pool.length))];
     // Boom mode: mega-projects that grow with the campaign (D-079).
     const mega = boom ? BOOM.fdiSizeBase + BOOM.fdiSizePerYear * (s.external.daysElapsed / 365) : 1;
     const amount = Math.round((k.amount[0] + size * (k.amount[1] - k.amount[0])) * mega / 1e8) * 1e8;

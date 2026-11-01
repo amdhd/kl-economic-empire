@@ -5,6 +5,7 @@ import { takeoverOffers } from './takeovers';
 import { supplyOffers } from './supply-contracts';
 import { exportOffers } from './export-contracts';
 import { boomOn } from '../data/boom';
+import { cohortAngle, dealTheme } from './deal-flavour';
 
 /** Small successive fictional cohorts keep decisions available beyond the opening month. */
 /** Drop the oldest offers that were never signed once the room grows large; signed agreements are always kept. */
@@ -57,18 +58,9 @@ export function periodicDealOffers(s: GameState, day: number): void {
     }
     rescueOffers(s);
   } else takeoverOffers(s);
-  const names = [
-    'Rimba Systems',
-    'Suria Ventures',
-    'Meranti Services',
-    'Langit Industries',
-    'Pesisir Partners',
-    'Bayu Operations',
-    'Cendana Group',
-  ];
   for (const [index, d] of s.deals.items.slice(first).entries()) {
+    // D-116: counterparties are already drawn from the campaign seed; mark the cohort and add its campaign angle.
     d.template = `${d.kind}:cohort-${episode}-${index}`;
-    d.name = `${names[(episode - 1) % names.length]} ${index + 1}: ${d.kind} opportunity`;
-    d.counterparty = `${names[(episode - 1) % names.length]} ${index + 1} stakeholders (fictional)`;
+    d.note = `${dealTheme(s).label} campaign: ${cohortAngle(s, episode, index)}. ${d.note}`;
   }
 }

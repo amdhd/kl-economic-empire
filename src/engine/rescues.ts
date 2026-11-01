@@ -3,6 +3,7 @@ import type { Deal, PrivateEnterprise } from '../types/deals';
 import { addDeal, dealLog, releaseDeal, DEAL_ROUNDS } from './deals';
 import { signEnterprise, markValue } from './private-enterprises';
 import { toMinor, assertSafeMinor, pushBounded } from './util';
+import { kindRound, rescueTarget } from './deal-flavour';
 import { klDay, klDayStartMin, klParts, klToEpochMin, daysInMonth } from './time';
 
 export function nextMonthDay(day: number): number {
@@ -13,19 +14,19 @@ export function nextMonthDay(day: number): number {
 }
 export function rescueOffers(s: GameState): void {
   if (!s.deals.enabled) return;
+  const round = kindRound(s, 'rescue') / 2;
   for (const insolvent of [false, true]) {
+    const t = rescueTarget(s, insolvent, Math.floor(round)); // D-116: the troubled firm is drawn from the campaign seed
     const d = addDeal(
       s,
       insolvent ? 'rescue:textiles' : 'rescue:clinics',
       'rescue',
-      insolvent ? 'Lestari Textiles: restructuring' : 'Cahaya Clinics: working-capital rescue',
+      insolvent ? `${t.name}: restructuring` : `${t.name}: working-capital rescue`,
       'strategic',
       insolvent ? 80.8e6 : 20.2e6,
       insolvent ? 'ind' : 'health',
     );
-    d.counterparty = insolvent
-      ? 'Lestari Textiles creditors (fictional)'
-      : 'Cahaya Clinics creditors (fictional)';
+    d.counterparty = `${t.name} creditors (fictional)`;
     d.terms.protection = insolvent ? 0 : 1;
     d.terms.stake = 0.8;
     d.terms.incentive = insolvent ? 0.5 : 0;
@@ -49,9 +50,9 @@ export function rescueOffers(s: GameState): void {
       buyerCashMinor: toMinor(200e6),
       sellerCashMinor: 0,
     };
-    d.note = insolvent
+    d.note = `${t.name} is ${t.what}. ` + (insolvent
       ? 'Negative net assets. Needs creditor consent and recapitalisation; a loan alone is rejected. Recap carries an immediate public loss.'
-      : 'Positive net assets but little cash. A senior secured loan can bridge operations; half is held until a 90-day review.';
+      : 'Positive net assets but little cash. A senior secured loan can bridge operations; half is held until a 90-day review.');
   }
 }
 export function offerRescue(s: GameState, d: Deal, terms: Partial<Deal['terms']>): string | null {

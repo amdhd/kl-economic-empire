@@ -8,6 +8,7 @@ import { capacitySlot } from '../data/boom';
 import { calibrationFor } from './calibration';
 import { navMYR } from './sovereign-fund';
 import { rand } from './rng';
+import { flavourScale, kindRound, startupFlavour } from './deal-flavour';
 import { assertSafeMinor, pushBounded, toMinor } from './util';
 
 export function privateValue(s: GameState, payer: Deal['payer']): number {
@@ -15,20 +16,22 @@ export function privateValue(s: GameState, payer: Deal['payer']): number {
 }
 export function enterpriseOffers(s: GameState): void {
   if (!s.deals.enabled) return;
-  const d = addDeal(s, 'startup:awan', 'startup', 'Awan Grid: seed investment', 'fund', 20.2e6, 'tech');
-  d.counterparty = 'Awan Grid founders (fictional)';
-  d.assetCostMinor = toMinor(80e6);
+  // D-116: the start-up, its archetype and its size come from the campaign seed; the stake, fee and caps are unchanged.
+  const round = kindRound(s, 'startup'), f = startupFlavour(s, round), k = flavourScale(s, `startup:${round}`, 0.3);
+  const d = addDeal(s, 'startup:awan', 'startup', `${f.name}: ${f.kind}`, 'fund', 80e6 * k * 0.2525, f.sector);
+  d.counterparty = `${f.founders} (fictional)`;
+  d.assetCostMinor = toMinor(80e6 * k);
   d.terms.stake = 0.2;
   d.enterprise = {
-    cashMinor: toMinor(4e6),
-    capitalMinor: toMinor(76e6),
+    cashMinor: toMinor(4e6 * k),
+    capitalMinor: toMinor(76e6 * k),
     debtMinor: 0,
     payablesMinor: 0,
     publicShare: 0,
     privateShare: 1,
     publicLoanMinor: 0,
-    revenueAnnualMinor: toMinor(12e6),
-    costAnnualMinor: toMinor(18e6),
+    revenueAnnualMinor: toMinor(12e6 * k),
+    costAnnualMinor: toMinor(18e6 * k),
     pendingCapexMinor: 0,
     openedDay: -1,
     nextRoundDay: -1,
@@ -39,6 +42,7 @@ export function enterpriseOffers(s: GameState): void {
     sellerCashMinor: 0,
   };
   d.note =
+    `${f.note} Fictional and simulated. ` +
     'Minority primary equity; company receives investment cash. 1% entry fee. Follow-on round after six months; loss and dilution are possible. Private holdings are capped at 10% of SWF NAV.';
 }
 export function offerEnterprise(s: GameState, d: Deal, terms: Partial<Deal['terms']>): string | null {

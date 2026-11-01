@@ -3,6 +3,7 @@ import type { Deal } from '../types/deals';
 import { addDeal, dealLog, releaseDeal, reserveDeal, spendDeal, DEAL_ROUNDS } from './deals';
 import { boomOn } from '../data/boom';
 import { toMinor } from './util';
+import { flavourScale, kindRound, supplier } from './deal-flavour';
 const active = (s: GameState, d: Deal, day = s.scheduler.lastDay) =>
   d.kind === 'supply' &&
   ['agreed', 'active'].includes(d.status) &&
@@ -12,24 +13,28 @@ const active = (s: GameState, d: Deal, day = s.scheduler.lastDay) =>
     2.5 * (d.lockedPrice ?? Infinity);
 export function supplyOffers(s: GameState): void {
   if (!s.deals.enabled) return;
+  const round = Math.floor(kindRound(s, 'supply') / 2);
   for (const industrial of [false, true]) {
+    // D-116: supplier, size and opening price come from the campaign seed; the allowed term ranges are unchanged.
+    const sup = supplier(s, industrial, round), k = flavourScale(s, `supply:${industrial}:${round}`, 0.25);
     const d = addDeal(
       s,
       industrial ? 'supply:steel' : 'supply:fuel',
       'supply',
-      industrial ? 'Participating manufacturers: steel supply' : 'Government fleet fuel contract',
+      sup.label,
       industrial ? 'strategic' : 'treasury',
-      industrial ? 5e6 : 4.5e6,
+      (industrial ? 5e6 : 4.5e6) * k,
       industrial ? 'ind' : 'util',
     );
-    d.counterparty = industrial ? 'Baja Materials Cooperative (fictional)' : 'Selat Fuel Supply (fictional)';
+    d.counterparty = `${sup.counterparty} (fictional)`;
     d.terms.months = 12;
-    d.terms.priceFactor = 1.03;
+    d.terms.priceFactor = Math.round((flavourScale(s, `supply-price:${industrial}:${round}`, 0.06) + 0.03) * 100) / 100;
     d.terms.protection = 0;
-    d.volume = industrial ? 0.2 : 50_000;
+    const volume = industrial ? Math.round(0.2 * k * 100) / 100 : Math.round(50_000 * k);
+    d.volume = volume;
     d.note = industrial
-      ? 'Voluntary industry cohort covers 20% of industrial steel inputs. Khazanah posts collateral; firms pay their own purchases.'
-      : 'Up to 50,000 litres/day within the existing fleet purchasing envelope. Collateral is refunded at expiry; it is not a second fuel payment.';
+      ? `${sup.counterparty} is ${sup.backstory}. Covers ${Math.round(volume * 100)}% of industrial steel inputs. Khazanah posts collateral; firms pay their own purchases.`
+      : `${sup.counterparty} is ${sup.backstory}. Up to ${volume.toLocaleString('en-MY')} litres/day within the existing fleet purchasing envelope. Collateral is refunded at expiry; it is not a second fuel payment.`;
   }
 }
 export function offerSupply(s: GameState, d: Deal, terms: Partial<Deal['terms']>): string | null {

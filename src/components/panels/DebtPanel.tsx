@@ -52,7 +52,7 @@ export function DebtPanel() {
         <Section title="Treasury journal · latest postings">
           <div className="num scroll-thin max-h-44 space-y-0.5 overflow-y-auto text-[11.5px]" data-testid="treasury-journal">
             {[...gov.ledger].reverse().slice(0, 30).map((l, i) => (
-              <div key={i} className="flex justify-between gap-2"><span className="text-slate-400">{FLOW_LABEL[l.kind]}</span><span className={l.amountMinor >= 0 ? 'up' : 'down'}>{money(l.amountMinor / 100, 'MYR', 2)}</span><span className="text-slate-500">bal {money(l.balanceMinor / 100)}</span></div>
+              <div key={i} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-baseline gap-x-3"><span className="truncate text-slate-400" title={FLOW_LABEL[l.kind]}>{FLOW_LABEL[l.kind]}</span><span className={`whitespace-nowrap text-right ${l.amountMinor >= 0 ? 'up' : 'down'}`}>{money(l.amountMinor / 100, 'MYR', 2)}</span><span className="min-w-[5.5rem] whitespace-nowrap text-right text-slate-500">bal {money(l.balanceMinor / 100)}</span></div>
             ))}
             {!gov.ledger.length && <div className="text-slate-500">No postings yet — start the clock.</div>}
           </div>

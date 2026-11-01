@@ -4,7 +4,7 @@ import type { Command } from '../../engine/game';
 import { formatKL } from '../../engine/time';
 import type { PartnerId } from '../../types/game';
 import { useGame, useGameState } from '../../store/game-store';
-import { pct } from '../../utils/format';
+import { money, pct } from '../../utils/format';
 import { Bar, Section, Stat } from '../ui';
 import { ConfirmDialog } from './ConfirmDialog';
 import { PanelShell } from './PanelShell';
@@ -28,7 +28,7 @@ export function PartnersPanel() {
     <div className="grid grid-cols-3 gap-3 rounded-xl bg-slate-900/40 p-3">
       <Stat label="Export access index" value={w.exportAccess.toFixed(3)} sub="1 = opening conditions" tone={w.exportAccess >= 1 ? 'up' : 'down'} hint="Partner demand cycles × their tariffs on Malaysia × agreements, weighted by export share" />
       <Stat label="Imported-goods price index" value={w.importPriceIndex.toFixed(3)} sub="after diversion between partners" tone={w.importPriceIndex <= 1 ? 'up' : 'down'} />
-      <Stat label="Bilateral duty this month" value={`RM${(w.mtd.bilateralDuty / 1e6).toFixed(0)}m`} />
+      <Stat label="Bilateral duty this month" value={`${money(w.mtd.bilateralDuty)}`} />
     </div>
     <Section title="Partners">
       <table className="w-full text-[12px]" data-testid="partner-table">
