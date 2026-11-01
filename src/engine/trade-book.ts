@@ -13,6 +13,7 @@ import { PARTNER_IDS, PARTNERS } from '../data/world';
 import type { GameState, PartnerId, SectorId, TradeBookState, TradeDeal, TradeMonth } from '../types/game';
 import { exportReach } from './calibration';
 import { exportContractFlows } from './export-contracts';
+import { tourismLift } from './policy';
 import { post } from './government';
 import { BOOM, boomOn } from '../data/boom';
 import { clamp, news, pushBounded } from './util';
@@ -40,7 +41,7 @@ function driverLevels(s: GameState): Record<TradeDriver, number> {
   return {
     semis: e.drivers.semis, industrial: e.drivers.industrial, oil: e.oil, palm: w.prices.palm * w.palmVolume,
     industrialOil: Math.sqrt(e.drivers.industrial * e.oil), steel: w.prices.steel * Math.sqrt(e.drivers.industrial), gas: w.prices.gas * prod,
-    crude: e.oil * prod, consumer: e.drivers.consumer, global: e.globalDemand, tourism: e.tourism * (1 + s.government.tourismBoost), tech: e.techCycle,
+    crude: e.oil * prod, consumer: e.drivers.consumer, global: e.globalDemand, tourism: e.tourism * (1 + s.government.tourismBoost + tourismLift(s)), tech: e.techCycle,
   };
 }
 
