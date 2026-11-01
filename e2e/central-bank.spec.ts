@@ -1,12 +1,12 @@
 import { expect, test } from '@playwright/test';
-import { startCampaign } from './helpers';
+import { startCampaign, openPanel } from './helpers';
 import type { GameState } from '../src/types/game';
 type Dev = { __klDev: { state: () => GameState } };
 const state = (page: import('@playwright/test').Page) => page.evaluate(() => (window as unknown as Dev).__klDev.state());
 
 test('central bank panel: take control of the rate, tighten banks, buy bonds, issue bills and share reserve income', async ({ page }) => {
   await startCampaign(page);
-  await page.getByTestId('nav-central').click();
+  await openPanel(page, 'central');
   await expect(page.getByTestId('panel')).toContainText('Central bank');
   await page.getByTestId('cb-mode-manual').click();
   await page.getByTestId('cb-target').fill('0.02');

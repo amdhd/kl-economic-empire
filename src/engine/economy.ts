@@ -385,6 +385,8 @@ export function weekly(s: GameState): void {
     sec.employment += (boomOn(s) ? BOOM.hiringSpeed : demandFor(s).hiringSpeed) * (need > sec.employment ? hiringBoost(s) : 1) * (need - sec.employment);
     total += sec.employment;
   }
+  // Boom mode (D-112): migrants arrive with the jobs, so a labour shortage pulls the workforce up at once instead of capping output.
+  if (boomOn(s) && total > hh.laborForce * 0.985) hh.laborForce += BOOM.weeklyMigration * (total / 0.96 - hh.laborForce);
   const maxEmp = hh.laborForce * 0.985;
   if (total > maxEmp) for (const j of SECTOR_IDS) s.sectors[j].employment *= maxEmp / total;
   hh.employed = Math.min(total, maxEmp);

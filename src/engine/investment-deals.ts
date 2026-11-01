@@ -2,7 +2,7 @@ import type { GameState, FdiPledge, SectorId } from '../types/game';
 import type { Deal } from '../types/deals';
 import { FDI_KINDS, investorName } from './fdi';
 import { addDeal, dealLog, releaseDeal, reserveDeal, spendDeal, DEAL_ROUNDS } from './deals';
-import { boomOn } from '../data/boom';
+import { BOOM, boomOn } from '../data/boom';
 import { assertSafeMinor, clamp, toMinor } from './util';
 
 export function syncInvestmentDeals(s: GameState): void {
@@ -155,6 +155,8 @@ export function negotiatedBuild(
   );
   if (stage === 4) {
     p.status = 'operating';
+    // Boom mode (D-112): the finished plant is capacity as well as demand (same rule as an ordinary pledge).
+    if (boomOn(s)) s.sectors[p.sector].capacity += (p.amount * FDI_KINDS[p.kind].exportRatio) / 365 / BOOM.fdiCapacityUtil;
     d.status = 'completed';
     d.committedMinor = 0;
     dealLog(

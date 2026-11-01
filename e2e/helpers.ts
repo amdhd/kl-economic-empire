@@ -12,3 +12,19 @@ export async function startCampaign(page: Page) {
 export async function runHours(page: Page, hours: number) {
   await page.evaluate((h) => (window as unknown as { __klDev: { runHours: (h: number) => void } }).__klDev.runHours(h), hours);
 }
+
+/** Opens an Info views panel: its window's rail button, then its tab when it is not the window's first panel. */
+const WINDOW_OF: Record<string, string> = { decisions: 'controls', fiscal: 'debt', central: 'debt', infra: 'projects', partners: 'ministry', trade: 'ministry', oil: 'commodities', fdi: 'deals', soe: 'fund', reports: 'economy', sources: 'economy' };
+export async function openPanel(page: Page, id: string) {
+  const tab = page.getByTestId(`tab-${id}`);
+  if (await tab.isVisible()) return tab.click(); // its window is already open
+  const primary = WINDOW_OF[id] ?? id;
+  await page.getByTestId(`nav-${primary}`).click();
+  if (primary !== id) await tab.click();
+}
+
+/** Opens the Economy window (the money readout) on a tab: budget, taxation, loans and so on. */
+export async function openEconomyWindow(page: Page, tab: string) {
+  if (!(await page.getByTestId('economy-window').isVisible())) await page.getByTestId('bottom-treasury').click();
+  await page.getByTestId(`econ-tab-${tab}`).click();
+}

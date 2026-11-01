@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { runHours, startCampaign } from './helpers';
+import { runHours, startCampaign, openPanel } from './helpers';
 import type { GameState } from '../src/types/game';
 type Dev = { __klDev: { state: () => GameState } };
 
@@ -19,19 +19,19 @@ test('shows full cash balances beside month close and exposes dated national sou
   await expect(page.getByTestId('bottom-fund-cash')).toContainText('$2,500,000,000');
   await page.getByTestId('economy-window').getByRole('button', { name: 'Treasury & debt' }).click();
   await expect(page.getByTestId('panel')).toContainText('Treasury & public debt');
-  await page.getByTestId('nav-sources').click();
+  await openPanel(page, 'sources');
   await expect(page.getByTestId('baseline-profile')).toContainText('Malaysia baseline');
   await expect(page.getByTestId('panel')).toContainText('RM 40,954,794,000');
   await expect(page.getByTestId('panel').getByRole('link', { name: 'Official source ↗' }).first()).toHaveAttribute('href', /open.dosm.gov.my/);
   await page.setViewportSize({ width: 1280, height: 800 });
-  await page.getByTestId('nav-reports').click();
+  await openPanel(page, 'reports');
   await expect(page.getByTestId('panel')).toContainText('Reports');
   await expect(cash).toBeVisible();
 });
 
 test('queues trade for tomorrow, settles reserve-backed FX and reconciles the new flows', async ({ page }) => {
   await startCampaign(page);
-  await page.getByTestId('nav-trade').click();
+  await openPanel(page, 'trade');
   await page.getByTestId('trade-tariff').fill('10');
   await page.getByTestId('export-support').fill('100');
   await page.getByTestId('queue-trade').click();
@@ -55,6 +55,6 @@ test('queues trade for tomorrow, settles reserve-backed FX and reconciles the ne
   const feb = await page.evaluate(() => (window as unknown as Dev).__klDev.state());
   expect(feb.reports[1].gov.importTariff).toBeGreaterThan(0);
   expect(feb.reports[1].reconciliation?.cashResidualMinor).toBe(0);
-  await page.getByTestId('nav-reports').click();
+  await openPanel(page, 'reports');
   await expect(page.getByTestId('panel')).toContainText('Import tariffs');
 });

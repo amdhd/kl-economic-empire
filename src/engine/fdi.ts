@@ -166,6 +166,8 @@ export function dailyFdi(s: GameState, purchases: Record<SectorId, number>): { i
     s.policy.mtd.fdiGrants += grant;
     if (p.spent >= p.amount - 1) {
       p.status = 'operating';
+      // Boom mode (D-112): the finished plant is capacity as well as demand, so its sector does not run short of what it exports.
+      if (boomOn(s)) s.sectors[p.sector].capacity += (p.amount * k.exportRatio) / 365 / BOOM.fdiCapacityUtil;
       news(s, { kind: 'fund', tone: 'good', title: `Now operating: ${investorName(p.investor)} ${k.label.replace(/^[A-Z][a-z]/, (m) => m.toLowerCase())}`, body: 'Exports and direct jobs start from the next settlement (simulated).' });
     }
   }

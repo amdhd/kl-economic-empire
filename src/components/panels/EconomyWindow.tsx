@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { budgetFor, BUDGET_LABELS, SECTOR_IDS, SECTORS, TAX_LABELS } from '../../data/economic-baseline';
-import { DEVELOPMENT_ANNUAL0 } from '../../data/world';
+import { DEVELOPMENT_ANNUAL0, FUEL_SUBSIDY0, SUBSIDY_REFERENCE } from '../../data/world';
+import { fuelSubsidyDaily, wheatSubsidyDaily } from '../../engine/world';
 import { debtMYR, outlaysOf, ratingLabel, revenueOf, treasuryMYR } from '../../engine/government';
 import { estimateTaxChange } from '../../engine/policy-preview';
 import { useGame, useGameState, type PanelId } from '../../store/game-store';
@@ -160,7 +161,7 @@ function Summary({ g, balance, label }: { g: GameState; balance: number; label: 
         </Detail>
         <Detail title="More views">
           <div className="econ-links">
-            {([['policies', 'Taxes & budget (full)'], ['fiscal', 'Fiscal rules'], ['debt', 'Treasury & debt'], ['fund', 'Sovereign fund'], ['commodities', 'Commodities'], ['economy', 'Economy analysis'], ['objectives', 'Objectives & score']] as [PanelId, string][]).map(([id, l]) => <button key={id} className="btn" onClick={go(id)}>{l}</button>)}
+            {([['fiscal', 'Fiscal rules'], ['debt', 'Treasury & debt'], ['fund', 'Sovereign fund'], ['commodities', 'Commodities'], ['economy', 'Economy analysis'], ['objectives', 'Objectives & score']] as [PanelId, string][]).map(([id, l]) => <button key={id} className="btn" onClick={go(id)}>{l}</button>)}
           </div>
         </Detail>
       </div>
@@ -174,7 +175,9 @@ function Budget({ g, balance, label }: { g: GameState; balance: number; label: s
   const pol = g.government.policies.budget;
   const pending = (k: BudgetCategory) => g.government.pending.filter((p) => p.kind === 'budget' && k in p.patch).map((p) => (p.patch as Record<string, number>)[k]).at(-1);
   const devPending = (g.government.pending.filter((p) => p.kind === 'development').at(-1)?.patch as { annual: number } | undefined)?.annual;
-  const [sel, setSel] = useState<BudgetCategory | 'devex'>('health');
+  const [selRaw, setSel] = useState<BudgetCategory | 'devex' | 'subsidy'>('health');
+  const isSub = selRaw === 'subsidy';
+  const sel: BudgetCategory | 'devex' = isSub ? 'health' : selRaw;
   const isDev = sel === 'devex';
   const current = isDev ? (devPending ?? g.fiscal.developmentAnnual) / 12 : pending(sel) ?? pol[sel];
   const opening = isDev ? DEVELOPMENT_ANNUAL0 / 12 : base[sel];
@@ -195,17 +198,18 @@ function Budget({ g, balance, label }: { g: GameState; balance: number; label: s
   return (
     <div className="econ-columns">
       <div className="econ-list">
-        {CATS.map((k) => <Row key={k} icon={BUDGET_INFO[k].icon} label={BUDGET_LABELS[k]} amount={money(12 * (pending(k) ?? pol[k]))} tone="out" active={sel === k} onClick={() => setSel(k)} testid={`econ-budget-${k}`} color={LINE_COLOR[k]} />)}
-        {g.world.enabled && <Row icon="projects" label="Development (capital)" amount={money(devPending ?? g.fiscal.developmentAnnual)} tone="out" active={isDev} onClick={() => setSel('devex')} testid="econ-budget-devex" color={LINE_COLOR.devex} />}
+        {CATS.map((k) => <Row key={k} icon={BUDGET_INFO[k].icon} label={BUDGET_LABELS[k]} amount={money(12 * (pending(k) ?? pol[k]))} tone="out" active={selRaw === k} onClick={() => setSel(k)} testid={`econ-budget-${k}`} color={LINE_COLOR[k]} />)}
+        {g.world.enabled && <Row icon="projects" label="Development (capital)" amount={money(devPending ?? g.fiscal.developmentAnnual)} tone="out" active={selRaw === 'devex'} onClick={() => setSel('devex')} testid="econ-budget-devex" color={LINE_COLOR.devex} />}
         <Row icon="projects" label="Projects & infrastructure builds" amount={money(builds)} tone="out" onClick={go(g.infra ? 'infra' : 'projects')} color={LINE_COLOR.devex} testid="econ-budget-builds" />
         <Row icon="fdi" label="FDI & policy grants" amount={money(yf.policyGrant)} tone="out" onClick={go('fdi')} color={LINE_COLOR.transfers} testid="econ-budget-grants" />
         {yf.exportSupport > 0 && <Row icon="trade" label="Export support" amount={money(yf.exportSupport)} tone="out" onClick={go('trade')} color={LINE_COLOR.tariff} />}
         {yf.emergency > 0 && <Row icon="debt" label="Emergency relief" amount={money(yf.emergency)} tone="out" onClick={() => undefined} color={LINE_COLOR.health} />}
         <Row icon="debt" label="Debt interest" amount={money(yf.interest)} tone="out" onClick={go('debt')} color={LINE_COLOR.interest} />
-        {g.world.enabled && <Row icon="commodities" label="Fuel & food subsidies" amount={money(yf.subsidy)} tone="out" onClick={go('commodities')} color={LINE_COLOR.subsidy} />}
+        {g.world.enabled && <Row icon="commodities" label="Subsidies (petrol & food)" amount={money(yf.subsidy)} tone="out" active={isSub} onClick={() => setSel('subsidy')} color={LINE_COLOR.subsidy} testid="econ-budget-subsidy" />}
         <AnnualBalance g={g} balance={balance} label={label} other="revenue"
           total={<div className="econ-total" data-testid="budget-total"><span>TOTAL SPENDING · PER YEAR<small>budget lines in force; other lines {year.label}</small></span><b className="econ-amount out"><span>−</span>{money(budgetTotal)}</b></div>} />
       </div>
+      {isSub ? <SubsidyDetail g={g} paid={yf.subsidy} label={year.label} /> : <>
       <Detail title={isDev ? 'Development (capital)' : BUDGET_LABELS[sel]} action={<button className="btn" onClick={() => setDraft({ ...draft, [sel]: opening })}>RESET</button>}>
         <label className="econ-slider">
           <span>Budget</span><span className="num">{Math.round(share * 100)} %</span>
@@ -217,6 +221,7 @@ function Budget({ g, balance, label }: { g: GameState; balance: number; label: s
           <Line label="In force" value={money(isDev ? g.fiscal.developmentAnnual : pol[sel] * 12)} tone="out" />
           <Line label="Opening (Budget 2027)" value={money(opening * 12)} />
         </div>
+        {!isDev && g.controls.plans.some((p) => p.category === sel) && Math.abs(value - current) >= 1 && <p className="econ-note" data-testid={`plan-replaced-${sel}`}>This line follows a ministry plan that raises it over time. Queuing a new amount replaces that plan.</p>}
         <button className="btn btn-primary" disabled={Math.abs(value - current) < 1} onClick={apply} data-testid="econ-budget-apply">Queue from tomorrow</button>
       </Detail>
       <div className="econ-info">
@@ -229,8 +234,44 @@ function Budget({ g, balance, label }: { g: GameState; balance: number; label: s
           <Line label="Annual cost of change" value={money((value - current) * 12)} />
         </div>
       </div>
+      </>}
     </div>
   );
+}
+
+/** Petrol and food subsidies as modelled, beside the official subsidy figures they should be read against. */
+function SubsidyDetail({ g, paid, label }: { g: GameState; paid: number; label: string }) {
+  const R = SUBSIDY_REFERENCE;
+  const petrol = fuelSubsidyDaily(g) * 365, food = wheatSubsidyDaily(g) * 365;
+  return <>
+    <Detail title="Subsidies">
+      <div className="econ-section" data-testid="subsidy-detail">
+        <h4>MODELLED · PER YEAR</h4>
+        <Line label="Petrol (RON95) at today's price" value={money(petrol)} tone="out" />
+        <Line label="Food (wheat & rice) at today's price" value={money(food)} tone="out" />
+        <Line label={`Paid · ${label}`} value={money(paid)} tone="out" />
+        <Line label="Opening petrol bill (Budget 2027 basis)" value={money(FUEL_SUBSIDY0)} />
+      </div>
+      <div className="econ-links">
+        <button className="btn" onClick={go('oil')}>Petrol ceiling & eligibility</button>
+        <button className="btn" onClick={go('commodities')}>Food subsidy</button>
+      </div>
+    </Detail>
+    <div className="econ-info">
+      <div className="econ-info-head"><span className="econ-info-icon" style={{ color: LINE_COLOR.subsidy }}><HudIcon name="commodities" size={34} /></span><h3>SUBSIDIES · OFFICIAL FIGURES</h3></div>
+      <div className="econ-section">
+        <Line label="Subsidies & social assistance 2025 (actual)" value={money(R.subsidiesAndAid2025Actual * 1e9)} />
+        <Line label="2026 Budget" value={money(R.subsidiesAndAid2026Budget * 1e9)} />
+        <Line label="2027 estimate" value={money(R.subsidiesAndAid2027Estimate * 1e9)} />
+        <Line label="Petrol & diesel, Budget 2026" value={money(R.fuelBudget2026 * 1e9)} />
+        <Line label="Petrol & diesel, PM's 2026 outlook" value={`≈ ${money(R.fuelOutturn2026Pm * 1e9)}`} />
+        <Line label="Blanket RON95 (2024 speech)" value={money(R.ron95Blanket2024 * 1e9)} />
+        <Line label="LPG, 2025 audit" value={money(R.lpg2025 * 1e9)} />
+        <Line label="Pensions & gratuities, Budget 2025" value={money(R.pensions2025Budget * 1e9)} />
+      </div>
+      <p className="econ-note">The game models the petrol and food subsidies, which swing with oil, the ringgit and your ceiling. Diesel, electricity, LPG, cooking oil and cash aid are inside Administration and Pensions & transfers, so their cost does not move with prices here. Pensions & transfers is the pension and cash-aid line.</p>
+    </div>
+  </>;
 }
 
 function Taxation({ g, balance, label }: { g: GameState; balance: number; label: string }) {

@@ -1,18 +1,19 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { GameState } from '../src/types/game';
-import { runHours, startCampaign } from './helpers';
+import { runHours, startCampaign, openPanel, openEconomyWindow } from './helpers';
 
 type Dev = { __klDev: { state: () => GameState } };
 const state = (page: Page) => page.evaluate(() => (window as unknown as Dev).__klDev.state());
 
 test('tax policy takes effect the next day; a zero levy still has a positive reintroduction forecast', async ({ page }) => {
   await startCampaign(page);
-  await page.getByTestId('nav-policies').click();
-  await page.getByTestId('tax-corporate').fill('0.25');
-  await page.getByTestId('tax-consumption').fill('0');
-  await page.getByTestId('queue-tax').click();
-  await expect(page.getByRole('dialog')).toContainText('Effective from tomorrow');
-  await page.getByTestId('confirm-btn').click();
+  await openEconomyWindow(page, 'taxation');
+  await page.getByTestId('econ-tax-corporate').click();
+  await page.getByTestId('econ-tax-slider').fill('0.25');
+  await page.getByTestId('econ-tax-apply').click();
+  await page.getByTestId('econ-tax-consumption').click();
+  await page.getByTestId('econ-tax-slider').fill('0');
+  await page.getByTestId('econ-tax-apply').click();
   expect((await state(page)).government.policies.tax.corporate).toBe(0.18);
   await runHours(page, 31 * 24 - 8); // 1 Feb 00:00
   let s = await state(page);
@@ -22,11 +23,15 @@ test('tax policy takes effect the next day; a zero levy still has a positive rei
   s = await state(page);
   expect(s.reports[1].gov.taxConsumption).toBe(0);
   // Reopen to start a fresh proposal at the currently effective rates.
-  await page.getByTestId('nav-reports').click();
+  await page.getByTestId('bottom-treasury').click(); // closes the Economy window
+  await openPanel(page, 'reports');
   await expect(page.getByTestId('panel')).toContainText('GDP by sector (value added)');
-  await page.getByTestId('nav-policies').click();
-  await page.getByTestId('tax-consumption').fill('0.04');
-  await expect(page.getByTestId('tax-estimate')).toContainText(/\+RM [1-9][\d,.]*(?:m|bn) per month/);
+  await page.getByRole('button', { name: 'Close panel' }).click();
+  await openEconomyWindow(page, 'taxation');
+  await page.getByTestId('econ-tax-consumption').click();
+  await page.getByTestId('econ-tax-slider').fill('0.04');
+  const estimate = page.locator('.econ-line', { hasText: 'Static estimate of change' });
+  await expect(estimate).toContainText(/RM [1-9][\d,.]*(?:m|bn|tn)/);
 });
 
 test('project quote includes current construction prices, then cash and work settle before completion', async ({ page }) => {
@@ -34,7 +39,7 @@ test('project quote includes current construction prices, then cash and work set
   await page.evaluate(() => {
     (window as unknown as Dev).__klDev.state().sectors.prop.price = 1.2;
   });
-  await page.getByTestId('nav-projects').click();
+  await openPanel(page, 'projects');
   await page.getByTestId('project-fibre').click();
   await expect(page.getByRole('dialog')).toContainText('Estimated cost RM 720.0m');
   await expect(page.getByRole('dialog')).toContainText('RM 600.0m base cost');

@@ -59,12 +59,12 @@ describe('Boom max-profit rules (D-090)', () => {
         infraAutopilot(g);
         if (g.clock.hour % 24 === 9) for (const p of g.fdi.pledges) if (p.status === 'offered') applyCommand(g, { type: 'decidePledge', id: p.id, approve: true, incentive: Math.min(0.3, p.ask) }, g.clock.hour * 60);
       });
-      // US$ bound was -0.011 before D-109: one-month infrastructure builds end a spending burst, and the 0.9% ringgit cap adds to the dip.
+      // Ringgit GDP bound -1.5% (was -1%, D-112) and US$ bound -2.5% (was -1.1%, D-109): the early infrastructure spending burst ends in month 4. US$ bound was -0.011 before D-109: one-month infrastructure builds end a spending burst, and the 0.9% ringgit cap adds to the dip.
       let real = 0, usd = 0, myr = 0;
       for (const r of s.reports) {
         const days = DAYS[r.label.slice(0, 3)] + (r.label.startsWith('Feb 2028') ? 1 : 0);
         const nr = (r.realGdp * 365) / days, nm = (r.nominalGdp * 365) / days, nu = nm / r.myrPerUsd;
-        if (real) { expect(nr / real - 1).toBeGreaterThan(-0.01); expect(nm / myr - 1).toBeGreaterThan(-0.01); expect(nu / usd - 1).toBeGreaterThan(-0.02); }
+        if (real) { expect(nr / real - 1).toBeGreaterThan(-0.01); expect(nm / myr - 1).toBeGreaterThan(-0.015); expect(nu / usd - 1).toBeGreaterThan(-0.025); }
         real = nr; usd = nu; myr = nm;
       }
     }

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { GameState } from '../src/types/game';
-import { runHours, startCampaign } from './helpers';
+import { runHours, startCampaign, openPanel } from './helpers';
 
 type Dev = { __klDev: { state: () => GameState } };
 const state = (page: Page) => page.evaluate(() => (window as unknown as Dev).__klDev.state());
@@ -19,10 +19,9 @@ test('help pauses deliberation and speed shortcuts cannot resume the clock insid
   await page.keyboard.press('Escape');
   expect((await state(page)).clock.paused).toBe(false);
   await page.getByTestId('btn-pause').click();
-  await page.getByTestId('nav-policies').click();
-  await page.getByTestId('tax-corporate').fill('0.25');
+  await openPanel(page, 'debt');
   await page.getByTestId('btn-speed-3').click();
-  await page.getByTestId('queue-tax').click();
+  await page.getByRole('button', { name: 'Issue bonds' }).click(); // opens a deliberation dialog
   await page.keyboard.press('2');
   expect((await state(page)).clock.paused).toBe(true);
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
