@@ -12,6 +12,7 @@ import { isOpen } from './market-calendar';
 import { avgDailyValue } from './stock-market';
 import { assertSafeMinor, clamp, news, pushBounded, toMinor } from './util';
 import { demandFor } from '../data/economic-baseline';
+import { boomOn } from '../data/boom';
 
 export const FEE_RATE: Record<Exchange, number> = { MY: 0.002, US: 0.0003 }; // brokerage + clearing + stamp, simplified
 export const HALF_SPREAD: Record<Exchange, number> = { MY: 0.001, US: 0.0002 };
@@ -20,6 +21,9 @@ export const FX_SPREAD = 0.0025;
 export const LOT: Record<Exchange, number> = { MY: 100, US: 1 };
 export const MAX_POSITION_PCT = 0.2;
 export const MAX_ADV_SHARE = 2;
+/** D-124: Boom mode has no per-session volume limit; price impact is capped instead. */
+export const BOOM_MAX_IMPACT = 0.15;
+export const advShareLimit = (s: Pick<GameState, 'mode'>) => (boomOn(s) ? Infinity : MAX_ADV_SHARE);
 export const US_WITHHOLDING = 0.15;
 export const ORDER_TTL_MIN = 7 * 1440;
 const TX_LIMIT = 400;
@@ -41,7 +45,8 @@ export function quoteFill(s: GameState, id: TickerId, side: 'buy' | 'sell', unit
   const adv = avgDailyValue(s, id);
   // Impact grows with the fund's cumulative trading in this name today, so splitting an order
   // into pieces does not avoid it.
-  const impact = IMPACT_COEF * Math.sqrt((s.market.quotes[id].fundDayValue + mid * units) / Math.max(adv, 1));
+  const raw = IMPACT_COEF * Math.sqrt((s.market.quotes[id].fundDayValue + mid * units) / Math.max(adv, 1));
+  const impact = boomOn(s) ? Math.min(raw, BOOM_MAX_IMPACT) : raw;
   const slip = HALF_SPREAD[c.exchange] + impact;
   const px = mid * (side === 'buy' ? 1 + slip : 1 - slip);
   const gross = px * units;
@@ -81,7 +86,7 @@ export function validateOrder(s: GameState, id: TickerId, side: 'buy' | 'sell', 
   if (![q.total, q.gross, q.fees].every((n) => Number.isFinite(n) && n >= 0 && Number.isSafeInteger(Math.round(n * 100)))) return 'Unsafe order value';
   const adv = avgDailyValue(s, id);
   const today = s.market.quotes[id].fundDayValue;
-  if (today + q.mid * units > MAX_ADV_SHARE * adv) return `Exceeds today’s liquidity: the fund may trade at most ${MAX_ADV_SHARE * 100}% of average daily value per stock per session (${((today + q.mid * units) / adv * 100).toFixed(0)}% requested incl. earlier fills) — spread it over several sessions`;
+  if (today + q.mid * units > advShareLimit(s) * adv) return `Exceeds today’s liquidity: the fund may trade at most ${MAX_ADV_SHARE * 100}% of average daily value per stock per session (${((today + q.mid * units) / adv * 100).toFixed(0)}% requested incl. earlier fills) — spread it over several sessions`;
   const f = s.fund;
   if (side === 'buy') {
     const cash = c.exchange === 'US' ? f.usdCash : f.myrCash;
@@ -334,7 +339,7 @@ export function planRebalance(s: GameState, targetMY: number, targetUS: number):
       names.forEach((c, i) => {
         const px = s.market.quotes[c.id].price;
         const room = MAX_POSITION_PCT * 0.97 * nav - positionValueMYR(s, c.id);
-        const liq = (MAX_ADV_SHARE * 0.95 * avgDailyValue(s, c.id) - s.market.quotes[c.id].fundDayValue) * fxEx;
+        const liq = (advShareLimit(s) * 0.95 * avgDailyValue(s, c.id) - s.market.quotes[c.id].fundDayValue) * fxEx;
         const alloc = Math.max(0, Math.min((diff * caps[i]) / total, room, liq));
         const units = Math.floor(alloc / (px * fxEx) / LOT[ex]) * LOT[ex];
         if (units <= 0) return;

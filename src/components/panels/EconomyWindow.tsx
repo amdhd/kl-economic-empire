@@ -101,8 +101,8 @@ export function EconomyWindow() {
         </div>
         <div className="econ-body">
           {tab === 'summary' && <Summary g={g} balance={balance} label={label} />}
-          {tab === 'budget' && <Budget g={g} balance={balance} label={label} />}
-          {tab === 'taxation' && <Taxation g={g} balance={balance} label={label} />}
+          {tab === 'budget' && <BudgetTax g={g} balance={balance} label={label} initial="budget" />}
+          {tab === 'taxation' && <BudgetTax g={g} balance={balance} label={label} initial="tax" />}
           {tab === 'loans' && <Loans g={g} balance={balance} label={label} />}
           {tab === 'production' && <Production g={g} balance={balance} label={label} />}
         </div>
@@ -189,7 +189,8 @@ function Summary({ g, balance, label }: { g: GameState; balance: number; label: 
   );
 }
 
-function Budget({ g, balance, label }: { g: GameState; balance: number; label: string }) {
+/** Budget half of the Budget & tax page: the spending list (left column) and the editor + notes for the selected line (middle). */
+function useBudgetParts(g: GameState, balance: number, label: string, focused: boolean, onFocus: () => void): { list: ReactNode; middle: ReactNode } {
   const command = useGame.getState().command;
   const base = budgetFor(g);
   const pol = g.government.policies.budget;
@@ -212,19 +213,22 @@ function Budget({ g, balance, label }: { g: GameState; balance: number; label: s
     command({ type: 'queueBudget', patch: { [sel]: value } });
     setDraft({ ...draft, [sel]: undefined as unknown as number });
   };
-  return (
-    <div className="econ-columns">
+  const pick = (k: BudgetCategory | 'subsidy') => () => { setSel(k); onFocus(); };
+  const list = (
       <div className="econ-list">
-        {CATS.map((k) => <Row key={k} icon={BUDGET_INFO[k].icon} label={BUDGET_LABELS[k]} amount={money(12 * (pending(k) ?? pol[k]))} tone="out" active={selRaw === k} onClick={() => setSel(k)} testid={`econ-budget-${k}`} color={LINE_COLOR[k]} />)}
+        {CATS.map((k) => <Row key={k} icon={BUDGET_INFO[k].icon} label={BUDGET_LABELS[k]} amount={money(12 * (pending(k) ?? pol[k]))} tone="out" active={focused && selRaw === k} onClick={pick(k)} testid={`econ-budget-${k}`} color={LINE_COLOR[k]} />)}
         <Row icon="projects" label="Projects & infrastructure builds" amount={money(builds)} tone="out" onClick={go(g.infra ? 'infra' : 'projects')} color={LINE_COLOR.devex} testid="econ-budget-builds" />
         <Row icon="fdi" label="FDI & policy grants" amount={money(yf.policyGrant)} tone="out" onClick={go('fdi')} color={LINE_COLOR.transfers} testid="econ-budget-grants" />
         {yf.exportSupport > 0 && <Row icon="trade" label="Export support" amount={money(yf.exportSupport)} tone="out" onClick={go('trade')} color={LINE_COLOR.tariff} />}
         {yf.emergency > 0 && <Row icon="debt" label="Emergency relief" amount={money(yf.emergency)} tone="out" onClick={() => undefined} color={LINE_COLOR.health} />}
         <Row icon="debt" label="Debt interest" amount={money(yf.interest)} tone="out" onClick={go('debt')} color={LINE_COLOR.interest} />
-        {g.world.enabled && <Row icon="commodities" label="Subsidies (petrol & food)" amount={money(yf.subsidy)} tone="out" active={isSub} onClick={() => setSel('subsidy')} color={LINE_COLOR.subsidy} testid="econ-budget-subsidy" />}
+        {g.world.enabled && <Row icon="commodities" label="Subsidies (petrol & food)" amount={money(yf.subsidy)} tone="out" active={focused && isSub} onClick={pick('subsidy')} color={LINE_COLOR.subsidy} testid="econ-budget-subsidy" />}
         <AnnualBalance g={g} balance={balance} label={label} other="revenue"
           total={<div className="econ-total" data-testid="budget-total"><span>TOTAL SPENDING · PER YEAR<small>budget lines in force; other lines {year.label}</small></span><b className="econ-amount out"><span>−</span>{money(budgetTotal)}</b></div>} />
       </div>
+  );
+  const middle = (
+    <div className="econ-mid">
       {isSub ? <SubsidyDetail g={g} paid={yf.subsidy} label={year.label} /> : <>
       <Detail title={BUDGET_LABELS[sel]} action={<button className="btn" onClick={() => setDraft({ ...draft, [sel]: opening })}>RESET</button>}>
         <label className="econ-slider">
@@ -253,6 +257,7 @@ function Budget({ g, balance, label }: { g: GameState; balance: number; label: s
       </>}
     </div>
   );
+  return { list, middle };
 }
 
 /** Petrol and food subsidies as modelled, beside the official subsidy figures they should be read against. */
@@ -290,7 +295,8 @@ function SubsidyDetail({ g, paid, label }: { g: GameState; paid: number; label: 
   </>;
 }
 
-function Taxation({ g, balance, label }: { g: GameState; balance: number; label: string }) {
+/** Tax half of the Budget & tax page: the revenue list (right column) and the editor + notes for the selected tax (middle). */
+function useTaxParts(g: GameState, label: string, focused: boolean, onFocus: () => void): { list: ReactNode; middle: ReactNode } {
   const command = useGame.getState().command;
   const pol = g.government.policies.tax;
   const pending = (k: keyof TaxPolicy) => g.government.pending.filter((p) => p.kind === 'tax' && k in p.patch).map((p) => (p.patch as TaxPolicy)[k]).at(-1);
@@ -305,10 +311,9 @@ function Taxation({ g, balance, label }: { g: GameState; balance: number; label:
   const annual: Record<keyof TaxPolicy, number> = { corporate: yf.taxCorporate, property: yf.taxProperty, consumption: yf.taxConsumption, household: yf.taxHousehold, incomeTax: yf.taxIncome };
   const TAX_KEYS = activeTaxKeys(g);
   const effect = estimateTaxChange(g, { ...pol, [sel]: value })[sel];
-  return (
-    <div className="econ-columns">
+  const list = (
       <div className="econ-list">
-        {TAX_KEYS.map((k) => <Row key={k} icon="policies" label={`${TAX_SHORT[k]} · ${pct(pending(k) ?? pol[k], 1)}`} amount={money(annual[k])} tone="in" active={sel === k} onClick={() => setSel(k)} testid={`econ-tax-${k}`} color={LINE_COLOR[k]} />)}
+        {TAX_KEYS.map((k) => <Row key={k} icon="policies" label={`${TAX_SHORT[k]} · ${pct(pending(k) ?? pol[k], 1)}`} amount={money(annual[k])} tone="in" active={focused && sel === k} onClick={() => { setSel(k); onFocus(); }} testid={`econ-tax-${k}`} color={LINE_COLOR[k]} />)}
         <Row icon="trade" label="Import tariffs" amount={money(yf.importTariff)} tone="in" onClick={go('trade')} color={LINE_COLOR.tariff} />
         {g.world.enabled && <Row icon="soe" label="Petroleum income tax" amount={money(yf.petroleumTax)} tone="in" onClick={go('soe')} color={LINE_COLOR.petroleum} />}
         {g.world.enabled && <Row icon="soe" label="SOE dividends" amount={money(yf.soeDividend)} tone="in" onClick={go('soe')} color={LINE_COLOR.soe} />}
@@ -316,9 +321,11 @@ function Taxation({ g, balance, label }: { g: GameState; balance: number; label:
         {g.policy?.enabled && <Row icon="policies" label="Policy levies & hub fees" amount={money(yf.policyLevy)} tone="in" onClick={go('decisions')} color={LINE_COLOR.duty} testid="econ-levies" />}
         {g.baseline.nonTax && <Row icon="sources" label="Fees, licences & fines" amount={money(yf.nonTaxRevenue)} tone="in" onClick={() => undefined} color={LINE_COLOR.other} testid="econ-nontax" />}
         <Row icon="sources" label="Other public receipts" amount={money(yf.federalGrant)} tone="in" color={LINE_COLOR.other} />
-        <AnnualBalance g={g} balance={balance} label={label} other="spending"
-          total={<div className="econ-total" data-testid="revenue-total"><span>TOTAL REVENUE · PER YEAR<small>{year.label}</small></span><b className="econ-amount in"><span>+</span>{money(revenueOf(yf))}</b></div>} />
+        <div className="econ-total mt-auto" data-testid="revenue-total"><span>TOTAL REVENUE · PER YEAR<small>{year.label}</small></span><b className="econ-amount in"><span>+</span>{money(revenueOf(yf))}</b></div>
       </div>
+  );
+  const middle = (
+    <div className="econ-mid">
       <Detail title={meta.label} action={<button className="btn" onClick={() => setDraft({ ...draft, [sel]: pol[sel] })}>RESET</button>}>
         <label className="econ-slider reverse">
           <span>{sel === 'incomeTax' ? 'Band rates (× statutory)' : 'Rate'}</span><span className="num">{pct(value, 1)}</span>
@@ -348,6 +355,15 @@ function Taxation({ g, balance, label }: { g: GameState; balance: number; label:
       </div>
     </div>
   );
+  return { list, middle };
+}
+
+/** One page for spending and revenue so they can be compared: spending list | slider and notes | revenue list. */
+function BudgetTax({ g, balance, label, initial }: { g: GameState; balance: number; label: string; initial: 'budget' | 'tax' }) {
+  const [focus, setFocus] = useState<'budget' | 'tax'>(initial);
+  const b = useBudgetParts(g, balance, label, focus === 'budget', () => setFocus('budget'));
+  const t = useTaxParts(g, label, focus === 'tax', () => setFocus('tax'));
+  return <div className="econ-columns">{b.list}{focus === 'budget' ? b.middle : t.middle}{t.list}</div>;
 }
 
 /** Tax, budget and development changes waiting for their start day, with Withdraw, and the latest policy log lines. */

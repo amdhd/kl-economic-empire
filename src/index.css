@@ -434,6 +434,8 @@ button:focus-visible, summary:focus-visible, a:focus-visible { outline: 2px soli
 .econ-foot { font-size: 9.5px; letter-spacing: .05em; color: #b7c9d6; text-shadow: 0 1px 2px rgba(0, 0, 0, .5); text-align: right; padding: 4px 14px 8px; }
 .econ-columns { display: grid; grid-template-columns: minmax(300px, 1.05fr) minmax(320px, 1.2fr) minmax(280px, 1fr); gap: 10px; height: 100%; }
 .econ-list, .econ-detail, .econ-info { min-height: 0; background: rgba(14, 26, 40, .42); border: 1px solid rgba(160, 210, 235, .12); border-radius: 3px; overflow-y: auto; }
+.econ-mid { min-height: 0; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+.econ-mid > .econ-detail, .econ-mid > .econ-info { flex: none; overflow: visible; }
 .econ-list { display: flex; flex-direction: column; padding: 8px; gap: 4px; }
 .econ-row { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 2px; text-align: left; color: #eef4f8; font-size: 12.5px; text-shadow: 0 1px 1px rgba(0, 0, 0, .35); }
 .econ-row:hover { background: #ffffff0f; }
