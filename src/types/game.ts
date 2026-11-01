@@ -825,7 +825,7 @@ export type LeverId =
   | 'fdiIncentive' | 'fdiGreenLane'
   | 'minimumWage' | 'workerLevy' | 'workerFreeze'
   | 'exportConversion' | 'hotMoneyControls'
-  | 'carbonTax' | 'greenIncentive'
+  | 'carbonTax' | 'greenIncentive' | 'buildProductivity'
   | 'hqRegime' | 'financialHub' | 'freeZones' | 'goldenVisa' | 'tourismDrive' | 'ringgitPush'
   // Fiscal reforms (D-114): pensions, subsidies and advanced taxes.
   | 'retirementAge' | 'pensionIndexation' | 'pensionMeansTest'
