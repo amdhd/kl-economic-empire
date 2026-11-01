@@ -75,7 +75,7 @@ export function dealOutlook(s: GameState, d: Deal): DealOutlook {
   } else if (d.kind === 'investment') {
     const p = s.fdi.pledges.find((x) => x.id === d.pledgeId);
     if (p) {
-      profit = { text: `No direct profit. A ${m(cash)} grant brings ${money(p.amount)} of investment and about ${p.jobs.toLocaleString('en-MY')} jobs: ${(p.amount / Math.max(1, cash / 100)).toFixed(1)}× your money, returning as output, wages and tax.`, tone: 'neutral' };
+      profit = { text: `No direct profit. A ${m(cash)} grant brings ${money(p.amount)} of investment and about ${p.jobs.toLocaleString('en-MY')} jobs: ${cash > 0 ? `${(p.amount / Math.max(1, cash / 100)).toFixed(1)}× your money, returning` : 'at no cost to you, returning'} as output, wages and tax.`, tone: 'neutral' };
       gets.push(`${money(p.amount)} of private investment and about ${p.jobs.toLocaleString('en-MY')} jobs once it operates.`);
     }
     risks.push('If delivery slips more than 90 days you lose unpaid support and can claw back 25% of grants paid.');

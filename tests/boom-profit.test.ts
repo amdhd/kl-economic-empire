@@ -33,7 +33,7 @@ describe('Boom max-profit rules (D-090)', () => {
   it('export buyers pay up to 30% over market in Boom and keep the contract', () => {
     const s = createGame(502, 'balanced', 'malaysia', { months: 36, boom: true }), d = s.deals.items.find((x) => x.template === 'export:chips')!;
     expect(buyerMaxPrice(60, 0, s)).toBe(1.3);
-    expect(buyerMaxPrice(60, 0)).toBeLessThan(1.15);
+    expect(buyerMaxPrice(60, 0)).toBe(1.3); // D-097: the same in every mode
     act(s, { type: 'deal', id: d.id, action: 'review' });
     expect(act(s, { type: 'dealOffer', id: d.id, terms: { months: 60, priceFactor: 1.3, protection: 0 } }).ok).toBe(true);
     expect(d.terms.priceFactor).toBe(1.3);

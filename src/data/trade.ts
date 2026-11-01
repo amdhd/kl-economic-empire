@@ -119,5 +119,5 @@ export const CONCESSION_IDS = Object.keys(CONCESSIONS) as ConcessionId[];
 /** Deal depth: 1 = tariff chapter, 2 = tariffs plus standards and non-tariff barriers. */
 export const DEAL_ACCESS_GAIN = [0, 0.1, 0.2]; // extra exports of the product to that partner, share of that slice
 export const DEAL_DISPLACEMENT = [0, 0.004, 0.009]; // home-market sales lost by the conceding sector, × partner import share × 10
-export const DEAL_TALK_DAYS = [0, 120, 180];
-export const DEAL_RAMP_DAYS = 180;
+export const DEAL_TALK_DAYS = [0, 30, 30]; // D-097: formal talks take one month
+export const DEAL_RAMP_DAYS = 30;

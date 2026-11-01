@@ -13,7 +13,7 @@ test('Deal Room reviews, reserves and settles a signed agreement', async ({ page
   await page.getByTestId('deals-tab-outcomes').click();
   await expect(page.getByTestId('deal-1')).toContainText('completed');
 });
-test('FDI counteroffers revise the signed version and reserve its milestone grant', async ({ page }) => {
+test('FDI investors accept revised terms and the signed version reserves its milestone grant', async ({ page }) => {
   await startCampaign(page);
   await page.getByTestId('nav-deals').click();
   const offer = page.getByTestId('deal-2');
@@ -21,7 +21,8 @@ test('FDI counteroffers revise the signed version and reserve its milestone gran
   await page.getByTestId('deals-tab-negotiations').click();
   await page.getByLabel('Government grant for deal 2').fill('0');
   await page.getByRole('button', { name: 'Send terms (0/6 rounds)' }).click();
-  await expect(offer).toContainText('Counteroffer');
+  await expect(offer).toContainText('Investor accepts these terms in principle');
+  await expect(offer).toContainText('version 2');
   await offer.getByRole('button', { name: 'Review signature' }).click();
   await page.getByTestId('confirm-btn').click();
   await page.getByTestId('deals-tab-active').click();

@@ -57,14 +57,13 @@ describe('trade ministry ledger (D-077)', () => {
     const d = s.tradeBook.deals[0];
     expect(d.wanted.concession).toBe('industrial');
     expect(act(s, { type: 'tradeDeal', action: 'offer', id: d.id, concession: 'consumer', give: 1 }).ok).toBe(true);
-    expect(act(s, { type: 'tradeDeal', action: 'sign', id: d.id }).ok).toBe(false); // not enough
     act(s, { type: 'tradeDeal', action: 'offer', id: d.id, concession: d.wanted.concession, give: d.wanted.give });
     expect(act(s, { type: 'tradeDeal', action: 'sign', id: d.id }).ok).toBe(true);
     expect(d.status).toBe('talks');
-    runUntil(s, 2027, 8, 1, 1);
-    expect(d.status).toBe('inForce');
+    runUntil(s, 2027, 3, 1, 1);
+    expect(d.status).toBe('inForce'); // talks take one month (D-097)
     runUntil(s, 2027, 11, 1, 1);
-    expect(s.tradeBook.displacement.ind).toBeGreaterThan(0);
+    expect(s.tradeBook.displacement.cons).toBeGreaterThan(0);
     expect(s.tradeBook.policyReal.tech).toBeGreaterThan(0);
     expect(act(s, { type: 'tradeDeal', action: 'withdraw', id: d.id }).ok).toBe(true);
     expect(s.world.partners.CN.relations).toBeLessThan(70);
@@ -75,10 +74,12 @@ describe('trade ministry ledger (D-077)', () => {
     expect(dealGain(real, 1)).toBe(0.1);
     expect(dealGain(boom, 1)).toBe(0.25);
     expect(dealGain(boom, 2)).toBe(0.5);
-    expect(dealTalkDays(boom, 2)).toBeLessThan(dealTalkDays(real, 2));
+    expect(dealTalkDays(boom, 2)).toBe(30);
+    expect(dealTalkDays(real, 2)).toBe(30); // D-097: one month in every mode
     expect(dealRounds(real)).toBe(3);
     expect(dealRounds(boom)).toBe(6);
-    expect(requiredDepth(boom, 'US', 1)).toBeCloseTo(requiredDepth(real, 'US', 1) / 2, 9);
+    expect(requiredDepth(boom, 'US', 1)).toBe(0); // D-097: partners require nothing in any mode
+    expect(requiredDepth(real, 'US', 1)).toBe(0);
     expect(offerValue('US', 'consumer', 1, boom)).toBe(0.9);
     expect(offerValue('US', 'consumer', 1, real)).toBe(0.6);
     expect(offerValue('US', 'consumer', 1)).toBe(0.6);
@@ -90,15 +91,16 @@ describe('trade ministry ledger (D-077)', () => {
     expect(d.concludeDay! - boom.scheduler.lastDay).toBe(BOOM.tradeTalkDays[1]);
   }));
 
-  it('a tariff dispute collapses talks', () => withoutEvents(() => {
+  it('talks always conclude, and a partner accepts an offer of nothing (D-097)', () => withoutEvents(() => {
     const s = createGame(305);
     act(s, { type: 'tradeDeal', action: 'propose', partner: 'US', product: 'machinery', ask: 1 });
     const d = s.tradeBook.deals[0];
-    act(s, { type: 'tradeDeal', action: 'offer', id: d.id, concession: d.wanted.concession, give: d.wanted.give });
+    expect(act(s, { type: 'tradeDeal', action: 'offer', id: d.id, concession: 'consumer', give: 0 }).ok).toBe(true);
     expect(act(s, { type: 'tradeDeal', action: 'sign', id: d.id }).ok).toBe(true);
     expect(act(s, { type: 'partnerTariff', partner: 'US', tariff: 0.1 }).ok).toBe(true);
-    runUntil(s, 2027, 6, 1, 1);
-    expect(d.status).toBe('collapsed');
+    runUntil(s, 2027, 3, 1, 1);
+    expect(d.status).toBe('inForce');
+    expect(d.give).toBe(0);
   }));
 
   it('buyer contracts hold a performance bond, add exports, and return the bond on completion', () => withoutEvents(() => {
@@ -106,7 +108,7 @@ describe('trade ministry ledger (D-077)', () => {
     const cash = s.government.treasury;
     act(s, { type: 'deal', id: d.id, action: 'review' });
     expect(applyCommand(s, { type: 'dealOffer', id: d.id, terms: { months: 12, priceFactor: 1.15, protection: 0 } }, s.clock.hour * 60).ok).toBe(true);
-    expect(d.terms.priceFactor).toBeLessThan(1.15); // buyer countered
+    expect(d.terms.priceFactor).toBe(1.15); // D-097: the buyer accepts any price in range
     expect(act(s, { type: 'deal', id: d.id, action: 'sign' }).ok).toBe(true);
     expect(cash - s.government.treasury).toBe(d.priceMinor);
     runUntil(s, 2027, 3, 1, 1);

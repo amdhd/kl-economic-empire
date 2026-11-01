@@ -988,3 +988,5 @@ housing 12) from the treasury's capex line; completion adds capacity. No randomn
 **Boom FX cap (D-093).** `BOOM.fxMaxDepreciationDaily` (0.0003) limits daily ringgit weakening in `updateExternal`.
 
 **Boom events (D-094).** `BOOM.upsideEventsOnly`, `upsideEvents` (ringgit rally), `eventFadeDays` (45): only good events start, they surge in over 7 days and fade out linearly over the last 45 days (`aggregateMods`).
+
+- **Negotiations (D-097):** counterparties in deals and trade talks accept any in-range offer; talks take one month and the access gain phases in over one month.
