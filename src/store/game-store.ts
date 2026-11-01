@@ -11,6 +11,7 @@ import { displayMinutes, SPEEDS } from '../engine/clock';
 import { advance, applyCommand, createGame, runHeadless, type Command, type CommandResult, type GameOptions } from '../engine/game';
 import { SKIP_LABEL, startSkip, stepSkip, type SkipKind, type SkipPlan, type SkipStop } from '../engine/skip';
 import { klDay } from '../engine/time';
+import { latestClosedYear } from '../engine/year-review';
 import { deserialize, serialize } from '../persistence/save';
 import { readSlot, writeSlot, type SlotId } from '../persistence/storage';
 import type { GameSpeed, GameState, ScenarioId, TickerId } from '../types/game';
@@ -36,6 +37,12 @@ interface Store {
   skip: { kind: SkipKind; plan: SkipPlan } | null;
   /** Serialized state taken just before the last skip; null once play resumes or a game is loaded. */
   undoSnapshot: string | null;
+  /** Calendar year shown in the year-in-review window (D-095), or null. Not saved. */
+  yearReview: number | null;
+  /** Last year the window opened for on its own, so each year-end shows it once. */
+  lastReviewedYear: number | null;
+  openYearReview: (year?: number) => void;
+  closeYearReview: () => void;
   startSkip: (kind: SkipKind) => void;
   cancelSkip: () => void;
   undoSkip: () => void;
@@ -101,6 +108,15 @@ export const useGame = create<Store>((set, get) => ({
   },
   skip: null,
   undoSnapshot: null,
+  yearReview: null,
+  lastReviewedYear: null,
+  openYearReview: (year) => {
+    const st = get();
+    const y = year ?? latestClosedYear(st.game);
+    if (y === null || st.yearReview !== null) return;
+    set({ yearReview: y, lastReviewedYear: Math.max(st.lastReviewedYear ?? y, y) });
+  },
+  closeYearReview: () => set({ yearReview: null }),
   startSkip: (kind) => {
     const st = get();
     if (st.skip) return;
@@ -183,7 +199,7 @@ export const useGame = create<Store>((set, get) => ({
     const game = createGame(seed, scenario, 'malaysia', options);
     resumeAfterDialog = false;
     skipAcked.clear();
-    set({ game, skip: null, undoSnapshot: null, rev: get().rev + 1, uiMinute: displayMinutes(game.clock), selection: null, panel: null, showNewGame: false,
+    set({ game, skip: null, undoSnapshot: null, yearReview: null, lastReviewedYear: null, rev: get().rev + 1, uiMinute: displayMinutes(game.clock), selection: null, panel: null, showNewGame: false,
       alertMemory: {}, alertHistory: [], lastAlertDay: klDay(game.clock.hour * 60) });
     lastAutosaveDay = klDay(game.clock.hour * 60);
   },
@@ -252,7 +268,7 @@ export const useGame = create<Store>((set, get) => ({
       return;
     }
     const ticks = advance(g, delta);
-    if (ticks > 0) st.checkAlerts();
+    if (ticks > 0) { st.checkAlerts(); checkYearEnd(); }
     const minute = displayMinutes(g.clock);
     const patch: Partial<Store> = {};
     if (ticks > 0) patch.rev = st.rev + 1;
@@ -271,6 +287,15 @@ export const useGame = create<Store>((set, get) => ({
 }));
 
 let lastAutosaveDay = 0;
+
+/** Opens the year-in-review window the first time a December close is seen (D-095). It pauses through the dialog counter. */
+function checkYearEnd() {
+  const st = useGame.getState();
+  const y = latestClosedYear(st.game);
+  if (y === null || st.yearReview !== null || st.game.scheduler.campaignEnded) return;
+  if (st.lastReviewedYear !== null && y <= st.lastReviewedYear) return;
+  st.openYearReview(y);
+}
 /** Offers and meetings a skip has already stopped for, so the next skip may pass them. Not saved. */
 const skipAcked = new Set<string>();
 
@@ -280,7 +305,7 @@ function applySnapshot(json: string) {
   if (validAppearance(appearance)) useAppearance.getState().update(appearance);
   resumeAfterDialog = false;
   skipAcked.clear();
-  useGame.setState((st) => ({ game, skip: null, rev: st.rev + 1, uiMinute: displayMinutes(game.clock), selection: null, showNewGame: false,
+  useGame.setState((st) => ({ game, skip: null, yearReview: null, lastReviewedYear: latestClosedYear(game), rev: st.rev + 1, uiMinute: displayMinutes(game.clock), selection: null, showNewGame: false,
     alertMemory: alertTransitions({}, economicAlerts(game, usePreferences.getState().alerts)).memory,
     alertHistory: [], lastAlertDay: klDay(game.clock.hour * 60),
     panel: game.scheduler.campaignEnded ? 'objectives' : st.panel }));
@@ -303,6 +328,7 @@ function runSkipFrame() {
   if (!cur) return;
   const g = st.game;
   const r = stepSkip(g, cur.plan, skipAcked, 24, () => useGame.getState().checkAlerts());
+  checkYearEnd();
   const patch: Partial<Store> = { rev: st.rev + 1, uiMinute: displayMinutes(g.clock) };
   if (r.stop) patch.skip = null;
   if (r.stop === 'termEnd') patch.panel = 'objectives';

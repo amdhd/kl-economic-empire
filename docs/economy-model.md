@@ -988,3 +988,7 @@ housing 12) from the treasury's capex line; completion adds capacity. No randomn
 **Boom FX cap (D-093).** `BOOM.fxMaxDepreciationDaily` (0.0003) limits daily ringgit weakening in `updateExternal`.
 
 **Boom events (D-094).** `BOOM.upsideEventsOnly`, `upsideEvents` (ringgit rally), `eventFadeDays` (45): only good events start, they surge in over 7 days and fade out linearly over the last 45 days (`aggregateMods`).
+
+## Year-end review and budget outlook (D-095)
+
+Read-only presentation over the closed monthly reports; no simulation rule changes. Year summary: real growth compares December's annualised real GDP with the previous December (or the opening level); deficit = revenue − outlays summed over the year's reports (borrowing and fund transfers excluded, as in the rating). Next-year outlook: revenue = trailing 12 months × (1 + last year's nominal growth, 0–30%); outlays = trailing non-operating outlays + proposed appropriations × 12 + December's operating overshoot of today's appropriations; debt/GDP adds the projected deficit; rating = `ratingScore` (the same formula as the monthly close). Service-quality target per line = `62 × (monthly / base / CPI)^0.6`, as in `ministryOutcomes`.

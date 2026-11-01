@@ -335,9 +335,7 @@ export function monthCloseGovernment(s: GameState, otherCorporateTax = 0): GovMo
     + (nationalV2(s) ? credibilityPremium(s) : 0));
   const prevRating = gov.creditRating;
   gov.bondYield = s.external.mgs10 + premium;
-  const ratingFree = nationalV2(s) ? 0.045 : 0.025;
-  const credibilityNotches = nationalV2(s) ? (s.fiscal.credibility - 60) / 40 : 0;
-  gov.creditRating = clamp(9 - 15 * Math.max(0, debtToGdp - (s.baseline.profile === 'malaysia' ? 0.6 : 0.3)) - 40 * Math.max(0, deficit - ratingFree) - 3 * arrears + credibilityNotches, 0, 10);
+  gov.creditRating = ratingScore(s, debtToGdp, deficit, arrears);
   if (Math.floor(gov.creditRating) < Math.floor(prevRating)) {
     news(s, { kind: 'policy', tone: 'bad', title: `Credit rating downgraded to ${ratingLabel(gov.creditRating)}`, body: `Debt/GDP ${(debtToGdp * 100).toFixed(1)}%, deficit ${(deficit * 100).toFixed(1)}% of GDP. Borrowing costs rise.` });
     s.policyChurn += 4;
@@ -361,6 +359,13 @@ export function monthCloseGovernment(s: GameState, otherCorporateTax = 0): GovMo
   gov.mtd = emptyFlows();
   gov.mtdArrearsDays = 0;
   return { flows, corporateTax, propertyLevy };
+}
+
+/** Credit rating score 0–10 (8 = A): debt above 60% of GDP, a deficit above the free level, arrears and fiscal credibility. */
+export function ratingScore(s: GameState, debtToGdp: number, deficit: number, arrears: 0 | 1): number {
+  const ratingFree = nationalV2(s) ? 0.045 : 0.025;
+  const credibilityNotches = nationalV2(s) ? (s.fiscal.credibility - 60) / 40 : 0;
+  return clamp(9 - 15 * Math.max(0, debtToGdp - (s.baseline.profile === 'malaysia' ? 0.6 : 0.3)) - 40 * Math.max(0, deficit - ratingFree) - 3 * arrears + credibilityNotches, 0, 10);
 }
 
 export function ratingLabel(r: number): string {
