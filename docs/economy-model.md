@@ -988,3 +988,5 @@ housing 12) from the treasury's capex line; completion adds capacity. No randomn
 **Boom FX cap (D-093).** `BOOM.fxMaxDepreciationDaily` (0.0003) limits daily ringgit weakening in `updateExternal`.
 
 **Boom events (D-094).** `BOOM.upsideEventsOnly`, `upsideEvents` (ringgit rally), `eventFadeDays` (45): only good events start, they surge in over 7 days and fade out linearly over the last 45 days (`aggregateMods`).
+
+- **Hub policies (D-098):** `hqRegime`, `financialHub`, `freeZones`, `goldenVisa`, `tourismDrive` and `ringgitPush` follow the usual lever cycle (announce → effective → ramp). Fees post as `policyLevy`, spending as `policyGrant`. In a 12-month test with all on (seed 98, no events): ringgit 4.19 → 3.92 per US$, real growth 4.2% → 6.7%, FDI pledges 4 → 12, fees about RM1.4bn a month against about RM1.1bn of grants and promotion.

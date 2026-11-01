@@ -813,7 +813,8 @@ export type LeverId =
   | 'fdiIncentive' | 'fdiGreenLane'
   | 'minimumWage' | 'workerLevy' | 'workerFreeze'
   | 'exportConversion' | 'hotMoneyControls'
-  | 'carbonTax' | 'greenIncentive';
+  | 'carbonTax' | 'greenIncentive'
+  | 'hqRegime' | 'financialHub' | 'freeZones' | 'goldenVisa' | 'tourismDrive' | 'ringgitPush';
 
 /** A lever's current setting and its phase cycle: announced → effective → ramping → full effect. */
 export interface PolicyLever {
@@ -832,7 +833,7 @@ export interface PolicyState {
   greenCapital: number; // cumulative real green investment, MYR
   emissionsIndex: number; // 1 = opening CO2 per unit of real output × output
   foreignWorkers: number; // millions
-  mtd: { carbonTax: number; workerLevy: number; fdiGrants: number; aiProgramme: number; reskilling: number; greenGrants: number };
+  mtd: { carbonTax: number; workerLevy: number; fdiGrants: number; aiProgramme: number; reskilling: number; greenGrants: number; hubFees: number; hubSpend: number };
   lastMonth: PolicyState['mtd'];
 }
 
