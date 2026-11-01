@@ -1123,3 +1123,10 @@ at the top right, an outlook (expected profit where a deal pays one, what you ge
 plain-language signing summary. Negotiation is looser: six rounds instead of three, and sellers, buyers and investors
 settle for less (D-086). Chart axes read in trillions, never "1000 billions". The GDP explanation gains a monthly US$ chart,
 and a new Monthly GDP history window gives three plain reasons for each month's rise or fall, including the ringgit effect.
+
+## 30. User amendment — year-in-review window (1 November 2026)
+
+The user asked for a window at the end of each year that summarises the year just closed and offers a budget plan for the next
+one. It opens once per calendar year at the first December close (not at the term end), pauses the clock like any dialog and can
+be reopened from the Info views rail. Budget changes go through the ordinary queued-budget command. Read-only over the monthly
+reports; no new randomness or economic rule (D-107).

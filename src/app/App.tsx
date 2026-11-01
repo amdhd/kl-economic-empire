@@ -36,6 +36,7 @@ import { TradeMinistryPanel } from '../components/panels/TradeMinistryPanel';
 import { CentralBankPanel } from '../components/panels/CentralBankPanel';
 import { SourcesPanel } from '../components/panels/SourcesPanel';
 import { ReportsPanel } from '../components/panels/ReportsPanel';
+import { YearReviewWindow } from '../components/panels/YearReviewWindow';
 import { MapView } from '../map/MapView';
 import { readSlot } from '../persistence/storage';
 import { startGameLoop, useGame, type PanelId } from '../store/game-store';
@@ -99,6 +100,7 @@ export function App() {
   const selection = useGame((s) => s.selection);
   const showNewGame = useGame((s) => s.showNewGame);
   const showHelp = useGame((s) => s.showHelp);
+  const yearReview = useGame((s) => s.yearReview);
   return (
     <div className="relative h-full w-full overflow-hidden">
       <ErrorBoundary label="Map">
@@ -128,6 +130,7 @@ export function App() {
         </div>
       </div>
       <Toasts />
+      {yearReview !== null && !showNewGame && <ErrorBoundary label="Year in review"><YearReviewWindow year={yearReview} /></ErrorBoundary>}
       {showNewGame && <NewGameModal />}
       {showHelp && <HelpModal />}
     </div>

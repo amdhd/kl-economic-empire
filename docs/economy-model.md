@@ -991,6 +991,10 @@ housing 12) from the treasury's capex line; completion adds capacity. No randomn
 
 **Boom events (D-094).** `BOOM.upsideEventsOnly`, `upsideEvents` (ringgit rally), `eventFadeDays` (45): only good events start, they surge in over 7 days and fade out linearly over the last 45 days (`aggregateMods`).
 
+## Year-end review and budget outlook (D-107)
+
+Read-only presentation over the closed monthly reports; no simulation rule changes. Year summary: real growth compares December's annualised real GDP with the previous December (or the opening level); deficit = revenue − outlays summed over the year's reports (borrowing and fund transfers excluded, as in the rating). Next-year outlook: revenue = trailing 12 months × (1 + last year's nominal growth, 0–30%); outlays = trailing non-operating outlays + proposed appropriations × 12 + December's operating overshoot of today's appropriations; debt/GDP adds the projected deficit; rating = `ratingScore` (the same formula as the monthly close). Service-quality target per line = `62 × (monthly / base / CPI)^0.6`, as in `ministryOutcomes`.
+
 - **Hub policies (D-098):** `hqRegime`, `financialHub`, `freeZones`, `goldenVisa`, `tourismDrive` and `ringgitPush` follow the usual lever cycle (announce → effective → ramp). Fees post as `policyLevy`, spending as `policyGrant`. In a 12-month test with all on (seed 98, no events): ringgit 4.19 → 3.92 per US$, real growth 4.2% → 6.7%, FDI pledges 4 → 12, fees about RM1.4bn a month against about RM1.1bn of grants and promotion.
 - **Regional projects (D-096):** `national` templates skip the KL-share discount in `completeProject`; otherwise they follow the same capex, asset-capitalisation and completion rules as the KL projects. A test checks that each completes and none is cancelled when cash is available.
 - **Negotiations (D-097):** counterparties in deals and trade talks accept any in-range offer; talks take one month and the access gain phases in over one month.
