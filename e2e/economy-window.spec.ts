@@ -43,17 +43,16 @@ test('the money readout opens a tabbed Economy window whose budget, tax and loan
   await expect(win).not.toBeVisible();
 });
 
-test('queued tax and budget changes are listed in the Economy window and can be withdrawn', async ({ page }) => {
+test('queued tax and budget changes are listed in the Fiscal control tab and can be withdrawn', async ({ page }) => {
   await startCampaign(page);
-  await page.getByTestId('bottom-treasury').click();
-  await page.getByTestId('econ-tab-taxation').click();
-  await expect(page.getByTestId('queued-policies')).toContainText('Nothing queued.');
+  await openPanel(page, 'reforms');
+  await expect(page.getByTestId('queued-policies').first()).toContainText('Nothing queued.');
   await page.getByTestId('econ-tax-corporate').click();
   await page.getByTestId('econ-tax-slider').fill('0.25');
   await page.getByTestId('econ-tax-apply').click();
-  await expect(page.getByTestId('queued-policies')).toContainText('Corporate');
+  await expect(page.getByTestId('queued-policies').first()).toContainText('Corporate');
   expect((await state(page)).government.pending).toHaveLength(1);
-  await page.getByTestId('queued-policies').getByRole('button', { name: 'Withdraw' }).click();
-  await expect(page.getByTestId('queued-policies')).toContainText('Nothing queued.');
+  await page.getByTestId('queued-policies').first().getByRole('button', { name: 'Withdraw' }).click();
+  await expect(page.getByTestId('queued-policies').first()).toContainText('Nothing queued.');
   expect((await state(page)).government.pending).toHaveLength(0);
 });
