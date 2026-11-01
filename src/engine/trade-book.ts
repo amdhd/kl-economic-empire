@@ -237,8 +237,10 @@ export function setProgramme(s: GameState, id: ProgrammeId, budgetAnnual: number
 
 /** The concession a partner prefers, and how deep an offer must go for it to accept our ask. */
 const PREFERRED: Record<PartnerId, ConcessionId> = { SG: 'services', US: 'services', CN: 'industrial', EU: 'procurement', JP: 'industrial', ASEAN: 'consumer', IN: 'consumer', ROW: 'consumer' };
-export function requiredDepth(s: GameState, k: PartnerId, ask: 1 | 2): number {
-  return ask * (1.3 - s.world.partners[k].relations / 100) * (boomOn(s) ? BOOM.tradeNeedScale : 1);
+/** D-097: partners accept any offer, including giving nothing, so no depth is required. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- signature kept for callers; the rule no longer reads these
+export function requiredDepth(_s: GameState, _k: PartnerId, _ask: 1 | 2): number {
+  return 0;
 }
 export const offerValue = (k: PartnerId, concession: ConcessionId, give: number, s?: Pick<GameState, 'mode'>) => give * (concession === PREFERRED[k] ? 1 : s && boomOn(s) ? BOOM.tradeOtherConcession : 0.6);
 
@@ -260,9 +262,7 @@ export function tradeDealCommand(s: GameState, cmd: TradeDealAction): string | n
     if (tb.deals.some((d) => d.partner === cmd.partner && d.product === cmd.product && ['draft', 'talks', 'inForce'].includes(d.status))) return 'A deal for this product with this partner is already open or in force.';
     const w = s.world.partners[cmd.partner];
     if (w.ourTariff > 0 || w.theirTariff > 0) return 'Remove the tariff dispute with this partner before negotiating.';
-    const need = requiredDepth(s, cmd.partner, cmd.ask);
-    if (need > 2) return `Relations with ${PARTNERS[cmd.partner].name} are too weak for this ask. Try a tariff chapter or improve relations first.`;
-    const wanted = { concession: PREFERRED[cmd.partner], give: (need <= 1 ? 1 : 2) as 1 | 2 };
+    const wanted = { concession: PREFERRED[cmd.partner], give: 1 as 1 | 2 };
     tb.deals.push({ id: tb.nextDealId++, partner: cmd.partner, product: cmd.product, ask: cmd.ask, concession: wanted.concession, give: 0, wanted, status: 'draft', rounds: 0, createdDay: today, concludeDay: null, startDay: null,
       note: `${PARTNERS[cmd.partner].name} will open its market for ${p.short} if Malaysia opens: ${CONCESSIONS[wanted.concession].label.toLowerCase()} (depth ${wanted.give}).` });
     tb.deals = tb.deals.slice(-60);
@@ -295,7 +295,7 @@ export function tradeDealCommand(s: GameState, cmd: TradeDealAction): string | n
     if (!ok) return `${name} has not accepted these terms. Revise the offer to meet its request.`;
     d.status = 'talks';
     d.concludeDay = today + dealTalkDays(s, d.ask);
-    d.note = `Formal talks under way; they conclude in about ${Math.round(dealTalkDays(s, d.ask) / 30)} months if there is no tariff dispute and relations stay above 40.`;
+    d.note = `Formal talks under way; they conclude in about ${Math.max(1, Math.round(dealTalkDays(s, d.ask) / 30))} month.`;
     return null;
   }
   if (!['draft', 'talks', 'inForce'].includes(d.status)) return 'This deal is already closed.';
@@ -308,17 +308,11 @@ export function tradeDealCommand(s: GameState, cmd: TradeDealAction): string | n
 }
 
 function concludeTalks(s: GameState, d: TradeDeal, day: number): void {
-  const w = s.world.partners[d.partner], name = PARTNERS[d.partner].name, p = EXPORT_PRODUCTS[d.product];
-  d.concludeDay = null;
-  if (w.ourTariff > 0 || w.theirTariff > 0 || w.relations < 40) {
-    d.status = 'collapsed';
-    d.note = 'Talks collapsed: a tariff dispute or poor relations made the chapter impossible to close.';
-    news(s, { kind: 'policy', tone: 'bad', title: `${p.short} talks with ${name} collapsed`, body: d.note });
-    return;
-  }
+  const name = PARTNERS[d.partner].name, p = EXPORT_PRODUCTS[d.product];
+  d.concludeDay = null; // D-097: talks always conclude; a partner never walks away
   d.status = 'inForce';
   d.startDay = day + 1;
-  d.note = `In force. ${p.short} exporters gain access over about six months${d.give ? '; the concession phases in over the same period' : ''}.`;
+  d.note = `In force. ${p.short} exporters gain access over about a month${d.give ? '; the concession phases in over the same period' : ''}.`;
   news(s, { kind: 'policy', tone: 'good', title: `${p.short} trade deal with ${name} in force`, body: `Exports of ${p.label.toLowerCase()} to ${name} can rise by up to ${(dealGain(s, d.ask) * 100).toFixed(0)}% of that market. Simulated.` });
 }
 

@@ -990,3 +990,4 @@ housing 12) from the treasury's capex line; completion adds capacity. No randomn
 **Boom events (D-094).** `BOOM.upsideEventsOnly`, `upsideEvents` (ringgit rally), `eventFadeDays` (45): only good events start, they surge in over 7 days and fade out linearly over the last 45 days (`aggregateMods`).
 
 - **Regional projects (D-096):** `national` templates skip the KL-share discount in `completeProject`; otherwise they follow the same capex, asset-capitalisation and completion rules as the KL projects. A test checks that each completes and none is cancelled when cash is available.
+- **Negotiations (D-097):** counterparties in deals and trade talks accept any in-range offer; talks take one month and the access gain phases in over one month.

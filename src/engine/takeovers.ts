@@ -62,19 +62,8 @@ export function offerTakeover(s: GameState, d: Deal, terms: Partial<Deal['terms'
   d.terms = t;
   d.rounds++;
   d.version++;
-  if (t.priceFactor < (d.rivalPriceFactor ?? 1.1)) {
-    d.terms.priceFactor = Math.ceil(((d.rivalPriceFactor ?? 1.1) + 0.005) * 1000) / 1000;
-    dealLog(
-      s,
-      d,
-      'Shareholders would rather take the rival bid. We matched it with a small extra for certainty; check the new cash cost.',
-    );
-  } else
-    dealLog(
-      s,
-      d,
-      'Shareholders accept this bid in principle. Closing funds and controlling ownership still need validation.',
-    );
+  // D-097: shareholders accept any bid in the allowed range, even below the rival's.
+  dealLog(s, d, 'Shareholders accept this bid in principle. Closing funds and controlling ownership still need validation.');
   d.priceMinor = Math.round((d.assetCostMinor ?? 0) * d.terms.stake * d.terms.priceFactor * 1.01);
   d.rivalBidMinor = Math.round((d.assetCostMinor ?? 0) * d.terms.stake * (d.rivalPriceFactor ?? 1.1));
   return null;
@@ -82,8 +71,6 @@ export function offerTakeover(s: GameState, d: Deal, terms: Partial<Deal['terms'
 export function signTakeover(s: GameState, d: Deal): string | null {
   if (d.enterprise!.publicShare > 0)
     return 'The public already owns this target; public-to-public acquisitions are not supported.';
-  if (d.terms.priceFactor < (d.rivalPriceFactor ?? 1.1))
-    return 'Shareholders prefer the cash-backed rival bid. Negotiate revised terms.';
   return signEnterprise(s, d);
 }
 export function closeTakeover(s: GameState, d: Deal, day: number): void {
