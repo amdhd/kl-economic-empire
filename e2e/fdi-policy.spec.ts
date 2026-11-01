@@ -49,3 +49,16 @@ test('fiscal reforms tab in Money & debt: estimate, review and decide a pension 
   expect(s.policy.levers.retirementAge.value).toBe(65);
   expect(s.policy.levers.wealthTax.value).toBeCloseTo(0.01, 9);
 });
+
+test('fiscal control tab: rating readout on top, development and borrowing controls in the same tab', async ({ page }) => {
+  await startCampaign(page);
+  await openPanel(page, 'reforms');
+  await expect(page.getByTestId('hub-readout')).toContainText('Credit rating');
+  await expect(page.getByTestId('rating-breakdown')).toContainText('Score starts at 9');
+  await page.getByTestId('dev-budget').fill('60');
+  await page.getByTestId('review-dev').click();
+  await page.getByTestId('confirm-btn').click();
+  expect((await state(page)).government.pending.some(p => p.kind === 'development')).toBe(true);
+  await page.getByTestId('hub-go-central').click();
+  await expect(page.getByTestId('panel')).toBeVisible();
+});

@@ -3,6 +3,7 @@ import { applyCommand, createGame, runHeadless } from '../src/engine/game';
 import { overallAttractiveness } from '../src/engine/fdi';
 import { ageingMismatch, fiscalGini, fiscalTrustPain, pensionSavingShare, subsidyCut, taxYield } from '../src/engine/fiscal-levers';
 import { INCOME_TAX_RELIEF, incomeTaxDaily } from '../src/engine/income-tax';
+import { ratingBreakdown, ratingScore } from '../src/engine/government';
 import { LEVER_IDS, LEVERS, leverValue } from '../src/engine/policy';
 import { leverEstimate } from '../src/engine/policy-preview';
 import { deserialize, serialize } from '../src/persistence/save';
@@ -122,4 +123,14 @@ describe('fiscal reform levers (D-114)', () => {
     expect(leverValue(t, 'personalRelief')).toBe(INCOME_TAX_RELIEF);
     expect(t.policy.mtd.reformTax).toBe(0);
   });
+
+  it('the rating breakdown shown in Fiscal control adds up to the rating score (D-115)', () => withoutEvents(() => {
+    const s = createGame(114);
+    for (const [debt, deficit, arrears] of [[0.5, 0.02, 0], [0.8, 0.07, 0], [0.7, 0.05, 1]] as [number, number, 0 | 1][]) {
+      const b = ratingBreakdown(s, debt, deficit, arrears);
+      expect(ratingScore(s, debt, deficit, arrears)).toBeCloseTo(Math.min(10, Math.max(0, 9 + b.debt + b.deficit + b.arrears + b.credibility)), 12);
+    }
+    expect(ratingBreakdown(s, 0.5, 0.02, 0).debt).toBeCloseTo(0, 12);
+    expect(ratingBreakdown(s, 0.8, 0.02, 0).debt).toBeLessThan(0);
+  }));
 });

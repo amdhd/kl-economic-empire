@@ -19,7 +19,7 @@ test('help pauses deliberation and speed shortcuts cannot resume the clock insid
   await page.keyboard.press('Escape');
   expect((await state(page)).clock.paused).toBe(false);
   await page.getByTestId('btn-pause').click();
-  await openPanel(page, 'debt');
+  await openPanel(page, 'reforms');
   await page.getByTestId('btn-speed-3').click();
   await page.getByRole('button', { name: 'Issue bonds' }).click(); // opens a deliberation dialog
   await page.keyboard.press('2');

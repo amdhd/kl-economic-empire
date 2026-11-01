@@ -8,7 +8,7 @@ import type { CommodityPolicy } from '../../types/game';
 import { useGame, useGameState } from '../../store/game-store';
 import { bnTick, money, pct } from '../../utils/format';
 import { TimeChart } from '../charts/TimeChart';
-import { Section, Stat, Tabs } from '../ui';
+import { Section, Stat } from '../ui';
 import { ConfirmDialog } from './ConfirmDialog';
 import { PanelShell } from './PanelShell';
 
@@ -17,19 +17,19 @@ const signed = (v: number) => `${v >= 0 ? '+' : '−'}RM${Math.abs(v / 1e9).toFi
 
 export function OilPanel() {
   const g = useGameState();
-  const [tab, setTab] = useState<'petronas' | 'fuel'>('petronas');
   if (!g.world.enabled || !g.soe.petronas.enabled) {
     return <PanelShell title="Oil" subtitle="PETRONAS and the fuel subsidy">
       <p className="text-[12px] text-amber-200">Oil, PETRONAS and fuel subsidies are modelled in new Malaysia campaigns. This save keeps its original calibration.</p>
     </PanelShell>;
   }
-  return <PanelShell title="Oil" subtitle="PETRONAS profit and capex, and the petrol subsidy · fictional simulation" width={780}>
-    <Tabs value={tab} onChange={setTab} options={[{ id: 'petronas', label: 'PETRONAS' }, { id: 'fuel', label: 'Petrol subsidy' }]} />
-    {tab === 'petronas' ? <Petronas /> : <Fuel />}
+  return <PanelShell title="Oil" subtitle="PETRONAS and the petrol subsidy · fictional simulation" width={640}>
+    <p className="text-[12.5px] text-slate-300">The PETRONAS dividend and capex and the petrol subsidy (pump ceiling and who gets it) are set in Money & debt, Fiscal control, beside the budget they pay for.</p>
+    <button className="btn btn-primary" data-testid="oil-go-fiscal" onClick={() => useGame.getState().setPanel('reforms')}>Open Fiscal control</button>
   </PanelShell>;
 }
 
-function Petronas() {
+/** PETRONAS dividend and capex, with the 12-month outlook. Shown in the Fiscal control tab (D-115). */
+export function Petronas() {
   const g = useGameState();
   const p = g.soe.petronas;
   const command = useGame.getState().command;
@@ -104,7 +104,8 @@ function Petronas() {
   </>;
 }
 
-function Fuel() {
+/** Petrol subsidy: pump ceiling and who gets it. Shown in the Fiscal control tab (D-115). */
+export function Fuel() {
   const g = useGameState();
   const w = g.world;
   const command = useGame.getState().command;
@@ -138,9 +139,9 @@ function Fuel() {
         </label>
       </div>
       <details className="mt-2 text-[12px] text-slate-400"><summary className="cursor-pointer text-slate-300">Technical details</summary>
-        <p className="mt-1">Raising the fuel ceiling above RM{FUEL_CEILING0.toFixed(2)} or narrowing eligibility saves money but raises prices and is unpopular. Extra household fuel spending comes out of other consumption. Food, steel and palm duties are on the Commodities panel.</p>
+        <p className="mt-1">Raising the fuel ceiling above RM{FUEL_CEILING0.toFixed(2)} or narrowing eligibility saves money but raises prices and is unpopular. Extra household fuel spending comes out of other consumption. Food, steel and palm duties are set beside it.</p>
       </details>
-      <button className="btn btn-primary mt-2" disabled={!changed} onClick={() => setConfirm(true)} data-testid="review-commodity">Review changes</button>
+      <button className="btn btn-primary mt-2" disabled={!changed} onClick={() => setConfirm(true)} data-testid="review-fuel">Review changes</button>
       {pending.map((p) => <div key={p.id} className="mt-2 flex items-center justify-between gap-2 text-[12px] text-amber-200"><span>{p.label} · from {formatKL(p.effectiveMin).date}</span><button className="btn" onClick={() => command({ type: 'cancelPolicy', id: p.id })}>Withdraw</button></div>)}
     </Section>
     {confirm && <ConfirmDialog title="Queue fuel policy" confirmLabel="Queue policy" onCancel={() => setConfirm(false)} onConfirm={() => { command({ type: 'queueCommodity', patch: Object.fromEntries(Object.entries(patch).filter(([k, v]) => Math.abs(v - proposed[k as keyof CommodityPolicy]) > 1e-9)) }); setConfirm(false); }}>
