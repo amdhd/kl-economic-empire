@@ -13,6 +13,7 @@ import { PARTNER_IDS, PARTNERS } from '../data/world';
 import type { GameState, PartnerId, SectorId, TradeBookState, TradeDeal, TradeMonth } from '../types/game';
 import { exportReach } from './calibration';
 import { exportContractFlows } from './export-contracts';
+import { fdiExports } from './fdi';
 import { tourismLift } from './policy';
 import { post } from './government';
 import { BOOM, boomOn } from '../data/boom';
@@ -114,6 +115,20 @@ export function policyGains(s: GameState): { promotion: Record<ExportProductId, 
   return { promotion, deals, byPartner };
 }
 
+/** Exports of operating FDI plants (core `fdiExports`, already in the core's foreign demand) in MYR/day, shared across
+ * each sector's manufactured and service products by today's base exports (D-099). Without it the ledger misses the
+ * plants' sales, which dominate Boom-mode exports. */
+export function fdiProductExports(s: GameState, base: Record<ExportProductId, number>): Record<ExportProductId, number> {
+  const out = zeroBy(EXPORT_PRODUCT_IDS), fdiX = fdiExports(s);
+  for (const j of SECTOR_IDS) {
+    if (!(fdiX[j] > 0)) continue;
+    const ids = EXPORT_PRODUCT_IDS.filter((id) => EXPORT_PRODUCTS[id].sector === j && !EXPORT_PRODUCTS[id].commodity);
+    const total = ids.reduce((a, id) => a + base[id], 0);
+    for (const id of ids) out[id] = (fdiX[j] * s.sectors[j].price * (total > 0 ? base[id] / total : 1 / ids.length));
+  }
+  return out;
+}
+
 // ------------------------------------------------------------------ daily settlement
 
 /** Before the economy step: pay promotion programmes, settle talks, and set today's policy exports and concessions. */
@@ -137,14 +152,14 @@ export function prepareTradeDay(s: GameState, day: number, purchases: Record<Sec
 
   for (const d of tb.deals) if (d.status === 'talks' && d.concludeDay !== null && day >= d.concludeDay) concludeTalks(s, d, day);
 
-  const base = baseExports(s), gains = policyGains(s), contracts = exportContractFlows(s);
+  const base = baseExports(s), gains = policyGains(s), contracts = exportContractFlows(s), fdi = fdiProductExports(s, base);
   const exports = zeroBy(EXPORT_PRODUCT_IDS);
   tb.policyReal = zeroBy(SECTOR_IDS);
   let policyExports = 0, importedContent = 0;
   for (const id of EXPORT_PRODUCT_IDS) {
     const p = EXPORT_PRODUCTS[id];
     const won = base[id] * (gains.promotion[id] + gains.deals[id]) + contracts.volume[id];
-    exports[id] = base[id] + won + contracts.hedge[id];
+    exports[id] = base[id] + won + contracts.hedge[id] + fdi[id];
     policyExports += won;
     // Extra exports carry imported parts: only the domestic content becomes new demand for the supplying sector.
     importedContent += won * (1 - p.domesticContent);
@@ -158,7 +173,7 @@ export function prepareTradeDay(s: GameState, day: number, purchases: Record<Sec
   for (const j of SECTOR_IDS) tb.displacement[j] = Math.min(0.05, tb.displacement[j]);
 
   // Goods exports by partner: opening destination shares, moved by each partner's access, plus deal and contract gains.
-  const goodsBase = GOODS_PRODUCT_IDS.reduce((a, id) => a + base[id] * (1 + gains.promotion[id]) + contracts.hedge[id], 0);
+  const goodsBase = GOODS_PRODUCT_IDS.reduce((a, id) => a + base[id] * (1 + gains.promotion[id]) + contracts.hedge[id] + fdi[id], 0);
   const weights = Object.fromEntries(PARTNER_IDS.map((k) => [k, partnerExportShare(k) * partnerAccessTerm(s, k) / tb.base.access[k]])) as Record<PartnerId, number>;
   const wSum = PARTNER_IDS.reduce((a, k) => a + weights[k], 0);
   const partners = zeroBy(PARTNER_IDS);
@@ -169,7 +184,7 @@ export function prepareTradeDay(s: GameState, day: number, purchases: Record<Sec
   tb.day = { ...tb.day, exports, partners, promotion, policyExports, importedContent };
 }
 
-export interface TradeDayInputs { inputImports: number; consumerImports: number; displaced: Record<SectorId, number>; fdiImports: number; gdpNominal: number }
+export interface TradeDayInputs { inputImports: number; consumerImports: number; displaced: Record<SectorId, number>; served: Record<SectorId, number>; fdiImports: number; gdpNominal: number }
 
 /** After the economy step: imports by end use (indexed to the core model's flows) and the month-to-date ledger. */
 export function recordTradeDay(s: GameState, x: TradeDayInputs): void {
@@ -179,7 +194,16 @@ export function recordTradeDay(s: GameState, x: TradeDayInputs): void {
   if (!tb.base.captured) {
     tb.base = { ...tb.base, inputImports: Math.max(x.inputImports, 1), consumerImports: Math.max(x.consumerImports, 1), investment: Math.max(investment, 1), gdp: Math.max(x.gdpNominal, 1), captured: true };
   }
-  const exports = tb.day.exports;
+  // Manufactures and services ship only what their sector could produce today, as in the core model (D-099);
+  // commodities sell from resource output at world prices. Partner flows, policy gains and their imported parts scale alike.
+  const before = tb.day.exports;
+  const exports = { ...before };
+  for (const id of EXPORT_PRODUCT_IDS) if (!EXPORT_PRODUCTS[id].commodity) exports[id] *= x.served[EXPORT_PRODUCTS[id].sector] ?? 1;
+  const goodsBefore = GOODS_PRODUCT_IDS.reduce((a, id) => a + before[id], 0), allBefore = EXPORT_PRODUCT_IDS.reduce((a, id) => a + before[id], 0);
+  const goodsShare = goodsBefore > 0 ? GOODS_PRODUCT_IDS.reduce((a, id) => a + exports[id], 0) / goodsBefore : 1;
+  const allShare = allBefore > 0 ? EXPORT_PRODUCT_IDS.reduce((a, id) => a + exports[id], 0) / allBefore : 1;
+  const partners = Object.fromEntries(PARTNER_IDS.map((k) => [k, tb.day.partners[k] * goodsShare])) as Record<PartnerId, number>;
+  tb.day = { ...tb.day, exports, partners, policyExports: tb.day.policyExports * allShare, importedContent: tb.day.importedContent * allShare };
   const goods0 = GOODS_PRODUCT_IDS.reduce((a, id) => a + openingDaily(s, EXPORT_PRODUCTS[id].value2025), 0);
   const goodsNow = GOODS_PRODUCT_IDS.reduce((a, id) => a + exports[id], 0);
   const opening = (c: ImportCategoryId) => openingDaily(s, IMPORT_CATEGORIES[c].value2025);

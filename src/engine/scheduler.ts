@@ -110,7 +110,7 @@ function settleDay(s: GameState, day: number): AggregatedMods {
   prepareTradeDay(s, day, gov.purchases);
   const e = daily(s, mods, gov);
   e.gdpNominal += res.gdpNominal;
-  recordTradeDay(s, { inputImports: e.inputImports, consumerImports: e.consumerImports, displaced: e.displaced, fdiImports, gdpNominal: e.gdpNominal });
+  recordTradeDay(s, { inputImports: e.inputImports, consumerImports: e.consumerImports, displaced: e.displaced, served: e.served, fdiImports, gdpNominal: e.gdpNominal });
   s.world.mtd.resourceVa += res.gdpNominal;
   e.gdpReal += res.gdpReal;
   // Households track listed-equity prices with a lag of a few weeks (wealth effect input).
