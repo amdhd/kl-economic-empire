@@ -6,7 +6,7 @@ import { calibrationFor, exportReach } from './calibration';
 import { baselineFor, demandFor, nationalV2, trendFor } from '../data/economic-baseline';
 import { COMMODITY_IMPORT, UTILITY_FUEL_PASSTHROUGH, FUEL_CPI_WEIGHT, HOUSEHOLD_EQUITY0, PUBLIC_CAPITAL_ELASTICITY, WEALTH_MPC } from '../data/world';
 import { publicCapitalFactor } from './fiscal-rules';
-import { aiMismatch, aiProductivity, carbonCost, EMISSION_INTENSITY, greenFuelSaving, hiringBoost, labourCostMultiplier, wageMultiplier, abatement } from './policy';
+import { aiMismatch, aiProductivity, carbonCost, EMISSION_INTENSITY, greenFuelSaving, hiringBoost, labourCostMultiplier, tourismLift, wageMultiplier, abatement } from './policy';
 import { fdiExports } from './fdi';
 import { infraCapacityMult } from './infrastructure';
 import { palmHouseholdDelta } from './soe';
@@ -123,7 +123,7 @@ export function exportIndex(s: GameState, j: SectorId): number {
   // Model 2: goods exports are shared across trading partners, whose cycles, tariffs and agreements set access.
   const access = nationalV2(s) ? s.world.exportAccess : 1;
   idx += (mix.global ?? 0) * e.globalDemand * access * Math.pow(rel, -0.6);
-  idx += (mix.tourism ?? 0) * e.tourism * (1 + s.government.tourismBoost) * levyHit * Math.pow(rel, -0.8);
+  idx += (mix.tourism ?? 0) * e.tourism * (1 + s.government.tourismBoost + tourismLift(s)) * levyHit * Math.pow(rel, -0.8);
   idx += (mix.tech ?? 0) * Math.sqrt(e.techCycle * e.globalDemand) * access * Math.pow(rel, -0.5);
   return idx * (1 + s.trade.readiness);
 }

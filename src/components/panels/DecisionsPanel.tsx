@@ -13,6 +13,7 @@ const GROUPS: { id: LeverGroup; title: string }[] = [
   { id: 'fdi', title: 'Foreign direct investment' },
   { id: 'labour', title: 'Labour market' },
   { id: 'capital', title: 'Capital & currency' },
+  { id: 'hub', title: 'Hub & free-zone policies (Singapore / Dubai style)' },
   { id: 'green', title: 'Industry & green transition' },
 ];
 const OTHER: { id: PanelId; label: string }[] = [
@@ -41,6 +42,7 @@ export function DecisionsPanel() {
     fdi: `Investment climate ${overallAttractiveness(g).toFixed(0)}/100 (50 = opening). FDI grants last month ${money(p.lastMonth.fdiGrants)}.`,
     labour: `Minimum wage ${pct(leverValue(g, 'minimumWage') / MIN_WAGE0 - 1, 1, true)} vs opening. Foreign workers ${p.foreignWorkers.toFixed(2)}m. Levy receipts last month ${money(p.lastMonth.workerLevy)}.`,
     capital: `Ringgit support ${pct(-leverValue(g, 'exportConversion') * 0.04, 1)} from conversion; swings damped ${pct(leverValue(g, 'hotMoneyControls') * 0.4, 0)}.`,
+    hub: `Investment climate ${overallAttractiveness(g).toFixed(0)}/100. Hub fees last month ${money(p.lastMonth.hubFees)}; grants and promotion ${money(p.lastMonth.hubSpend)}. Ringgit ${g.external.myrPerUsd.toFixed(3)} per US$.`,
     green: `Emissions ${(p.emissionsIndex * 100).toFixed(1)} (opening output mix = 100), abatement ${pct(abatement(g))}. Carbon tax last month ${money(p.lastMonth.carbonTax)}; green grants ${money(p.lastMonth.greenGrants)}.`,
   };
   return (

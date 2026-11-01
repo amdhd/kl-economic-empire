@@ -6,7 +6,7 @@ import { COMPANY_BY_ID } from '../data/companies';
 import { BASE_TAX, SECTOR_IDS } from '../data/economic-baseline';
 import type { FdiKind, FdiPledge, FdiState, GameState, SectorId, TickerId } from '../types/game';
 import { post } from './government';
-import { leverTarget, leverValue, LEVERS, MIN_WAGE0, WORKER_LEVY0 } from './policy';
+import { hubClimate, leverTarget, leverValue, LEVERS, MIN_WAGE0, WORKER_LEVY0 } from './policy';
 import { rand, seedRng } from './rng';
 import { clamp, news, pushBounded } from './util';
 import { BOOM, boomOn } from '../data/boom';
@@ -53,6 +53,7 @@ export function attractiveness(s: GameState, kind: FdiKind): number {
     - 8 * leverTarget(s, 'hotMoneyControls')
     - 15 * Math.max(0, leverTarget(s, 'minimumWage') / MIN_WAGE0 - 1) * (kind === 'ev' || kind === 'semiconductor' ? 1.5 : 0.5)
     - 4 * (leverTarget(s, 'workerLevy') / WORKER_LEVY0 - 1)
+    + hubClimate(s, kind)
     + 10 * Math.log(Math.max(0.2, s.world?.exportAccess ?? 1));
   if (kind === 'datacentre') x += 25 * Math.min(1, leverTarget(s, 'aiProgramme') / 5e9) + 6 * leverTarget(s, 'aiAdoptionCredit') - 40 * (s.sectors.util.price - 1);
   if (kind === 'semiconductor') x += 8 * Math.min(1, leverTarget(s, 'reskilling') / 2e9) + 6 * Math.min(1, leverTarget(s, 'aiProgramme') / 5e9);

@@ -81,6 +81,14 @@ const MIGRATIONS: Record<number, Migration> = {
     addMissingListings(state as unknown as GameState);
     return state;
   },
+  // v15 → v16: hub and free-zone policy levers (D-098). They open switched off, so nothing in an existing campaign changes.
+  15: state => {
+    const s = state as unknown as GameState;
+    const fresh = initialPolicy(false);
+    for (const id of Object.keys(fresh.levers) as (keyof typeof fresh.levers)[]) s.policy.levers[id] ??= fresh.levers[id];
+    for (const m of [s.policy.mtd, s.policy.lastMonth]) { m.hubFees ??= 0; m.hubSpend ??= 0; }
+    return state;
+  },
   // v11 → v12: central-bank monetary policy. Existing campaigns stay on the automatic rule with neutral settings.
   11: state => {
     const s = state as unknown as GameState;
