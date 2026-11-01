@@ -46,7 +46,7 @@ The SWF was ~4 % of GDP, so fund skill barely moved the wealth score.
 | Diminishing returns | each gain × exp(−existing sector boost / 4 %) | `BOOST_SATURATION` |
 | Growth score slope | 1000 per pp of annual real growth (was 1500) | `computeScore` |
 | Inflation penalty | band ±1.25 pp around 2.5 %, slope 1000 (was ±1 pp, 1500) | `computeScore` |
-| Starting SWF | RM 15 bn + US$ 2.5 bn ≈ RM 26 bn (was ≈ RM 13 bn) | `BASELINE` |
+| Starting SWF | RM 60 bn + US$ 9.8 bn ≈ RM 100 bn (D-120; was RM 15 bn + US$ 2.5 bn ≈ RM 26 bn) | `BASELINE` |
 | Victory threshold | 75 (was 80) | `VICTORY` |
 
 **Replays after the change** (final score, 3 seeds)
