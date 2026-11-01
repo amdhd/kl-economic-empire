@@ -1008,3 +1008,5 @@ Read-only presentation over the closed monthly reports; no simulation rule chang
 
 **Boom build times and cost (D-109).** Projects 30–60 days (`projectBuildDays`), infrastructure power/housing 30 and transport 60 days at 25% of the realistic price (`BOOM.infraCostFactor`), sector capacity pipeline lag 2 months (`BOOM.capacityLagMonths`; new capacity is written to `pipeline[capacitySlot]`), policy-lever ramps ≤ 30 days, export promotion speed 1/30 a day. Realistic mode keeps the original values. Capex is paid from treasury cash first, then bridge bonds, and counts in outlays, the deficit and the rating.
 
+**Boom company earnings (D-110).** For Malaysian-listed companies in Boom mode: labour cost index = `wageIndex ÷ sector productivity` (realistic: `wageIndex`); foreign-sales revenue term and volume term × `exportReach(sector)`. US-listed firms and realistic campaigns are unchanged.
+

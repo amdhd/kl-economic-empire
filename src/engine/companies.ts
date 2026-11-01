@@ -1,5 +1,6 @@
 import { sectorTax } from './policy-controls';
-import { calibrationFor } from './calibration';
+import { boomOn } from '../data/boom';
+import { calibrationFor, exportReach } from './calibration';
 import { baselineFor, nationalV2 } from '../data/economic-baseline';
 // Featured listed companies (40). Their KL revenue is a *share of* the sector aggregates, so they
 // are a sample inside the economy, not an addition to it: government taxes are computed on sector
@@ -70,15 +71,18 @@ export function dailyCompanies(s: GameState, day = s.scheduler.lastDay): void {
     const e = c.exposure;
     // Model 2: Malaysian exporters' foreign sales depend on access to trading partners.
     const access = v2 && c.exchange === 'MY' ? s.world.exportAccess : 1;
-    const mix = c.exchange === 'MY' ? e.kl * kl + e.my * my + e.global * gl * fxf * access : (e.kl * kl + e.my * my) / fxf + e.global * gl;
-    const realVol = (e.kl * (s.sectors[c.sector].output / CAL.Y0[c.sector]) + e.my * (s.baseline.profile === 'malaysia' ? s.sectors[c.sector].output / CAL.Y0[c.sector] : s.external.myDemand) + e.global * s.external.drivers[c.driver]) * st.revenueShock;
+    // Boom mode (D-110): Malaysian firms' foreign sales grow with their sector's capacity, as the core exports do (reach is 1 otherwise).
+    const reach = c.exchange === 'MY' ? exportReach(s, c.sector) : 1;
+    const mix = c.exchange === 'MY' ? e.kl * kl + e.my * my + e.global * gl * fxf * access * reach : (e.kl * kl + e.my * my) / fxf + e.global * gl;
+    const realVol = (e.kl * (s.sectors[c.sector].output / CAL.Y0[c.sector]) + e.my * (s.baseline.profile === 'malaysia' ? s.sectors[c.sector].output / CAL.Y0[c.sector] : s.external.myDemand) + e.global * s.external.drivers[c.driver] * reach) * st.revenueShock;
     // Producers' realised prices follow world commodity indices (e.g. aluminium for a smelter), model 2.
     let priceMix = 1;
     if (v2 && c.commodityRevenue) for (const [k, share] of Object.entries(c.commodityRevenue) as [CommodityId, number][]) priceMix += share * (s.world.prices[k] - 1);
     const revenue = (c.revenue / 365) * mix * st.revenueShock * priceMix;
     const opex0 = (c.revenue * (1 - c.ebitdaMargin)) / 365;
     const scale = FIXED_COST_SHARE + (1 - FIXED_COST_SHARE) * realVol;
-    const labIdx = c.exchange === 'MY' ? s.households.wageIndex : s.external.usPrice;
+    // Boom mode (D-110): wages rise with productivity, so a firm's labour cost per unit is wages ÷ its sector's productivity.
+    const labIdx = c.exchange === 'MY' ? s.households.wageIndex / (boomOn(s) ? s.sectors[c.sector].productivity : 1) : s.external.usPrice;
     const enIdx = c.exchange === 'MY' ? s.external.oil * fxf : s.external.oil;
     const othIdx = c.exchange === 'MY' ? s.indicators.cpi / 100 : s.external.usPrice;
     const os = 1 - c.laborShare - c.energyShare;
