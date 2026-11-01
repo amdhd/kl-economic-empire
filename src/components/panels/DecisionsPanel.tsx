@@ -128,7 +128,7 @@ export function LeverPanel({ groups, title, subtitle, intro, width = 760 }: { gr
 
 /** Fiscal control tab of the Money & debt window (D-115): everything that moves the rating, deficit or debt cost, then the reform levers (D-114). */
 export function FiscalReformsPanel() {
-  return <LeverPanel groups={FISCAL_GROUPS} title="Fiscal control" width={1180} subtitle="Rating, deficit and debt readout on top; below it the development budget, borrowing, debt terms, ministry budgets and tax rates, then pension, subsidy and tax reforms. Each reform saves or raises money and costs you something."
+  return <LeverPanel groups={FISCAL_GROUPS} title="Fiscal control" width={1180} subtitle="Rating, deficit and debt readout on top; below it the development budget, borrowing and debt terms, then pension, subsidy and tax reforms. Each reform saves or raises money and costs you something."
     intro={<>
       <FiscalControlHub />
       <p className="mb-2 mt-2 text-[11.5px] text-slate-400" data-testid="reforms-intro">Fictional simulated policy levers modelled on debates in Europe and the US, not forecasts of any real programme. Estimates are annual and all else equal; the real result also depends on growth, prices and how households and investors react.</p>

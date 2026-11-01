@@ -16,9 +16,11 @@ import { StatsStrip } from '../hud/StatsStrip';
 import { TimeChart } from '../charts/TimeChart';
 import { housingStatus } from '../../engine/housing';
 
-type Tab = 'summary' | 'loans' | 'production';
+type Tab = 'summary' | 'budget' | 'taxation' | 'loans' | 'production';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'summary', label: 'Summary' },
+  { id: 'budget', label: 'Budget' },
+  { id: 'taxation', label: 'Taxation' },
   { id: 'loans', label: 'Loans' },
   { id: 'production', label: 'Production' },
 ];
@@ -99,6 +101,8 @@ export function EconomyWindow() {
         </div>
         <div className="econ-body">
           {tab === 'summary' && <Summary g={g} balance={balance} label={label} />}
+          {tab === 'budget' && <Budget g={g} balance={balance} label={label} />}
+          {tab === 'taxation' && <Taxation g={g} balance={balance} label={label} />}
           {tab === 'loans' && <Loans g={g} balance={balance} label={label} />}
           {tab === 'production' && <Production g={g} balance={balance} label={label} />}
         </div>
@@ -119,8 +123,7 @@ function Balance({ balance, label }: { balance: number; label: string }) {
 
 /** Pinned list footer: the tab's yearly total, the other side of the budget, and the annual balance (the same measure
  * as the fiscal rule's deficit) above the last closed month. */
-function AnnualBalance({ g, balance, label, total, other, bare }: { g: GameState; balance: number; label: string; total: ReactNode; other: 'revenue' | 'spending'; bare?: boolean }) {
-  if (bare) return <div className="econ-annual">{total}</div>; // the Fiscal control tab shows the balance once, with the budget editor
+function AnnualBalance({ g, balance, label, total, other }: { g: GameState; balance: number; label: string; total: ReactNode; other: 'revenue' | 'spending' }) {
   const year = annualFlows(g);
   const revenue = revenueOf(year.flows), spending = outlaysOf(year.flows), net = revenue - spending;
   return (
@@ -186,10 +189,6 @@ function Summary({ g, balance, label }: { g: GameState; balance: number; label: 
   );
 }
 
-export function BudgetEditor({ g }: { g: GameState }) {
-  const { flows, label } = monthFlows(g);
-  return <Budget g={g} balance={revenueOf(flows) - outlaysOf(flows)} label={label} />;
-}
 function Budget({ g, balance, label }: { g: GameState; balance: number; label: string }) {
   const command = useGame.getState().command;
   const base = budgetFor(g);
@@ -291,11 +290,7 @@ function SubsidyDetail({ g, paid, label }: { g: GameState; paid: number; label: 
   </>;
 }
 
-export function TaxEditor({ g }: { g: GameState }) {
-  const { flows, label } = monthFlows(g);
-  return <Taxation g={g} balance={revenueOf(flows) - outlaysOf(flows)} label={label} bare />;
-}
-function Taxation({ g, balance, label, bare }: { g: GameState; balance: number; label: string; bare?: boolean }) {
+function Taxation({ g, balance, label }: { g: GameState; balance: number; label: string }) {
   const command = useGame.getState().command;
   const pol = g.government.policies.tax;
   const pending = (k: keyof TaxPolicy) => g.government.pending.filter((p) => p.kind === 'tax' && k in p.patch).map((p) => (p.patch as TaxPolicy)[k]).at(-1);
@@ -321,7 +316,7 @@ function Taxation({ g, balance, label, bare }: { g: GameState; balance: number; 
         {g.policy?.enabled && <Row icon="policies" label="Policy levies & hub fees" amount={money(yf.policyLevy)} tone="in" onClick={go('decisions')} color={LINE_COLOR.duty} testid="econ-levies" />}
         {g.baseline.nonTax && <Row icon="sources" label="Fees, licences & fines" amount={money(yf.nonTaxRevenue)} tone="in" onClick={() => undefined} color={LINE_COLOR.other} testid="econ-nontax" />}
         <Row icon="sources" label="Other public receipts" amount={money(yf.federalGrant)} tone="in" color={LINE_COLOR.other} />
-        <AnnualBalance g={g} balance={balance} label={label} other="spending" bare={bare}
+        <AnnualBalance g={g} balance={balance} label={label} other="spending"
           total={<div className="econ-total" data-testid="revenue-total"><span>TOTAL REVENUE · PER YEAR<small>{year.label}</small></span><b className="econ-amount in"><span>+</span>{money(revenueOf(yf))}</b></div>} />
       </div>
       <Detail title={meta.label} action={<button className="btn" onClick={() => setDraft({ ...draft, [sel]: pol[sel] })}>RESET</button>}>

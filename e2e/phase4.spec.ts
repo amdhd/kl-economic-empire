@@ -6,7 +6,6 @@ type Dev = { __klDev: { state: () => GameState } };
 const state = (page: Page) => page.evaluate(() => (window as unknown as Dev).__klDev.state());
 
 test('tax policy takes effect the next day; a zero levy still has a positive reintroduction forecast', async ({ page }) => {
-  test.slow(); // the Fiscal control tab is a long page: on a loaded CI runner these steps come close to the 60s budget
   await startCampaign(page);
   await openEconomyWindow(page, 'taxation');
   await page.getByTestId('econ-tax-corporate').click();
@@ -24,6 +23,7 @@ test('tax policy takes effect the next day; a zero levy still has a positive rei
   s = await state(page);
   expect(s.reports[1].gov.taxConsumption).toBe(0);
   // Reopen to start a fresh proposal at the currently effective rates.
+  await page.getByTestId('bottom-treasury').click(); // closes the Economy window
   await openPanel(page, 'reports');
   await expect(page.getByTestId('panel')).toContainText('GDP by sector (value added)');
   await page.getByRole('button', { name: 'Close panel' }).click();
