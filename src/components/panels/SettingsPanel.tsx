@@ -1,4 +1,4 @@
-import { economicAlerts, treasuryRunway, type AlertPreferences, type AlertRule } from '../../engine/alerts';
+import { alertDealTab, economicAlerts, treasuryRunway, type AlertPreferences, type AlertRule } from '../../engine/alerts';
 import { formatKL } from '../../engine/time';
 import { useGame, useGameState } from '../../store/game-store';
 import { usePreferences } from '../../store/preferences';
@@ -43,7 +43,7 @@ export function SettingsPanel() {
     <Section title="Current risks">
       <p className="mb-2 text-[12px] text-slate-400">Treasury coverage: {runway === null ? 'available after the first daily settlement' : `${runway.toFixed(1)} days at recent outlays`}</p>
       {current.length === 0 && <p className="text-[13px] text-slate-300">No enabled thresholds are breached.</p>}
-      {current.map(a => <div key={a.key} className="mb-2 rounded-lg bg-amber-400/10 p-3 text-[12px]"><strong className={a.severity === 'critical' ? 'text-rose-200' : 'text-amber-200'}>{a.severity.toUpperCase()} · {a.title}</strong><p className="mt-1 text-slate-300">{a.detail}</p><button className="btn mt-2" onClick={() => a.rule==='deals'?useGame.getState().setPanel('deals'):a.rule === 'projects' ? useGame.getState().setPanel('projects') : useGame.getState().explain(a.rule === 'treasury' ? 'treasury' : a.rule === 'unemployment' ? 'unemployment' : 'inflation')}>Investigate</button></div>)}
+      {current.map(a => <div key={a.key} className="mb-2 rounded-lg bg-amber-400/10 p-3 text-[12px]"><strong className={a.severity === 'critical' ? 'text-rose-200' : 'text-amber-200'}>{a.severity.toUpperCase()} · {a.title}</strong><p className="mt-1 text-slate-300">{a.detail}</p><button className="btn mt-2" onClick={() => a.rule==='deals'?(useGame.setState({dealsTab:alertDealTab(game,a.key)}),useGame.getState().setPanel('deals')):a.rule === 'projects' ? useGame.getState().setPanel('projects') : useGame.getState().explain(a.rule === 'treasury' ? 'treasury' : a.rule === 'unemployment' ? 'unemployment' : 'inflation')}>Investigate</button></div>)}
     </Section>
     <Section title="Alert history · this session">
       <div data-testid="alert-history" className="space-y-2 text-[12px]">{history.length ? [...history].reverse().map((a, i) => <div key={`${a.key}-${a.atMin}-${i}`} className="border-b border-slate-700 pb-2"><span className="text-slate-400">{formatKL(a.atMin).date} · {a.severity}</span><p>{a.title}</p>{prefs.detail === 'detailed' && <p className="text-slate-400">{a.detail}</p>}</div>) : <p className="text-slate-400">No alerts recorded. Loading a save does not replay existing warnings.</p>}</div>

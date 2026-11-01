@@ -17,7 +17,7 @@ const GROUPS: { id: LeverGroup; title: string }[] = [
 ];
 const OTHER: { id: PanelId; label: string }[] = [
   { id: 'policies', label: 'Taxes & budget' }, { id: 'controls', label: 'Sector relief, ministry plans, FX band' },
-  { id: 'commodities', label: 'Fuel & food subsidies' }, { id: 'trade', label: 'Tariffs & export support' },
+  { id: 'oil', label: 'Fuel subsidy & PETRONAS' }, { id: 'commodities', label: 'Food subsidy & commodity duties' }, { id: 'trade', label: 'Tariffs & export support' },
   { id: 'partners', label: 'Trade agreements' }, { id: 'debt', label: 'Borrowing' }, { id: 'fdi', label: 'Investment pledges' },
 ];
 const PHASE_LABEL = { opening: 'Opening setting', announced: 'Announced', phasing: 'Phasing in', full: 'Full effect' } as const;

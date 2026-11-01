@@ -1,6 +1,7 @@
 // Seeded event spawning (weekly) and expiry (daily). Effects are read by aggregateMods() and by
 // the company model for company-specific events.
 import { COMPANIES } from '../data/companies';
+import { BOOM, boomOn } from '../data/boom';
 import { EVENTS, EVENT_BY_ID } from '../data/events';
 import type { ActiveEvent, GameState, TickerId } from '../types/game';
 import { rand, randInt } from './rng';
@@ -35,6 +36,7 @@ export function weeklyEvents(s: GameState, today: number): void {
     if (!t.company && s.events.active.some((e) => e.templateId === t.id && eventIsActive(e, today))) continue;
     const r = rand(s.rng);
     if (r >= t.weeklyHazard * scenarioHazardMultiplier(s, t.id)) continue;
+    if (BOOM.noBadEvents && boomOn(s) && t.tone === 'bad') continue; // D-090: Boom mode has no adverse random events
     const days = randInt(s.rng, t.minDays, t.maxDays);
     const magnitude = 0.75 + 0.5 * rand(s.rng);
     const ticker = t.company ? COMPANIES[randInt(s.rng, 0, COMPANIES.length - 1)].id : undefined;

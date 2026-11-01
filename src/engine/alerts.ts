@@ -81,3 +81,15 @@ export function alertTransitions(previous: AlertMemory, current: EconomicAlert[]
     fresh: current.filter(a => !previous[a.key] || (previous[a.key] === 'warning' && a.severity === 'critical')),
   };
 }
+
+/** Deal Room tab that shows the deal behind a `deal:<id>:<kind>` alert, so Investigate never lands on an empty list. */
+export function alertDealTab(s: GameState, key: string): string {
+  const [, id, kind] = key.split(':');
+  const d = s.deals?.items.find((x) => x.id === Number(id));
+  if (!d) return 'outcomes';
+  if (kind === 'expiry') return d.status === 'negotiating' ? 'negotiations' : 'opportunities';
+  if (['completed', 'failed', 'rejected', 'expired'].includes(d.status)) return 'outcomes';
+  if (d.status === 'negotiating') return 'negotiations';
+  if (d.status === 'opportunity') return 'opportunities';
+  return kind === 'arrears' ? 'exposure' : 'active';
+}

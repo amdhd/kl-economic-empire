@@ -3,6 +3,7 @@ import type { Deal } from '../types/deals';
 import { PROJECT_BY_ID } from '../data/projects';
 import { addDeal, dealLog, releaseDeal, reserveDeal, spendDeal, DEAL_ROUNDS } from './deals';
 import { completeProject, post } from './government';
+import { boomOn } from '../data/boom';
 import { toMinor } from './util';
 
 export function concessionOffers(s: GameState): void {
@@ -113,7 +114,7 @@ export function cancelConcession(s: GameState, d: Deal): void {
   s.government.serviceBoost -= d.effectService ?? 0;
   d.effectInfra = {};
   d.effectService = 0;
-  if (d.status === 'active') d.arrearsMinor += Math.round((d.assetCostMinor ?? 0) * 0.1);
+  if (d.status === 'active' && !boomOn(s)) d.arrearsMinor += Math.round((d.assetCostMinor ?? 0) * 0.1);
   releaseDeal(s, d);
   d.committedMinor = 0;
   d.guaranteeMinor = 0;

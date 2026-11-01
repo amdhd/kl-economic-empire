@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import {
-  CONCESSION_IDS, CONCESSIONS, DEAL_ACCESS_GAIN, DEAL_TALK_DAYS, EXPORT_PRODUCT_IDS, EXPORT_PRODUCTS, GOODS_EXPORTS_2025, GOODS_IMPORTS_2025,
+  CONCESSION_IDS, CONCESSIONS, EXPORT_PRODUCT_IDS, EXPORT_PRODUCTS, GOODS_EXPORTS_2025, GOODS_IMPORTS_2025,
   IMPORT_CATEGORIES, IMPORT_CATEGORY_IDS, PARTNER_TRADE_2025, PROGRAMME_IDS, PROGRAMMES, SERVICES_EXPORTS_2025,
   type ConcessionId, type ExportProductId, type ProgrammeId,
 } from '../../data/trade';
 import { PARTNER_IDS, PARTNERS } from '../../data/world';
 import type { Command } from '../../engine/game';
 import { monthKeyLabel } from '../../engine/time';
-import { offerValue, policyGains, requiredDepth, tradeRunRate } from '../../engine/trade-book';
+import { dealGain, dealRounds, dealTalkDays, offerValue, policyGains, requiredDepth, tradeRunRate } from '../../engine/trade-book';
 import { useGame, useGameState } from '../../store/game-store';
 import type { PartnerId, TradeMonth } from '../../types/game';
 import { bnTick, money, pct } from '../../utils/format';
@@ -148,27 +148,33 @@ function Deals() {
       <div className="flex flex-wrap items-end gap-3 text-[12px]">
         <label>Partner<select className="input mt-1 block" value={partner} onChange={(e) => setPartner(e.target.value as PartnerId)} data-testid="deal-partner">{DEAL_PARTNERS.map((k) => <option key={k} value={k}>{PARTNERS[k].name}</option>)}</select></label>
         <label>Product chapter<select className="input mt-1 block" value={product} onChange={(e) => setProduct(e.target.value as ExportProductId)} data-testid="deal-product">{NEGOTIABLE.map((id) => <option key={id} value={id}>{EXPORT_PRODUCTS[id].label}</option>)}</select></label>
-        <label>We ask for<select className="input mt-1 block" value={ask} onChange={(e) => setAsk(Number(e.target.value) as 1 | 2)} data-testid="deal-ask"><option value={1}>Tariff chapter (+{pct(DEAL_ACCESS_GAIN[1], 0)})</option><option value={2}>Deep chapter (+{pct(DEAL_ACCESS_GAIN[2], 0)})</option></select></label>
+        <label>We ask for<select className="input mt-1 block" value={ask} onChange={(e) => setAsk(Number(e.target.value) as 1 | 2)} data-testid="deal-ask"><option value={1}>Tariff chapter (+{pct(dealGain(g, 1), 0)})</option><option value={2}>Deep chapter (+{pct(dealGain(g, 2), 0)})</option></select></label>
         <button className="btn btn-primary" data-testid="deal-propose" onClick={() => command({ type: 'tradeDeal', action: 'propose', partner, product, ask })}>Open draft</button>
       </div>
-      <p className="mt-2 text-[12px] text-slate-400">Roughly {bn(slice)} a year of {EXPORT_PRODUCTS[product].short} goes to {PARTNERS[partner].name}; this chapter could add up to {bn(slice * DEAL_ACCESS_GAIN[ask])} a year once it phases in (about six months after talks of {Math.round(DEAL_TALK_DAYS[ask] / 30)} months). Relations {rel.toFixed(0)}/100: {PARTNERS[partner].name} will want a concession worth about {need.toFixed(1)}{need > 2 ? ' (more than any offer: improve relations first)' : ''}. Commodities sell at world prices and are not negotiable; for those, use buyer contracts.</p>
+      <p className="mt-2 text-[13px] text-slate-200">{PARTNERS[partner].name} buys about {bn(slice)} a year of {EXPORT_PRODUCTS[product].short} from us. A {ask === 2 ? 'deep' : 'tariff'} deal could add up to <b>{bn(slice * dealGain(g, ask))} a year (+{pct(dealGain(g, ask), 0)})</b>. The price: we open one of our own markets to them. Press Open draft, then Sign.</p>
+      <details className="mt-1 text-[12px] text-slate-400"><summary className="cursor-pointer text-slate-300">Technical details</summary><p className="mt-1">Roughly {bn(slice)} a year of {EXPORT_PRODUCTS[product].short} goes to {PARTNERS[partner].name}; this chapter could add up to {bn(slice * dealGain(g, ask))} a year once it phases in (about six months after talks of {Math.round(dealTalkDays(g, ask) / 30)} months). Relations {rel.toFixed(0)}/100: {PARTNERS[partner].name} will want a concession worth about {need.toFixed(1)}{need > 2 ? ' (more than any offer: improve relations first)' : ''}. Commodities sell at world prices and are not negotiable; for those, use buyer contracts.</p></details>
     </Section>
     <Section title="Open deals">
       {open.length === 0 && <p className="text-[12px] text-slate-400">No deals open yet.</p>}
       <div className="space-y-2">{open.map((d) => {
         const o = offers[d.id] ?? { concession: d.wanted.concession, give: d.wanted.give };
-        const value = offerValue(d.partner, o.concession, o.give), required = requiredDepth(g, d.partner, d.ask);
+        const value = offerValue(d.partner, o.concession, o.give, g), required = requiredDepth(g, d.partner, d.ask);
         return <div key={d.id} className="rounded-lg bg-slate-800/50 p-2.5 text-[12px]" data-testid={`trade-deal-${d.id}`}>
           <div className="flex items-center justify-between gap-2"><b>{PARTNERS[d.partner].name} · {EXPORT_PRODUCTS[d.product].label} · {d.ask === 2 ? 'deep' : 'tariff'} chapter</b>
             <span className="rounded-full bg-cyan-500/20 px-2 py-0.5 text-[11px] font-bold uppercase text-cyan-200">{d.status === 'talks' ? `talks · ${Math.max(0, (d.concludeDay ?? today) - today)}d` : d.status === 'inForce' ? 'in force' : 'draft'}</span></div>
           <p className="mt-1 text-slate-300">{d.note}</p>
-          {d.status === 'draft' && <div className="mt-2 flex flex-wrap items-end gap-2">
+          {d.status === 'draft' && <>
+            <p className="mt-1 text-slate-200">In return we open <b>{CONCESSIONS[o.concession].label.toLowerCase()}</b> ({o.give === 2 ? 'tariffs and rules' : o.give === 1 ? 'tariff cuts' : 'nothing'}). Talks then take about {Math.round(dealTalkDays(g, d.ask) / 30)} month(s).</p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+            <button className="btn btn-primary" disabled={value + 1e-9 < required} onClick={() => setReview({ cmd: { type: 'tradeDeal', action: 'sign', id: d.id, ...o }, title: 'Sign and open formal talks', body: `Open formal talks with ${PARTNERS[d.partner].name}. Malaysia opens ${CONCESSIONS[o.concession].label.toLowerCase()} at depth ${o.give}: ${CONCESSIONS[o.concession].plain} Talks take about ${Math.round(dealTalkDays(g, d.ask) / 30)} months and collapse if a tariff dispute starts.` })} data-testid={`deal-sign-${d.id}`}>Accept & sign</button>
+            <span className={value + 1e-9 >= required ? 'text-emerald-300' : 'text-amber-200'}>{value + 1e-9 >= required ? 'They will accept this.' : 'Not enough for them yet: change the terms.'}</span>
+            </div>
+            <details className="mt-2 text-slate-400"><summary className="cursor-pointer text-slate-300">Change the terms</summary><div className="mt-2 flex flex-wrap items-end gap-2">
             <label>Market we open<select className="input mt-1 block" value={o.concession} onChange={(e) => setOffers({ ...offers, [d.id]: { ...o, concession: e.target.value as ConcessionId } })} data-testid={`deal-concession-${d.id}`}>{CONCESSION_IDS.map((c) => <option key={c} value={c}>{CONCESSIONS[c].label}</option>)}</select></label>
             <label>Depth<select className="input mt-1 block" value={o.give} onChange={(e) => setOffers({ ...offers, [d.id]: { ...o, give: Number(e.target.value) as 0 | 1 | 2 } })} data-testid={`deal-give-${d.id}`}><option value={0}>Nothing</option><option value={1}>Tariff cuts</option><option value={2}>Tariffs + rules</option></select></label>
-            <button className="btn" disabled={d.rounds >= 3} onClick={() => command({ type: 'tradeDeal', action: 'offer', id: d.id, ...o })} data-testid={`deal-offer-${d.id}`}>Make offer ({3 - d.rounds} left)</button>
-            <button className="btn btn-primary" disabled={value + 1e-9 < required} onClick={() => setReview({ cmd: { type: 'tradeDeal', action: 'sign', id: d.id, ...o }, title: 'Sign and open formal talks', body: `Open formal talks with ${PARTNERS[d.partner].name}. Malaysia opens ${CONCESSIONS[o.concession].label.toLowerCase()} at depth ${o.give}: ${CONCESSIONS[o.concession].plain} Talks take about ${Math.round(DEAL_TALK_DAYS[d.ask] / 30)} months and collapse if a tariff dispute starts.` })} data-testid={`deal-sign-${d.id}`}>Sign</button>
-            <span className={value + 1e-9 >= required ? 'text-emerald-300' : 'text-amber-200'}>Offer worth {value.toFixed(1)} of {required.toFixed(1)} needed</span>
-          </div>}
+            <button className="btn" disabled={d.rounds >= dealRounds(g)} onClick={() => command({ type: 'tradeDeal', action: 'offer', id: d.id, ...o })} data-testid={`deal-offer-${d.id}`}>Make offer ({dealRounds(g) - d.rounds} left)</button>
+            <span>Offer worth {value.toFixed(1)} of {required.toFixed(1)} needed</span></div></details>
+          </>}
           {d.status !== 'draft' && <p className="mt-1 text-slate-400">We open: {CONCESSIONS[d.concession].label} (depth {d.give}).</p>}
           <button className="btn mt-2" onClick={() => setReview({ cmd: { type: 'tradeDeal', action: 'withdraw', id: d.id }, title: 'Withdraw from this deal', body: d.status === 'inForce' ? 'Withdrawing a deal in force ends the market access at once and costs 15 points of relations.' : d.status === 'talks' ? 'Leaving talks costs 5 points of relations.' : 'Drop this draft.' })} data-testid={`deal-withdraw-${d.id}`}>Withdraw</button>
         </div>;

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { EXPORT_PRODUCTS, GOODS_EXPORTS_2025, GOODS_IMPORTS_2025, SERVICES_EXPORTS_2025 } from '../src/data/trade';
 import { applyCommand, createGame, runHeadless } from '../src/engine/game';
-import { tradeRunRate } from '../src/engine/trade-book';
+import { BOOM } from '../src/data/boom';
+import { dealGain, dealRounds, dealTalkDays, offerValue, requiredDepth, tradeRunRate } from '../src/engine/trade-book';
 import { deserialize, serialize } from '../src/persistence/save';
 import { clone, runUntil, withoutEvents } from './helpers';
 
@@ -67,6 +68,26 @@ describe('trade ministry ledger (D-077)', () => {
     expect(s.tradeBook.policyReal.tech).toBeGreaterThan(0);
     expect(act(s, { type: 'tradeDeal', action: 'withdraw', id: d.id }).ok).toBe(true);
     expect(s.world.partners.CN.relations).toBeLessThan(70);
+  }));
+
+  it('Boom mode loosens product deals (D-088): bigger gain, quick talks, six rounds, easier demands', () => withoutEvents(() => {
+    const real = createGame(306), boom = createGame(306, 'balanced', 'malaysia', { months: 36, boom: true });
+    expect(dealGain(real, 1)).toBe(0.1);
+    expect(dealGain(boom, 1)).toBe(0.25);
+    expect(dealGain(boom, 2)).toBe(0.5);
+    expect(dealTalkDays(boom, 2)).toBeLessThan(dealTalkDays(real, 2));
+    expect(dealRounds(real)).toBe(3);
+    expect(dealRounds(boom)).toBe(6);
+    expect(requiredDepth(boom, 'US', 1)).toBeCloseTo(requiredDepth(real, 'US', 1) / 2, 9);
+    expect(offerValue('US', 'consumer', 1, boom)).toBe(0.9);
+    expect(offerValue('US', 'consumer', 1, real)).toBe(0.6);
+    expect(offerValue('US', 'consumer', 1)).toBe(0.6);
+    act(boom, { type: 'tradeDeal', action: 'propose', partner: 'US', product: 'machinery', ask: 1 });
+    const d = boom.tradeBook.deals[0];
+    for (let i = 0; i < 6; i++) expect(act(boom, { type: 'tradeDeal', action: 'offer', id: d.id, concession: 'consumer', give: 1 }).ok).toBe(true);
+    expect(act(boom, { type: 'tradeDeal', action: 'offer', id: d.id, concession: 'consumer', give: 1 }).ok).toBe(false);
+    expect(act(boom, { type: 'tradeDeal', action: 'sign', id: d.id }).ok).toBe(true);
+    expect(d.concludeDay! - boom.scheduler.lastDay).toBe(BOOM.tradeTalkDays[1]);
   }));
 
   it('a tariff dispute collapses talks', () => withoutEvents(() => {

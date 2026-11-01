@@ -1,14 +1,12 @@
 import { useState } from 'react';
 import { COMPANIES, COMPANY_BY_ID } from '../../data/companies';
-import { PETRONAS } from '../../data/world';
 import type { Command } from '../../engine/game';
 import { isOpen } from '../../engine/market-calendar';
-import { khazanahNav, petronasCapex, upstreamPriceIndex } from '../../engine/soe';
-import { monthKeyLabel } from '../../engine/time';
+import { khazanahNav } from '../../engine/soe';
 import type { TickerId } from '../../types/game';
 import { useGame, useGameState } from '../../store/game-store';
 import { money, pct } from '../../utils/format';
-import { Section, Stat } from '../ui';
+import { Section } from '../ui';
 import { ConfirmDialog } from './ConfirmDialog';
 import { PanelShell } from './PanelShell';
 
@@ -17,9 +15,6 @@ export function SoePanel() {
   const p = g.soe.petronas;
   const k = g.soe.khazanah;
   const command = useGame.getState().command;
-  const [dividend, setDividend] = useState(p.dividendAnnual / 1e9);
-  const [capex, setCapex] = useState(p.capexAnnual / 1e9);
-  const [special, setSpecial] = useState(5);
   const [payout, setPayout] = useState(k.payout * 100);
   const [ticker, setTicker] = useState<TickerId>('MY:6888');
   const [side, setSide] = useState<'buy' | 'sell'>('sell');
@@ -32,32 +27,10 @@ export function SoePanel() {
       <p className="text-[12px] text-amber-200">State enterprises are modelled in new Malaysia campaigns. This save keeps its original calibration.</p>
     </PanelShell>;
   }
-  const last = p.history.at(-1);
   const bursaOpen = isOpen('MY', g.clock.hour * 60);
-  return <PanelShell title="State enterprises" subtitle="Opening scale approximates public figures; every result is simulated" width={760}>
-    <Section title="PETRONAS · wholly state-owned" right={<span className="text-[11.5px] text-slate-400">Realised price index {upstreamPriceIndex(g).toFixed(2)}</span>}>
-      <div className="grid grid-cols-4 gap-3" data-testid="petronas-stats">
-        <Stat label="Cash" value={money(p.cash)} sub={`floor ${money(PETRONAS.cashFloor)}`} tone={p.cash >= PETRONAS.cashFloor ? 'up' : 'down'} />
-        <Stat label="Borrowings" value={money(p.debt)} />
-        <Stat label="Production index" value={p.production.toFixed(3)} sub="1 = opening" tone={p.production >= 1 ? 'up' : 'down'} />
-        <Stat label="Capex now" value={`${money(petronasCapex(p, g))}/yr`} sub={p.cash < PETRONAS.cashFloor ? 'cut: cash below floor' : Math.abs(petronasCapex(p, g) / p.capexAnnual - 1) > 0.005 ? 'policy × lagged oil price' : 'per policy'} />
-      </div>
-      {last && <p className="mt-2 text-[12px] text-slate-400">{monthKeyLabel(last.monthKey)}: upstream revenue {money(last.revenue)}, petroleum income tax {money(last.pita)}, profit after tax {money(last.profitAfterTax)}, dividend to government {money(last.dividend)}.</p>}
-      <div className="mt-3 grid grid-cols-2 gap-4 text-[12px]">
-        <label className="block">Annual dividend to government · RM{dividend.toFixed(0)}bn
-          <input type="range" min={0} max={80} step={1} value={dividend} onChange={(e) => setDividend(Number(e.target.value))} aria-label="PETRONAS dividend" data-testid="petronas-dividend" />
-        </label>
-        <label className="block">Annual capital expenditure · RM{capex.toFixed(0)}bn
-          <input type="range" min={10} max={100} step={1} value={capex} onChange={(e) => setCapex(Number(e.target.value))} aria-label="PETRONAS capex" data-testid="petronas-capex" />
-        </label>
-      </div>
-      <p className="mt-1 text-[12px] text-slate-400">Dividends move cash from PETRONAS to the treasury: they shrink the deficit but not public wealth. Fields decline about 6% a year unless capex keeps up, so starving investment to pay dividends lowers future production, tax and dividends. About 40% of capex is spent in Malaysia. If cash falls below RM30bn, PETRONAS cuts capex by 30%.</p>
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        <button className="btn btn-primary" data-testid="review-petronas" onClick={() => setReview({ cmd: { type: 'petronasPolicy', dividendAnnual: dividend * 1e9, capexAnnual: capex * 1e9 }, title: 'PETRONAS directive', body: `Dividend RM${dividend.toFixed(0)}bn a year (now RM${(p.dividendAnnual / 1e9).toFixed(0)}bn), capex RM${capex.toFixed(0)}bn a year (now RM${(p.capexAnnual / 1e9).toFixed(0)}bn), effective immediately.` })}>Review directive</button>
-        <label className="text-[12px]">Special dividend RM bn <input className="input num ml-1 !w-20" type="number" min={1} max={100} value={special} onChange={(e) => setSpecial(Number(e.target.value))} aria-label="Special dividend" /></label>
-        <button className="btn" onClick={() => setReview({ cmd: { type: 'soeSpecialDividend', entity: 'petronas', amount: special * 1e9 }, title: 'PETRONAS special dividend', body: `Transfer RM${special}bn from PETRONAS cash to the treasury now. Public wealth is unchanged; PETRONAS has less cash for capex.` })}>Special dividend</button>
-      </div>
-      <p className="mt-2 text-[12px] text-slate-400">Listed subsidiaries held: {Object.entries(p.shares).map(([id, n]) => `${COMPANY_BY_ID[id as TickerId].displayName} ${pct((n as number) / g.companies[id as TickerId].shares, 0)}`).join(', ')}. Their dividends flow to PETRONAS.</p>
+  return <PanelShell title="State enterprises" subtitle="Khazanah · opening scale approximates public figures; every result is simulated" width={760}>
+    <Section title="PETRONAS">
+      <p className="text-[12px] text-slate-400">PETRONAS profit, dividend and capex now live in the <button className="underline" onClick={() => useGame.getState().setPanel('oil')} data-testid="soe-open-oil">Oil window</button>.</p>
     </Section>
     <Section title="Khazanah Nasional · government investment holding" right={<span className="num text-[12px] text-slate-300">NAV {money(khazanahNav(g))}</span>}>
       <table className="w-full text-[12px]" data-testid="khazanah-table">

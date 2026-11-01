@@ -38,6 +38,19 @@ export const BOOM = {
   /** Extra climate points for every kind of pledge (an investment rush), and the build time of any pledge in months. */
   fdiAttractiveness: 10,
   fdiBuildMonths: 1,
+  /** Trade deals (D-088): export gain by chapter depth (realistic 10% / 20%), talks and phase-in days, how much of the partner's
+   * demand we must meet (realistic 1×), the worth of a non-preferred concession (realistic 0.6) and negotiation rounds (realistic 3). */
+  tradeDealGain: [0, 0.25, 0.5],
+  tradeTalkDays: [0, 30, 45],
+  tradeRampDays: 60,
+  tradeNeedScale: 0.5,
+  tradeOtherConcession: 0.9,
+  tradeRounds: 6,
+  /** Max profit (D-090): no adverse random events; export buyers pay up to +30% over market for any contract; suppliers sell down
+   * to 15% under market; shortfall penalties, buyer walk-aways, price-shock supplier failures and termination claims are off. */
+  noBadEvents: true,
+  exportMaxPrice: 1.3,
+  supplyMinPrice: 0.85,
   fdiSizeBase: 3,
   fdiSizePerYear: 2,
 };
