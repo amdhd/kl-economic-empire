@@ -981,8 +981,10 @@ housing 12) from the treasury's capex line; completion adds capacity. No randomn
 
 **PETRONAS outlook (D-089).** `petronasOutlook(state, dividend, capex)` replays the daily upstream formulas for 365 days on copies of cash, production and trailing capex (floor cut included). It reads but never writes state, and a test checks it lands within 20% of the year-end cash the real run produces.
 
-**Boom max profit (D-090).** `BOOM.noMacroEvents` (D-092: no temporary macro events of any tone, since each ends in a cliff), `exportMaxPrice` (1.30), `supplyMinPrice` (0.85); export shortfall penalties, buyer walk-aways, supplier price-shock failures and concession termination claims are off. Realistic mode keeps all of them.
+**Boom max profit (D-090).** `BOOM.upsideEventsOnly` (D-094: only good events start, and they fade out), `exportMaxPrice` (1.30), `supplyMinPrice` (0.85); export shortfall penalties, buyer walk-aways, supplier price-shock failures and concession termination claims are off. Realistic mode keeps all of them.
 
 - **Boom ledger:** trade-ledger product exports are multiplied by the same capacity reach the core uses (`exportReach`), so ledger and core trade stay consistent in Boom mode (D-091).
 
 **Boom FX cap (D-093).** `BOOM.fxMaxDepreciationDaily` (0.0003) limits daily ringgit weakening in `updateExternal`.
+
+**Boom events (D-094).** `BOOM.upsideEventsOnly`, `upsideEvents` (ringgit rally), `eventFadeDays` (45): only good events start, they surge in over 7 days and fade out linearly over the last 45 days (`aggregateMods`).

@@ -57,7 +57,9 @@ export function aggregateMods(s: GameState, today: number): AggregatedMods {
   for (const ev of s.events.active) {
     const t = EVENT_BY_ID[ev.templateId];
     if (!t || t.company || !eventIsActive(ev, today)) continue;
-    const k = clamp((today - ev.startDay + 1) / 7, 0, 1) * ev.magnitude;
+    // Boom mode (D-094): a surge arrives fast (7 days) but fades over eventFadeDays, so its end is never a one-day cliff.
+    const fade = boomOn(s) ? clamp((ev.endDay - today) / Math.min(BOOM.eventFadeDays, (ev.endDay - ev.startDay) / 2), 0, 1) : 1;
+    const k = clamp((today - ev.startDay + 1) / 7, 0, 1) * fade * ev.magnitude;
     const mods: EventMods = t.mods;
     const mul = (x: number | undefined) => (x === undefined ? 1 : Math.pow(x, k));
     m.oil *= mul(mods.oil);

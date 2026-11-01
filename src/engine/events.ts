@@ -36,7 +36,7 @@ export function weeklyEvents(s: GameState, today: number): void {
     if (!t.company && s.events.active.some((e) => e.templateId === t.id && eventIsActive(e, today))) continue;
     const r = rand(s.rng);
     if (r >= t.weeklyHazard * scenarioHazardMultiplier(s, t.id)) continue;
-    if (BOOM.noMacroEvents && boomOn(s) && !t.company) continue; // D-090/D-092: Boom mode has no temporary macro events, so no event cliffs
+    if (BOOM.upsideEventsOnly && boomOn(s) && !t.company && t.tone !== 'good' && !BOOM.upsideEvents.includes(t.id)) continue; // D-094: Boom mode only starts upside macro events
     const days = randInt(s.rng, t.minDays, t.maxDays);
     const magnitude = 0.75 + 0.5 * rand(s.rng);
     const ticker = t.company ? COMPANIES[randInt(s.rng, 0, COMPANIES.length - 1)].id : undefined;

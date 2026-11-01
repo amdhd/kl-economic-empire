@@ -48,9 +48,13 @@ export const BOOM = {
   tradeNeedScale: 0.5,
   tradeOtherConcession: 0.9,
   tradeRounds: 6,
-  /** Max profit (D-090, D-092): no temporary macro events of any tone (they end in a cliff, e.g. a ringgit rally reversing); export buyers pay up to +30% over market for any contract; suppliers sell down
+  /** Max profit (D-090, D-092): only upside macro events (see below); export buyers pay up to +30% over market for any contract; suppliers sell down
    * to 15% under market; shortfall penalties, buyer walk-aways, price-shock supplier failures and termination claims are off. */
-  noMacroEvents: true,
+  /** Events (D-094): only upside macro events start in Boom mode (every 'good' one plus the ringgit rally); oil hikes, slowdowns, slumps and
+   * other adverse or oil-price-cut events never do. Every event fades out over this many days instead of ending in a one-day cliff. */
+  upsideEventsOnly: true,
+  upsideEvents: ['myr_strong'] as string[],
+  eventFadeDays: 45,
   exportMaxPrice: 1.3,
   supplyMinPrice: 0.85,
   fdiSizeBase: 3,

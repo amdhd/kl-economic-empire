@@ -2,17 +2,32 @@ import { describe, expect, it } from 'vitest';
 import { EVENTS } from '../src/data/events';
 import { applyCommand, createGame, runHeadless } from '../src/engine/game';
 import { buyerMaxPrice } from '../src/engine/export-contracts';
+import { aggregateMods } from '../src/engine/external';
 import { infraAutopilot, runUntil } from './helpers';
 
 const act = (s: ReturnType<typeof createGame>, cmd: Parameters<typeof applyCommand>[1]) => applyCommand(s, cmd, s.clock.hour * 60);
 
 describe('Boom max-profit rules (D-090)', () => {
-  it('starts no macro event of any tone, but realistic mode still does', () => {
+  it('starts only upside macro events in Boom (no hikes, slowdowns or slumps); realistic mode still starts bad ones', () => {
     const boom = createGame(501, 'balanced', 'malaysia', { months: 36, boom: true }), real = createGame(501);
-    runHeadless(boom, 24 * 365 * 2); runHeadless(real, 24 * 365 * 2);
-    const macro = (s: typeof boom) => s.events.log.filter((e) => !EVENTS.find((x) => x.id === e.templateId)!.company).length;
-    expect(macro(boom)).toBe(0); // a ringgit rally or tourism surge would end in a cliff (D-092)
-    expect(macro(real)).toBeGreaterThan(0);
+    runHeadless(boom, 24 * 365 * 3); runHeadless(real, 24 * 365 * 3);
+    const tmpl = (id: string) => EVENTS.find((x) => x.id === id)!;
+    const macro = (s: typeof boom) => s.events.log.filter((e) => !tmpl(e.templateId).company).map((e) => e.templateId);
+    const m = macro(boom);
+    expect(m.length).toBeGreaterThan(0); // surges still happen
+    expect(m.every((id) => tmpl(id).tone === 'good' || id === 'myr_strong')).toBe(true);
+    expect(macro(real).some((id) => tmpl(id).tone === 'bad')).toBe(true);
+  }, 120_000);
+
+  it('events fade out over 45 days in Boom instead of ending in a cliff, and surge in at full speed', () => {
+    const boom = createGame(502, 'balanced', 'malaysia', { months: 36, boom: true }), real = createGame(502);
+    for (const s of [boom, real]) s.events.active.push({ id: 1, templateId: 'tourism_boom', title: 't', startDay: 100, endDay: 200, magnitude: 1 });
+    const at = (s: typeof boom, day: number) => aggregateMods(s, day).tourism;
+    expect(at(boom, 107)).toBeCloseTo(at(real, 107), 9); // fully in after 7 days
+    expect(at(real, 199)).toBeCloseTo(1.2, 6); // realistic: full strength until the last day, then gone
+    expect(at(boom, 199)).toBeLessThan(1.01);
+    expect(at(boom, 199)).toBeGreaterThan(1);
+    expect(at(boom, 160)).toBeGreaterThan(at(boom, 180));
   });
 
   it('export buyers pay up to 30% over market in Boom and keep the contract', () => {
@@ -36,7 +51,7 @@ describe('Boom max-profit rules (D-090)', () => {
     expect(d.terms.priceFactor).toBe(0.85);
   });
 
-  it('no month loses more than 1% of real, ringgit or US$ GDP over 36 months on three seeds (no event cliffs, D-092; ringgit weakening cap, D-093)', () => {
+  it('no month loses more than 1% of real, ringgit or US$ GDP over 36 months on three seeds (surges fade instead of cliffing, D-094; ringgit weakening cap, D-093)', () => {
     const DAYS: Record<string, number> = { Jan: 31, Feb: 28, Mar: 31, Apr: 30, May: 31, Jun: 30, Jul: 31, Aug: 31, Sep: 30, Oct: 31, Nov: 30, Dec: 31 };
     for (const seed of [20270101, 99, 1234]) {
       const s = createGame(seed, 'balanced', 'malaysia', { months: 36, boom: true });
