@@ -13,11 +13,18 @@ test('the money readout opens a tabbed Economy window whose budget, tax and loan
   await expect(page.getByTestId('monthly-balance')).toBeVisible();
 
   await page.getByTestId('econ-tab-budget').click();
+  // Every line is per year, with a pinned total and the annual balance (the fiscal rule's deficit measure).
+  await expect(page.getByTestId('budget-total')).toContainText('TOTAL SPENDING · PER YEAR');
+  await expect(page.getByTestId('econ-budget-builds')).toBeVisible();
+  await expect(page.getByTestId('annual-balance')).toBeVisible();
+  const shown = (await page.getByTestId('annual-balance-block').innerText()).match(/([\d.]+)% of GDP/)![1];
+  expect(Number(shown)).toBeCloseTo((await state(page)).fiscal.history.at(-1)!.deficit * 100, 1);
   await page.getByTestId('econ-budget-health').click();
   await page.getByTestId('econ-budget-slider').fill('1.2');
   await page.getByTestId('econ-budget-apply').click();
 
   await page.getByTestId('econ-tab-taxation').click();
+  await expect(page.getByTestId('revenue-total')).toContainText('TOTAL REVENUE · PER YEAR');
   await page.getByTestId('econ-tax-consumption').click();
   await page.getByTestId('econ-tax-slider').fill('0.05');
   await page.getByTestId('econ-tax-apply').click();
