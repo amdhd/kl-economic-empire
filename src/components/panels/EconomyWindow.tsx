@@ -6,7 +6,7 @@ import { debtMYR, outlaysOf, ratingLabel, revenueOf, treasuryMYR } from '../../e
 import { estimateTaxChange } from '../../engine/policy-preview';
 import { useGame, useGameState, type PanelId } from '../../store/game-store';
 import type { BudgetCategory, GameState, GovMonthFlows, SectorId, TaxPolicy } from '../../types/game';
-import { daysInMonth } from '../../engine/time';
+import { daysInMonth, formatKL } from '../../engine/time';
 import { fullMoneyMinor, gdpUsd, money, num as numFmt, pct } from '../../utils/format';
 import { NON_TAX_REVENUE_2027 } from '../../data/non-tax-revenue';
 import { householdDemand } from '../../engine/economy';
@@ -228,6 +228,7 @@ function Budget({ g, balance, label }: { g: GameState; balance: number; label: s
           <Line label="Change vs in force" value={`${pct(value / Math.max(1, pol[sel]) - 1, 1, true)}`} />
           <Line label="Annual cost of change" value={money((value - current) * 12)} />
         </div>
+        <QueuedPolicies g={g} />
       </div>
       </>}
     </div>
@@ -326,8 +327,28 @@ function Taxation({ g, balance, label, bare }: { g: GameState; balance: number; 
             <p className="econ-note">Fees, licences, fines and rentals from the MOF revenue estimates grow with nominal GDP. Investment returns come through SOE dividends.</p>
           </div>
         )}
+        <QueuedPolicies g={g} />
         <p>The estimate holds demand, prices and profits fixed. Real receipts also move as the economy responds, and every change takes effect tomorrow.</p>
       </div>
+    </div>
+  );
+}
+
+/** Tax, budget and development changes waiting for their start day, with Withdraw, and the latest policy log lines. */
+function QueuedPolicies({ g }: { g: GameState }) {
+  const command = useGame.getState().command;
+  return (
+    <div className="econ-section" data-testid="queued-policies">
+      <h4>QUEUED CHANGES</h4>
+      {g.government.pending.length === 0 && <p className="econ-note">Nothing queued.</p>}
+      {g.government.pending.map((p) => (
+        <div key={p.id} className="econ-line" data-testid={`queued-${p.id}`}>
+          <span>{p.label} · from {formatKL(p.effectiveMin).date}</span>
+          <button className="btn !px-2 !py-0.5 !text-[11px]" onClick={() => command({ type: 'cancelPolicy', id: p.id })}>Withdraw</button>
+        </div>
+      ))}
+      <h4>RECENT POLICY</h4>
+      {[...g.policyLog].reverse().slice(0, 6).map((l, i) => <p key={i} className="econ-note">{formatKL(l.atMin).date} — {l.label}</p>)}
     </div>
   );
 }
