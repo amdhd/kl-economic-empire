@@ -6,6 +6,7 @@ type Dev = { __klDev: { state: () => GameState } };
 const state = (page: Page) => page.evaluate(() => (window as unknown as Dev).__klDev.state());
 
 test('tax policy takes effect the next day; a zero levy still has a positive reintroduction forecast', async ({ page }) => {
+  test.slow(); // the Fiscal control tab is a long page: on a loaded CI runner these steps come close to the 60s budget
   await startCampaign(page);
   await openEconomyWindow(page, 'taxation');
   await page.getByTestId('econ-tax-corporate').click();

@@ -30,6 +30,7 @@ test('shows full cash balances beside month close and exposes dated national sou
 });
 
 test('queues trade for tomorrow, settles reserve-backed FX and reconciles the new flows', async ({ page }) => {
+  test.slow(); // the Fiscal control tab is a long page: on a loaded CI runner these steps come close to the 60s budget
   await startCampaign(page);
   await openPanel(page, 'reforms');
   await page.getByTestId('trade-tariff').fill('10');

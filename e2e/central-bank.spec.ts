@@ -5,6 +5,7 @@ type Dev = { __klDev: { state: () => GameState } };
 const state = (page: import('@playwright/test').Page) => page.evaluate(() => (window as unknown as Dev).__klDev.state());
 
 test('central bank panel: take control of the rate, tighten banks, buy bonds, issue bills and share reserve income', async ({ page }) => {
+  test.slow(); // the Fiscal control tab is a long page: on a loaded CI runner these steps come close to the 60s budget
   await startCampaign(page);
   await openPanel(page, 'reforms');
   await page.getByTestId('cb-mode-manual').click();

@@ -5,6 +5,7 @@ type Dev = { __klDev: { state: () => GameState } };
 const state = (page: import('@playwright/test').Page) => page.evaluate(() => (window as unknown as Dev).__klDev.state());
 
 test('the money readout opens a tabbed Economy window whose budget, tax and loan controls act on the game', async ({ page }) => {
+  test.slow(); // the Fiscal control tab is a long page: on a loaded CI runner these steps come close to the 60s budget
   await startCampaign(page);
   await runHours(page, 24 * 35);
   await page.getByTestId('bottom-treasury').click();

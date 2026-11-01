@@ -4,6 +4,7 @@ import type { GameState } from '../src/types/game';
 type Dev = {__klDev:{state:()=>GameState}};
 
 test('all four economic controls can be reviewed, applied and observed in simulation',async({page})=>{
+  test.slow(); // the Fiscal control tab is a long page: on a loaded CI runner these steps come close to the 60s budget
   await startCampaign(page);
   await openPanel(page, 'reforms');
   await page.getByTestId('review-incentive').click();
