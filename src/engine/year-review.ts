@@ -4,6 +4,7 @@ import { budgetFor, BUDGET_LABELS } from '../data/economic-baseline';
 import type { BudgetCategory, BudgetPolicy, GameState, MonthlyReport } from '../types/game';
 import { gdpHistory } from './gdp-history';
 import { debtMYR, gdpForRatios, outlaysOf, ratingLabel, ratingScore, revenueOf } from './government';
+import { bnTick } from '../utils/format';
 import { daysInMonth } from './time';
 
 export const BUDGET_CATEGORIES = Object.keys(BUDGET_LABELS) as BudgetCategory[];
@@ -84,7 +85,7 @@ export function yearReview(s: GameState, year: number): YearReview | null {
 
 function headlinesFor(r: YearReview): string[] {
   const h: string[] = [];
-  const bn = (v: number) => `RM${(Math.abs(v) / 1e9).toFixed(Math.abs(v) >= 1e11 ? 0 : 1)}bn`;
+  const bn = (v: number) => bnTick(Math.abs(v) / 1e9, 'RM');
   const pc = (v: number) => `${(Math.abs(v) * 100).toFixed(1)}%`;
   h.push(`The economy ${r.gdp.realGrowth >= 0 ? 'grew' : 'shrank'} ${pc(r.gdp.realGrowth)} in real terms; in US dollars GDP ${r.gdp.usdChangePct >= 0 ? 'rose' : 'fell'} ${pc(r.gdp.usdChangePct)}.`);
   h.push(`Prices rose ${(r.inflationYoY * 100).toFixed(1)}% over the year and unemployment ended at ${(r.unemployment.end * 100).toFixed(1)}% (${r.unemployment.end <= r.unemployment.start ? 'down' : 'up'} from ${(r.unemployment.start * 100).toFixed(1)}%).`);

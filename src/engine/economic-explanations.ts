@@ -5,6 +5,7 @@ import type { GameState, MonthlyReport } from '../types/game';
 import { calibrationFor } from './calibration';
 import { householdDemand } from './economy';
 import { outlaysOf, revenueOf, treasuryMYR } from './government';
+import { bnTick, money } from '../utils/format';
 import { daysInMonth, formatKL, klDayLabel } from './time';
 import { fuelPriceIndex } from './world';
 
@@ -61,7 +62,7 @@ export function explainEconomy(s: GameState, metric: ExplainMetric) {
     caveat = 'Contributions are from the approval formula, not a claim that a recent policy alone caused the change.';
   } else if (metric === 'gdp') {
     period = last ? `${last.label} versus ${previous?.label ?? 'opening'}; nominal annual run rates` : 'Opening position; wait for the first monthly close';
-    summary = `Nominal GDP US$${(s.indicators.nominalGdpAnnual / s.external.myrPerUsd / 1e9).toFixed(1)}bn/year; real growth ${(s.indicators.realGrowthYoY * 100).toFixed(2)}% ${s.reports.length >= 12 ? 'year on year' : 'versus opening'}.`;
+    summary = `Nominal GDP ${bnTick(s.indicators.nominalGdpAnnual / s.external.myrPerUsd / 1e9, 'US$')}/year; real growth ${(s.indicators.realGrowthYoY * 100).toFixed(2)}% ${s.reports.length >= 12 ? 'year on year' : 'versus opening'}.`;
     if (last) {
       const cal = calibrationFor(s);
       const fxNow = s.external.myrPerUsd; // GDP contributions are shown in US dollars at today's rate
@@ -77,7 +78,9 @@ export function explainEconomy(s: GameState, metric: ExplainMetric) {
   } else {
     const f = s.government.mtd;
     const opening = last?.treasury ?? s.baseline.openingTreasury; // MYR, not sen
-    summary = `Treasury RM${(treasuryMYR(s.government) / 1e9).toFixed(3)}bn; change RM${((treasuryMYR(s.government) - opening) / 1e9).toFixed(3)}bn.`;
+    // Billions to three places, trillions from RM1tn up so a big Boom treasury never reads "RM1500.000bn".
+    const cash = (v: number) => (Math.abs(v) >= 1e12 ? money(v, 'MYR', 2) : `RM${(v / 1e9).toFixed(3)}bn`);
+    summary = `Treasury ${cash(treasuryMYR(s.government))}; change ${cash(treasuryMYR(s.government) - opening)}.`;
     period = 'This month so far: cash movements';
     parts.push({ label: 'Public receipts', value: revenueOf(f), unit: 'MYR' }, { label: 'Paid outlays', value: -outlaysOf(f), unit: 'MYR' },
       { label: 'New borrowing', value: f.borrowing, unit: 'MYR' }, { label: 'Principal repayments', value: -f.principal, unit: 'MYR' },

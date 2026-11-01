@@ -3,7 +3,7 @@ import { budgetFor } from '../../data/economic-baseline';
 import { budgetLines, budgetOutlook, BUDGET_CATEGORIES, currentBudget, indexedBudget, planGrowth, yearReview } from '../../engine/year-review';
 import { useGame, useGameState } from '../../store/game-store';
 import type { BudgetPolicy } from '../../types/game';
-import { money, pct } from '../../utils/format';
+import { bnTick, money, pct } from '../../utils/format';
 import { Section, SimTag, Stat } from '../ui';
 
 const pts = (v: number) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(1)}`;
@@ -64,7 +64,7 @@ export function YearReviewWindow({ year }: { year: number }) {
             </ul>
             <div className="grid grid-cols-3 gap-x-4 gap-y-3 sm:grid-cols-6">
               <Stat label="Real growth" value={pctChange(review.gdp.realGrowth)} tone={review.gdp.realGrowth >= 0 ? 'up' : 'down'} />
-              <Stat label="GDP (US$)" value={`US$${review.gdp.usdEnd.toFixed(0)}bn`} sub={pctChange(review.gdp.usdChangePct)} tone={review.gdp.usdChangePct >= 0 ? 'up' : 'down'} />
+              <Stat label="GDP (US$)" value={bnTick(review.gdp.usdEnd, 'US$')} sub={pctChange(review.gdp.usdChangePct)} tone={review.gdp.usdChangePct >= 0 ? 'up' : 'down'} />
               <Stat label="Inflation" value={pct(review.inflationYoY)} />
               <Stat label="Unemployment" value={pct(review.unemployment.end)} sub={`from ${pct(review.unemployment.start)}`} tone={review.unemployment.end <= review.unemployment.start ? 'up' : 'down'} />
               <Stat label="Approval" value={review.approval.end.toFixed(0)} sub={`${pts(review.approval.end - review.approval.start)} pts`} tone={review.approval.end >= review.approval.start ? 'up' : 'down'} />

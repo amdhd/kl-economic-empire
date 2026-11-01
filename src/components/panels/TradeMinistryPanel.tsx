@@ -30,7 +30,7 @@ const GROUPS: { key: string; name: string; color: string; ids: ExportProductId[]
   { key: 'chemMetals', name: 'Chemicals & steel', color: '#d55181', ids: ['chemicals', 'metals'] },
   { key: 'other', name: 'Food & other goods', color: '#008300', ids: ['food', 'otherGoods'] },
 ];
-const bn = (v: number) => `RM${(v / 1e9).toFixed(v >= 100e9 ? 0 : 1)}bn`;
+const bn = (v: number) => bnTick(v / 1e9, 'RM');
 const sum = (r: Record<string, number>) => Object.values(r).reduce((a, v) => a + v, 0);
 const annual = (m: TradeMonth, v: number) => (v * 365) / Math.max(1, m.days);
 const NEGOTIABLE = EXPORT_PRODUCT_IDS.filter((id) => !EXPORT_PRODUCTS[id].commodity);
