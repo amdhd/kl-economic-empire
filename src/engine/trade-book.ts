@@ -11,6 +11,7 @@ import {
 } from '../data/trade';
 import { PARTNER_IDS, PARTNERS } from '../data/world';
 import type { GameState, PartnerId, SectorId, TradeBookState, TradeDeal, TradeMonth } from '../types/game';
+import { exportReach } from './calibration';
 import { exportContractFlows } from './export-contracts';
 import { post } from './government';
 import { BOOM, boomOn } from '../data/boom';
@@ -85,6 +86,8 @@ export function baseExports(s: GameState): Record<ExportProductId, number> {
     if (PRICE_DRIVERS.has(p.driver)) value *= fxf;
     else value *= Math.pow(s.sectors[p.sector].price / tb.base.prices[p.sector], 1 - COMPETITIVENESS) * Math.pow(fxUs, COMPETITIVENESS);
     if (p.group === 'goods' && !p.commodity) value *= access;
+    // Boom mode: the core model sells more as capacity grows; the ledger must follow or its balance drifts from the core's.
+    if (!p.commodity) value *= exportReach(s, p.sector);
     out[id] = value;
   }
   return out;
