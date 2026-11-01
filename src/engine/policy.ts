@@ -8,7 +8,7 @@ import { post } from './government';
 import { clamp, news, pushBounded } from './util';
 import { daysInMonth, klDayStartMin, klParts } from './time';
 
-export type LeverGroup = 'ai' | 'fdi' | 'labour' | 'capital' | 'green';
+export type LeverGroup = 'ai' | 'fdi' | 'labour' | 'capital' | 'green' | 'hub';
 export interface LeverSpec {
   group: LeverGroup;
   label: string;
@@ -54,6 +54,19 @@ export const LEVERS: Record<LeverId, LeverSpec> = {
     cycle: 'Phased in over six months. Power and industrial prices rise first; firms then abate, cutting emissions. Revenue accrues to the treasury.' },
   greenIncentive: { group: 'green', label: 'Renewables & EV incentive programme', kind: 'slider', min: 0, max: 5e9, step: 0.25e9, initial: 0, unit: 'RMbnYr', timing: 'tomorrow', rampDays: 90,
     cycle: 'Grants buy solar, grid and EV investment straight away. Green capital builds over years, lowering emissions and power-sector fuel imports and drawing green FDI.' },
+  // Hub and free-zone policies (D-098): Singapore- and Dubai-style playbooks. Fictional game-balance settings, not estimates of any real regime.
+  hqRegime: { group: 'hub', label: 'Regional headquarters regime (Singapore style): tax breaks, fast visas, office grants', kind: 'toggle', min: 0, max: 1, step: 1, initial: 0, unit: 'toggle', timing: 'tomorrow', rampDays: 120,
+    cycle: 'Announced at once: multinationals read it as a pro-business signal, so FDI interest rises, headquarters most of all. Costs about 0.4% of GDP a year in office and relocation grants, which pay local finance, property and retail.' },
+  financialHub: { group: 'hub', label: 'Financial hub regime (wealth management, funds, offshore licences)', kind: 'toggle', min: 0, max: 1, step: 1, initial: 0, unit: 'toggle', timing: 'tomorrow', rampDays: 180,
+    cycle: 'Funds and wealth managers move money in over about six months: the ringgit strengthens, and licence fees of about 0.25% of GDP a year reach the treasury against a regulator budget of 0.15%.' },
+  freeZones: { group: 'hub', label: 'Free zones (Dubai style): 100% foreign ownership, light tax, duty-free', kind: 'slider', min: 0, max: 1, step: 0.1, initial: 0, unit: 'share', timing: 'tomorrow', rampDays: 180,
+    cycle: 'Share of the zone plan that is open. Investment interest rises at once; zone licence and land fees (up to 0.2% of GDP a year) flow to the treasury as zones fill, over about six months.' },
+  goldenVisa: { group: 'hub', label: 'Golden residency visa for investors, talent and remote workers', kind: 'toggle', min: 0, max: 1, step: 1, initial: 0, unit: 'toggle', timing: 'tomorrow', rampDays: 120,
+    cycle: 'Wealthy residents arrive over about four months: visa fees of about 0.3% of GDP a year, more tourism and spending, and a small lift to investment interest.' },
+  tourismDrive: { group: 'hub', label: 'Tourism & mega-events promotion budget', kind: 'slider', min: 0, max: 3e9, step: 0.25e9, initial: 0, unit: 'RMbnYr', timing: 'tomorrow', rampDays: 90,
+    cycle: 'Marketing and event spending buy local services at once. Visitor numbers rise over a quarter, lifting tourism exports and consumer-sector sales.' },
+  ringgitPush: { group: 'hub', label: 'Strong-ringgit programme (managed appreciation, reserve-currency push)', kind: 'slider', min: 0, max: 1, step: 0.1, initial: 0, unit: 'share', timing: 'tomorrow', rampDays: 90,
+    cycle: 'Policy signals and reserve diversification pull the ringgit up by as much as 8% over a quarter. Imports and foreign debt cost less; exporters and tourism lose price competitiveness.' },
 };
 export const LEVER_IDS = Object.keys(LEVERS) as LeverId[];
 
@@ -67,7 +80,7 @@ const FOREIGN_SHARE: Record<SectorId, number> = { fin: 0, prop: 0.3, util: 0.02,
 
 export function initialPolicy(enabled: boolean): PolicyState {
   const levers = Object.fromEntries(LEVER_IDS.map(id => [id, { value: LEVERS[id].initial, from: LEVERS[id].initial, announcedDay: -1, effectiveDay: -1, rampDays: LEVERS[id].rampDays }])) as Record<LeverId, PolicyLever>;
-  const mtd = { carbonTax: 0, workerLevy: 0, fdiGrants: 0, aiProgramme: 0, reskilling: 0, greenGrants: 0 };
+  const mtd = { carbonTax: 0, workerLevy: 0, fdiGrants: 0, aiProgramme: 0, reskilling: 0, greenGrants: 0, hubFees: 0, hubSpend: 0 };
   return { enabled, levers, aiAdoption: AI_ADOPTION0, aiEffective: AI_ADOPTION0, greenCapital: 0, emissionsIndex: 1, foreignWorkers: FOREIGN_WORKERS0, mtd, lastMonth: { ...mtd } } as PolicyState;
 }
 
@@ -166,11 +179,44 @@ export function aiMismatch(s: GameState): number {
   if (!s.policy?.enabled) return 0;
   return 0.1 * Math.max(0, s.policy.aiEffective - AI_ADOPTION0) * (1 - Math.min(1, leverValue(s, 'reskilling') / 2e9));
 }
+/** Investment-climate points from the hub policies (announced setting, so expectations move at once). */
+export function hubClimate(s: GameState, kind: string): number {
+  if (!s.policy?.enabled) return 0;
+  return 10 * leverTarget(s, 'hqRegime') + (kind === 'hq' ? 12 * leverTarget(s, 'hqRegime') : 0) + 6 * leverTarget(s, 'financialHub')
+    + 14 * leverTarget(s, 'freeZones') + 3 * leverTarget(s, 'goldenVisa');
+}
+/** Extra tourism demand (share of opening) from the golden visa and the promotion budget. */
+export function tourismLift(s: GameState): number {
+  if (!s.policy?.enabled) return 0;
+  return 0.05 * leverValue(s, 'goldenVisa') + 0.1 * Math.pow(Math.min(1, leverValue(s, 'tourismDrive') / 2e9), 0.7);
+}
+/** Free zones (D-103): share of each zone sector's activity inside the zones once the whole plan is open. Zone firms pay
+ * licence and land fees (0.2% of GDP a year in all) and are excused most corporate tax, so the lever trades tax for FDI. */
+const ZONE_SHARE: Partial<Record<SectorId, number>> = { ind: 0.3, tech: 0.3, fin: 0.15 };
+const ZONE_SHARE_TOTAL = 0.75;
+const ZONE_TAX_RELIEF = 0.8; // share of the corporate rate waived inside a zone
+/** Zone licence and land fees paid by sector j today (MYR); a business cost like the carbon tax. */
+export function zoneFeeDaily(s: GameState, j: SectorId): number {
+  if (!s.policy?.enabled) return 0;
+  return leverValue(s, 'freeZones') * 0.002 * s.indicators.nominalGdpAnnual / 365 * (ZONE_SHARE[j] ?? 0) / ZONE_SHARE_TOTAL;
+}
+/** Share of sector j's corporate tax rate waived by the free zones. */
+export function zoneTaxRelief(s: GameState, j: SectorId): number {
+  if (!s.policy?.enabled) return 0;
+  return leverValue(s, 'freeZones') * (ZONE_SHARE[j] ?? 0) * ZONE_TAX_RELIEF;
+}
+/** Golden-visa residents bid up housing (D-103): rents rise by up to 2% with the visa fully in force. */
+export function visaRentPressure(s: GameState): number {
+  if (!s.policy?.enabled) return 0;
+  return 0.02 * leverValue(s, 'goldenVisa');
+}
 /** Log FX effect (negative strengthens the ringgit) and volatility damping from capital controls. */
 export function capitalControls(s: GameState) {
   if (!s.policy?.enabled) return { fxLevel: 0, fxDamping: 0, yieldPremium: 0 };
   const hot = leverValue(s, 'hotMoneyControls');
-  return { fxLevel: -0.04 * leverValue(s, 'exportConversion'), fxDamping: 0.4 * hot, yieldPremium: 0.0015 * hot };
+  // Hub policies (D-098) pull the ringgit up as foreign money and reserve demand arrive.
+  const hubFx = -0.03 * leverValue(s, 'financialHub') - 0.08 * leverValue(s, 'ringgitPush');
+  return { fxLevel: -0.04 * leverValue(s, 'exportConversion') + hubFx, fxDamping: 0.4 * hot, yieldPremium: 0.0015 * hot };
 }
 
 // ---------------------------------------------------------------- settlement
@@ -196,6 +242,14 @@ export function dailyPolicy(s: GameState, purchases: Record<SectorId, number>): 
   const pInv = (s.sectors.ind.price + s.sectors.prop.price + s.sectors.tech.price) / 3;
   p.greenCapital = p.greenCapital * (1 - 0.04 * PER_YEAR) + green / pInv;
   p.mtd.workerLevy += post(s.government, 'policyLevy', leverValue(s, 'workerLevy') * p.foreignWorkers * 1e6 * PER_YEAR);
+  // Hub policies (D-098): grants and promotion buy local services. Offshore licence and visa fees are paid by non-residents,
+  // a transfer from abroad; free-zone fees are charged to zone firms in the daily production step instead (D-103).
+  const gdp = s.indicators.nominalGdpAnnual;
+  p.mtd.hubSpend += spend(s, purchases, leverValue(s, 'hqRegime') * 0.004 * gdp, { fin: 0.5, prop: 0.3, cons: 0.2 });
+  p.mtd.hubSpend += spend(s, purchases, leverValue(s, 'financialHub') * 0.0015 * gdp, { fin: 1 });
+  p.mtd.hubSpend += spend(s, purchases, leverValue(s, 'tourismDrive'), { cons: 0.7, tech: 0.2, fin: 0.1 });
+  const fees = (leverValue(s, 'financialHub') * 0.0025 + leverValue(s, 'goldenVisa') * 0.003) * gdp;
+  if (fees > 0) p.mtd.hubFees += post(s.government, 'policyLevy', fees * PER_YEAR);
 }
 
 /** Monthly: AI adoption, the foreign workforce and emissions. `operatingDataCentres` is MYR of operating FDI. */
@@ -221,7 +275,7 @@ export function monthClosePolicy(s: GameState, operatingDataCentres: number): vo
     hh.employed = Math.min(SECTOR_IDS.reduce((a, j) => a + s.sectors[j].employment, 0), hh.laborForce * 0.985);
   }
   p.lastMonth = { ...p.mtd };
-  p.mtd = { carbonTax: 0, workerLevy: 0, fdiGrants: 0, aiProgramme: 0, reskilling: 0, greenGrants: 0 };
+  p.mtd = { carbonTax: 0, workerLevy: 0, fdiGrants: 0, aiProgramme: 0, reskilling: 0, greenGrants: 0, hubFees: 0, hubSpend: 0 };
 }
 
 export function validatePolicy(p: PolicyState): void {

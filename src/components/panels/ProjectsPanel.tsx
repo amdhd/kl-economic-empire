@@ -49,7 +49,8 @@ export function ProjectsPanel() {
       )}
       <Section title="Available projects">
         <div className="grid grid-cols-2 gap-2">
-          {PROJECTS.map((t) => {
+          {PROJECTS.filter((t) => !t.national || nationalV2(g)).map((t) => {
+            const sc = t.national ? 1 : scale;
             const taken = gov.projects.some((p) => p.templateId === t.id && p.status !== 'cancelled');
             return (
               <div key={t.id} className="flex flex-col rounded-xl bg-slate-800/40 p-3 ring-1 ring-slate-600/20">
@@ -57,12 +58,13 @@ export function ProjectsPanel() {
                 <div className="num my-1 text-[11.5px] text-amber-200">≈ {money(t.cost * constructionPrice)} at current prices · {Math.round(t.durationDays / 30)} months</div>
                 <p className="mb-2 flex-1 text-[11.5px] text-slate-400">{t.description}</p>
                 <div className="mb-2 text-[11px] text-slate-300">
-                  {Object.entries(t.productivity).map(([k, v]) => `${k} +${((v as number) * scale * 100).toFixed(2)}%`).join(' · ')}
-                  {t.rentEffect ? ` · rents ${(t.rentEffect * scale * 100).toFixed(2)}%` : ''}
+                  {Object.entries(t.productivity).map(([k, v]) => `${k} +${((v as number) * sc * 100).toFixed(2)}%`).join(' · ')}
+                  {t.rentEffect ? ` · rents ${(t.rentEffect * sc * 100).toFixed(2)}%` : ''}
                   {t.resilience ? ` · flood damage −${t.resilience * 100}%` : ''}
-                  {t.tourism ? ` · tourism +${(t.tourism * scale * 100).toFixed(2)}%` : ''}
-                  {t.serviceEffect ? ` · services +${(t.serviceEffect * scale * 100).toFixed(1)}pt` : ''}
-                  {scale < 1 && <span className="text-slate-500"> · national effect = KL share ({(scale * 100).toFixed(0)}%) of city effect</span>}
+                  {t.tourism ? ` · tourism +${(t.tourism * sc * 100).toFixed(2)}%` : ''}
+                  {t.serviceEffect ? ` · services +${(t.serviceEffect * sc * 100).toFixed(1)}pt` : ''}
+                  {t.national && <span className="text-slate-500"> · regional: full national effect, no KL discount</span>}
+                  {sc < 1 && <span className="text-slate-500"> · national effect = KL share ({(sc * 100).toFixed(0)}%) of city effect</span>}
                 </div>
                 <button className="btn btn-primary" disabled={taken} onClick={() => setPick(t)} data-testid={`project-${t.id}`}>{taken ? 'Commissioned' : 'Commission'}</button>
               </div>

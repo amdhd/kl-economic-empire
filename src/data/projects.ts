@@ -13,6 +13,8 @@ export interface ProjectTemplate {
   resilience: number; // share of flood damage avoided
   tourism: number; // permanent tourism demand uplift
   description: string;
+  /** Regional project outside Kuala Lumpur (D-096): its effects reach the national economy at full strength, not at KL's share. */
+  national?: boolean;
 }
 
 export const PROJECTS: ProjectTemplate[] = [
@@ -24,5 +26,20 @@ export const PROJECTS: ProjectTemplate[] = [
   { id: 'clinics', name: 'Community clinics network', kind: 'health', cost: 0.5e9, durationDays: 150, productivity: { health: 0.01 }, rentEffect: 0, serviceEffect: 0.05, resilience: 0, tourism: 0, description: '40 clinics. Raises service quality and satisfaction quickly.' },
   { id: 'heritage', name: 'Heritage & tourism quarter', kind: 'transport', cost: 0.7e9, durationDays: 210, productivity: { cons: 0.006 }, rentEffect: 0.003, serviceEffect: 0.005, resilience: 0, tourism: 0.06, description: 'Pedestrianised Merdeka–Petaling Street precinct. Boosts visitor demand.' },
 ];
+
+// Regional projects (D-096). Fictional, illustrative designs; sizes are game-balance assumptions, not estimates of real projects.
+// They are built by the same pipeline as the KL projects, so they cost real treasury cash and cannot fail or be cancelled by chance.
+const regional = (t: Omit<ProjectTemplate, 'national' | 'rentEffect' | 'resilience'> & Partial<Pick<ProjectTemplate, 'rentEffect' | 'resilience'>>): ProjectTemplate => ({ rentEffect: 0, resilience: 0, ...t, national: true });
+export const REGIONAL_PROJECTS: ProjectTemplate[] = [
+  regional({ id: 'jb_zone', name: 'Johor financial & special economic zone', kind: 'zone', cost: 6e9, durationDays: 720, productivity: { fin: 0.012, tech: 0.008, prop: 0.006, cons: 0.004 }, serviceEffect: 0.004, tourism: 0.008, description: 'A cross-border finance, logistics and tech zone beside Singapore. Pulls in firms, jobs and trade; big construction demand while it is built.' }),
+  regional({ id: 'rts_link', name: 'Johor–Singapore rapid transit link', kind: 'transport', cost: 3e9, durationDays: 450, productivity: { cons: 0.006, fin: 0.004, prop: 0.004 }, serviceEffect: 0.004, tourism: 0.012, description: 'A short cross-border rail shuttle for commuters and visitors. Speeds up the Johor zone and lifts tourism.' }),
+  regional({ id: 'penang_port', name: 'Penang port & logistics expansion', kind: 'port', cost: 3.2e9, durationDays: 540, productivity: { ind: 0.014, cons: 0.004, tech: 0.002 }, serviceEffect: 0.002, tourism: 0, description: 'Deeper berths, new cranes and a container yard for the northern industrial belt. Lowers freight costs for factories.' }),
+  regional({ id: 'klang_gateway', name: 'Port Klang gateway upgrade', kind: 'port', cost: 4e9, durationDays: 600, productivity: { ind: 0.015, cons: 0.006, fin: 0.002 }, serviceEffect: 0.002, tourism: 0, description: 'More container capacity and rail links at the main national gateway. Helps every goods exporter.' }),
+  regional({ id: 'ecrl', name: 'East Coast rail link', kind: 'transport', cost: 8e9, durationDays: 720, productivity: { ind: 0.01, cons: 0.006, prop: 0.006 }, serviceEffect: 0.006, tourism: 0.015, description: 'A long rail line joining the east coast to the west. Opens land, jobs and tourism; the largest regional build.' }),
+  regional({ id: 'kulim_tech', name: 'Kulim high-tech & chip park', kind: 'industrial', cost: 2.5e9, durationDays: 540, productivity: { tech: 0.015, ind: 0.01 }, serviceEffect: 0.002, tourism: 0, description: 'Serviced land, power and water for chip and electronics plants. Raises tech and industrial productivity.' }),
+  regional({ id: 'borneo_energy', name: 'Borneo hydro & green-energy grid', kind: 'energy', cost: 4e9, durationDays: 600, productivity: { util: 0.02, ind: 0.006, tech: 0.004 }, serviceEffect: 0.004, tourism: 0, description: 'Hydro and solar with a long transmission line. Cheaper, cleaner power lifts utilities and heavy industry.' }),
+  regional({ id: 'langkawi_hub', name: 'Langkawi airport & tourism hub', kind: 'transport', cost: 1.5e9, durationDays: 360, productivity: { cons: 0.004 }, serviceEffect: 0.002, tourism: 0.03, description: 'A bigger terminal, longer runway and resort infrastructure. A strong boost to tourism for a small price.' }),
+];
+PROJECTS.push(...REGIONAL_PROJECTS);
 
 export const PROJECT_BY_ID = Object.fromEntries(PROJECTS.map((p) => [p.id, p])) as Record<string, ProjectTemplate>;

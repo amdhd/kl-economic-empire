@@ -1,4 +1,4 @@
-// Year in review and next-year budget plan (D-095). Read-only: everything is derived from the closed monthly reports,
+// Year in review and next-year budget plan (D-107). Read-only: everything is derived from the closed monthly reports,
 // so it works for any save and never touches the simulation or the rng.
 import { budgetFor, BUDGET_LABELS } from '../data/economic-baseline';
 import type { BudgetCategory, BudgetPolicy, GameState, MonthlyReport } from '../types/game';

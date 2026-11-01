@@ -178,7 +178,8 @@ export const NATIONAL_SCALE_V3 = nationalScale(BASE_BUDGET, NATIONAL_GDP - RESOU
 export const CAL: Calibration = calibrate(BASELINE, BASE_BUDGET, NATIONAL_SCALE_V3, DEVELOPMENT_ANNUAL0, NATIONAL_TREND.capitalGrowth, NATIONAL_DEMAND.importedConsumption);
 export const calibrationFor = (s: Pick<GameState, 'baseline'>): Calibration =>
   s.baseline.profile === 'legacy-kl' ? LEGACY_CAL : s.baseline.model === 1 ? CAL_V1 : s.baseline.model === 2 ? CAL_V2 : CAL;
-/** Boom mode (D-079): a small open economy sells what it can make, so foreign demand scales with sector capacity. 1 in realistic campaigns. */
-export const exportReach = (s: Pick<GameState, 'baseline' | 'mode' | 'sectors'>, j: SectorId): number =>
-  boomOn(s) ? Math.pow(Math.max(1, s.sectors[j].capacity / calibrationFor(s).cap0[j]), BOOM.exportCapacityElasticity) : 1;
+/** Boom mode (D-079): a small open economy sells what it can make, so foreign demand scales with sector capacity. 1 in realistic campaigns.
+ * Capacity is what infrastructure lets the sector use (D-099), so a power, transport or housing bottleneck stops export demand growing. */
+export const exportReach = (s: Pick<GameState, 'baseline' | 'mode' | 'sectors' | 'infra'>, j: SectorId): number =>
+  boomOn(s) ? Math.pow(Math.max(1, (s.sectors[j].capacity * (s.infra?.mult[j] ?? 1)) / calibrationFor(s).cap0[j]), BOOM.exportCapacityElasticity) : 1;
 export const SECTOR_INDEX: Record<SectorId, number> = Object.fromEntries(SECTOR_IDS.map((s, i) => [s, i])) as Record<SectorId, number>;

@@ -33,18 +33,10 @@ export function syncInvestmentDeals(s: GameState): void {
     }
   }
 }
-export function investorAsk(s: GameState, d: Deal): number {
-  const p = s.fdi.pledges.find((p) => p.id === d.pledgeId)!;
-  // Looser investors (D-086): in the Deal Room they settle for 15% less grant than they first ask.
-  return clamp(
-    0.85 *
-      (p.ask +
-        0.2 * (d.terms.localShare - FDI_KINDS[p.kind].domesticShare) +
-        0.03 * (d.terms.jobsShare - 1) +
-        0.02 * (p.buildMonths / d.terms.months - 1)),
-    0,
-    0.3,
-  );
+/** D-097: investors accept any grant, including none, so the minimum they ask in the Deal Room is zero. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- signature kept for callers; the rule no longer reads these
+export function investorAsk(_s: GameState, _d: Deal): number {
+  return 0;
 }
 export function offerInvestment(s: GameState, id: number, terms: Partial<Deal['terms']>): string | null {
   const d = s.deals.items.find((d) => d.id === id);

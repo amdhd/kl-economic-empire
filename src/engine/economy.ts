@@ -6,7 +6,7 @@ import { calibrationFor, exportReach } from './calibration';
 import { baselineFor, demandFor, nationalV2, trendFor } from '../data/economic-baseline';
 import { COMMODITY_IMPORT, UTILITY_FUEL_PASSTHROUGH, FUEL_CPI_WEIGHT, HOUSEHOLD_EQUITY0, PUBLIC_CAPITAL_ELASTICITY, WEALTH_MPC } from '../data/world';
 import { publicCapitalFactor } from './fiscal-rules';
-import { aiMismatch, aiProductivity, carbonCost, EMISSION_INTENSITY, greenFuelSaving, hiringBoost, labourCostMultiplier, wageMultiplier, abatement } from './policy';
+import { aiMismatch, aiProductivity, carbonCost, EMISSION_INTENSITY, greenFuelSaving, hiringBoost, labourCostMultiplier, tourismLift, visaRentPressure, wageMultiplier, zoneFeeDaily, abatement } from './policy';
 import { fdiExports } from './fdi';
 import { infraCapacityMult } from './infrastructure';
 import { palmHouseholdDelta } from './soe';
@@ -40,6 +40,8 @@ export interface DayEconomy {
   inputImports: number;
   consumerImports: number;
   displaced: Vec;
+  /** Share of each sector's demand it could produce today (1 unless capacity or labour binds; D-099). */
+  served: Vec;
 }
 
 /** Share of steel imports replaced by domestic producers under a safeguard duty (ASSUMPTION). */
@@ -121,7 +123,7 @@ export function exportIndex(s: GameState, j: SectorId): number {
   // Model 2: goods exports are shared across trading partners, whose cycles, tariffs and agreements set access.
   const access = nationalV2(s) ? s.world.exportAccess : 1;
   idx += (mix.global ?? 0) * e.globalDemand * access * Math.pow(rel, -0.6);
-  idx += (mix.tourism ?? 0) * e.tourism * (1 + s.government.tourismBoost) * levyHit * Math.pow(rel, -0.8);
+  idx += (mix.tourism ?? 0) * e.tourism * (1 + s.government.tourismBoost + tourismLift(s)) * levyHit * Math.pow(rel, -0.8);
   idx += (mix.tech ?? 0) * Math.sqrt(e.techCycle * e.globalDemand) * access * Math.pow(rel, -0.5);
   return idx * (1 + s.trade.readiness);
 }
@@ -245,10 +247,11 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
   let tariffReceipts = 0;
   let steelDutyReceipts = 0;
   let bilateralReceipts = 0;
-  let carbonTax = 0, emissions = 0, emissions0 = 0;
+  let carbonTax = 0, zoneFees = 0, emissions = 0, emissions0 = 0;
   let wheatImports = 0;
   let riceImports = 0;
   let inputImports = 0;
+  const served = zero();
   SECTOR_IDS.forEach((j, idx) => {
     const sec = s.sectors[j];
     const boost = productivityBoost(s, j);
@@ -260,6 +263,7 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
     sec.utilization = Math.max(demand / cap, (demand / laborCap) * LABOR_STRETCH * NORMAL_UTIL);
     const out = Math.min(demand, cap, laborCap);
     sec.output = out;
+    served[j] = demand > 0 ? out / demand : 1;
     const gross = sec.price * out;
     const ic = importCost(s, j);
     const req = SECTORS[j].importShare * out;
@@ -285,7 +289,9 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
     carbonTax += carbon;
     emissions += EMISSION_INTENSITY[j] * out;
     emissions0 += EMISSION_INTENSITY[j] * CAL.Y0[j];
-    const profit = va - labourCost - dep - interest - propLevy - carbon;
+    const zoneFee = zoneFeeDaily(s, j); // free-zone licence and land fees (D-103)
+    zoneFees += zoneFee;
+    const profit = va - labourCost - dep - interest - propLevy - carbon - zoneFee;
     sec.mtd.output += out;
     sec.mtd.nominalOutput += gross;
     sec.mtd.va += va;
@@ -302,6 +308,7 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
   const tariffPaid = post(s.government, 'importTariff', tariffReceipts);
   if (s.policy?.enabled) {
     s.policy.mtd.carbonTax += post(s.government, 'policyLevy', carbonTax);
+    s.policy.mtd.hubFees += post(s.government, 'policyLevy', zoneFees);
     s.policy.emissionsIndex = emissions * (1 - abatement(s)) / Math.max(1e-9, emissions0);
   }
   const steelDutyPaid = post(s.government, 'commodityDuty', steelDutyReceipts);
@@ -332,7 +339,7 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
   }
   for (const j of SECTOR_IDS) s.sectors[j].price = clamp(nextP[j], 0.3, 5);
   const prop = s.sectors.prop;
-  const rentTarget = prop.price * s.government.housingFactor * clamp(1 + 0.8 * (prop.avgUtil - NORMAL_UTIL), 0.8, 1.3) * (1 + 0.5 * (tax.property - BASE_TAX.property));
+  const rentTarget = prop.price * s.government.housingFactor * clamp(1 + 0.8 * (prop.avgUtil - NORMAL_UTIL), 0.8, 1.3) * (1 + 0.5 * (tax.property - BASE_TAX.property)) * (1 + visaRentPressure(s));
   hh.rentIndex += RENT_SPEED * (rentTarget - hh.rentIndex);
   s.indicators.cpi = computeCpi(s);
 
@@ -343,7 +350,7 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
   hh.mtd.debtService += interestH + amortH;
   hh.mtd.disposable += disposable;
   hh.mtd.consumption += spending + credit;
-  return { gdpNominal, gdpReal, levy, householdTax, inputImports, consumerImports: importedConsumption, displaced };
+  return { gdpNominal, gdpReal, levy, householdTax, inputImports, consumerImports: importedConsumption, displaced, served };
 }
 
 /** Basket-weighted domestic prices excluding the consumption levy and pump prices (1 at opening). */
@@ -443,15 +450,18 @@ export function monthClose(s: GameState, inflationYoY: number, unemployment: num
   const newHh = hhDemand * ratio;
   hh.newCreditMonthly = newHh;
 
+  // Only investment goods the supplying sectors could make become capital (D-099): when machinery or construction is
+  // rationed, the unmet part of investment spending adds no capacity.
+  const delivered = investmentDelivery(s);
   for (const j of SECTOR_IDS) {
     const sec = s.sectors[j];
     const need = Math.max(0, desired[j] - internal[j]);
     sec.investmentMonthly = Math.max(0, Math.min(desired[j], internal[j]) + need * ratio);
     // capital & capacity
     const pInv = SECTOR_IDS.reduce((a, k) => a + (INVESTMENT_GOODS[k] ?? 0) * s.sectors[k].price, 0);
-    sec.capital += sec.investmentMonthly - (sec.capital * BASELINE.depreciation) / 12;
+    sec.capital += sec.investmentMonthly * delivered - (sec.capital * BASELINE.depreciation) / 12;
     const matured = sec.pipeline.shift() ?? 0;
-    sec.pipeline.push(sec.investmentMonthly / pInv / CAL.capitalPerCap[j]);
+    sec.pipeline.push((sec.investmentMonthly * delivered) / pInv / CAL.capitalPerCap[j]);
     sec.capacity += matured - (sec.capacity * BASELINE.depreciation) / 12;
     // Boom mode: the productivity boom also lifts output per machine, not only per worker.
     if (boom) sec.capacity *= 1 + BOOM.productivity / 12;
@@ -486,6 +496,18 @@ export function monthClose(s: GameState, inflationYoY: number, unemployment: num
 }
 
 /** New lending capacity this month: capital headroom × willingness. */
+/** Price-weighted share of this month's investment-goods demand that the supplying sectors produced (1 when none was
+ * rationed). Read at month close, before month-to-date totals reset. */
+export function investmentDelivery(s: GameState): number {
+  let want = 0, got = 0;
+  for (const k of SECTOR_IDS) {
+    const w = (INVESTMENT_GOODS[k] ?? 0) * s.sectors[k].price, m = s.sectors[k].mtd;
+    want += w;
+    got += w * (m.demand > 0 ? Math.min(1, m.output / m.demand) : 1);
+  }
+  return want > 0 ? got / want : 1;
+}
+
 export function creditSupply(s: GameState): number {
   const b = s.bank;
   const loans = b.loansH + b.loansF;

@@ -4,7 +4,8 @@ import { DEVELOPMENT_ANNUAL0 } from '../../data/world';
 import { debtMYR, outlaysOf, ratingLabel, revenueOf, treasuryMYR } from '../../engine/government';
 import { estimateTaxChange } from '../../engine/policy-preview';
 import { useGame, useGameState, type PanelId } from '../../store/game-store';
-import type { BudgetCategory, GameState, SectorId, TaxPolicy } from '../../types/game';
+import type { BudgetCategory, GameState, GovMonthFlows, SectorId, TaxPolicy } from '../../types/game';
+import { daysInMonth } from '../../engine/time';
 import { fullMoneyMinor, gdpUsd, money, num as numFmt, pct } from '../../utils/format';
 import { NON_TAX_REVENUE_2027 } from '../../data/non-tax-revenue';
 import { householdDemand } from '../../engine/economy';
@@ -69,6 +70,20 @@ function monthFlows(g: GameState) {
   return { flows: last?.gov ?? g.government.mtd, label: last ? `${last.label} (closed)` : 'This month so far' };
 }
 
+/** A year of fiscal flows: the last 12 closed months, or the closed months so far scaled up to a year. Before the first
+ * close it scales up this month so far. `development` is the development-programme part of capex. */
+function annualFlows(g: GameState) {
+  const recent = g.reports.slice(-12);
+  const parts = recent.length ? recent.map((r) => ({ f: r.gov, dev: r.developmentPaid ?? 0, days: daysInMonth(Math.floor(r.monthKey / 12), (r.monthKey % 12) + 1) }))
+    : [{ f: g.government.mtd, dev: g.government.mtdDevelopmentPaid ?? 0, days: Math.max(1, g.scheduler.mtdDays) }];
+  const days = parts.reduce((a, p) => a + p.days, 0);
+  const k = recent.length === 12 ? 1 : 365 / days;
+  const flows = Object.fromEntries((Object.keys(parts[0].f) as (keyof GovMonthFlows)[]).map((key) => [key, parts.reduce((a, p) => a + (p.f[key] ?? 0), 0) * k])) as unknown as GovMonthFlows;
+  const development = parts.reduce((a, p) => a + p.dev, 0) * k;
+  const label = recent.length === 12 ? 'last 12 months' : recent.length ? `${recent.length} month${recent.length > 1 ? 's' : ''} so far, scaled to a year` : 'this month so far, scaled to a year';
+  return { flows, development, label };
+}
+
 export function EconomyWindow() {
   const g = useGameState();
   const setPanel = useGame.getState().setPanel;
@@ -100,6 +115,24 @@ function Balance({ balance, label }: { balance: number; label: string }) {
     <div className="econ-balance" title={`Revenue minus outlays · ${label}`}>
       <span>MONTHLY BALANCE<small>{label}</small></span>
       <b className={`econ-amount ${balance < 0 ? 'out' : 'in'}`} data-testid="monthly-balance"><span>{balance < 0 ? '−' : '+'}</span>{money(Math.abs(balance))}</b>
+    </div>
+  );
+}
+
+/** Pinned list footer: the tab's yearly total, the other side of the budget, and the annual balance (the same measure
+ * as the fiscal rule's deficit) above the last closed month. */
+function AnnualBalance({ g, balance, label, total, other }: { g: GameState; balance: number; label: string; total: ReactNode; other: 'revenue' | 'spending' }) {
+  const year = annualFlows(g);
+  const revenue = revenueOf(year.flows), spending = outlaysOf(year.flows), net = revenue - spending;
+  return (
+    <div className="econ-annual" data-testid="annual-balance-block">
+      {total}
+      {other === 'revenue' ? <Line label={`Revenue · per year (${year.label})`} value={money(revenue)} tone="in" /> : <Line label={`Spending · per year (${year.label})`} value={money(spending)} tone="out" />}
+      <div className="econ-balance" title={`Revenue minus spending · ${year.label}`}>
+        <span>ANNUAL BALANCE<small>{year.label} · {pct(Math.abs(net) / Math.max(1, g.indicators.nominalGdpAnnual), 2)} of GDP</small></span>
+        <b className={`econ-amount ${net < 0 ? 'out' : 'in'}`} data-testid="annual-balance"><span>{net < 0 ? '−' : '+'}</span>{money(Math.abs(net))}</b>
+      </div>
+      <Balance balance={balance} label={label} />
     </div>
   );
 }
@@ -148,7 +181,11 @@ function Budget({ g, balance, label }: { g: GameState; balance: number; label: s
   const [draft, setDraft] = useState<Record<string, number>>({});
   const value = draft[sel] ?? current;
   const share = opening > 0 ? value / opening : 1;
-  const { flows } = monthFlows(g);
+  const year = annualFlows(g);
+  const yf = year.flows;
+  const builds = Math.max(0, yf.capex - year.development);
+  const budgetTotal = CATS.reduce((a, k) => a + 12 * (pending(k) ?? pol[k]), 0) + (g.world.enabled ? devPending ?? g.fiscal.developmentAnnual : 0)
+    + builds + yf.policyGrant + yf.exportSupport + yf.emergency + yf.interest + yf.subsidy;
   const outcome = sel === 'health' || sel === 'services' || sel === 'safety' ? g.controls.outcomes[sel] : null;
   const apply = () => {
     if (isDev) command({ type: 'setDevelopment', annual: value * 12 });
@@ -160,9 +197,14 @@ function Budget({ g, balance, label }: { g: GameState; balance: number; label: s
       <div className="econ-list">
         {CATS.map((k) => <Row key={k} icon={BUDGET_INFO[k].icon} label={BUDGET_LABELS[k]} amount={money(12 * (pending(k) ?? pol[k]))} tone="out" active={sel === k} onClick={() => setSel(k)} testid={`econ-budget-${k}`} color={LINE_COLOR[k]} />)}
         {g.world.enabled && <Row icon="projects" label="Development (capital)" amount={money(devPending ?? g.fiscal.developmentAnnual)} tone="out" active={isDev} onClick={() => setSel('devex')} testid="econ-budget-devex" color={LINE_COLOR.devex} />}
-        <Row icon="debt" label="Debt interest" amount={money(flows.interest)} tone="out" onClick={() => undefined} color={LINE_COLOR.interest} />
-        {g.world.enabled && <Row icon="commodities" label="Fuel & food subsidies" amount={money(flows.subsidy)} tone="out" onClick={go('commodities')} color={LINE_COLOR.subsidy} />}
-        <Balance balance={balance} label={label} />
+        <Row icon="projects" label="Projects & infrastructure builds" amount={money(builds)} tone="out" onClick={go(g.infra ? 'infra' : 'projects')} color={LINE_COLOR.devex} testid="econ-budget-builds" />
+        <Row icon="fdi" label="FDI & policy grants" amount={money(yf.policyGrant)} tone="out" onClick={go('fdi')} color={LINE_COLOR.transfers} testid="econ-budget-grants" />
+        {yf.exportSupport > 0 && <Row icon="trade" label="Export support" amount={money(yf.exportSupport)} tone="out" onClick={go('trade')} color={LINE_COLOR.tariff} />}
+        {yf.emergency > 0 && <Row icon="debt" label="Emergency relief" amount={money(yf.emergency)} tone="out" onClick={() => undefined} color={LINE_COLOR.health} />}
+        <Row icon="debt" label="Debt interest" amount={money(yf.interest)} tone="out" onClick={go('debt')} color={LINE_COLOR.interest} />
+        {g.world.enabled && <Row icon="commodities" label="Fuel & food subsidies" amount={money(yf.subsidy)} tone="out" onClick={go('commodities')} color={LINE_COLOR.subsidy} />}
+        <AnnualBalance g={g} balance={balance} label={label} other="revenue"
+          total={<div className="econ-total" data-testid="budget-total"><span>TOTAL SPENDING · PER YEAR<small>budget lines in force; other lines {year.label}</small></span><b className="econ-amount out"><span>−</span>{money(budgetTotal)}</b></div>} />
       </div>
       <Detail title={isDev ? 'Development (capital)' : BUDGET_LABELS[sel]} action={<button className="btn" onClick={() => setDraft({ ...draft, [sel]: opening })}>RESET</button>}>
         <label className="econ-slider">
@@ -201,20 +243,24 @@ function Taxation({ g, balance, label }: { g: GameState; balance: number; label:
   const value = draft[sel] ?? current;
   const meta = TAX_LABELS[sel];
   const { flows } = monthFlows(g);
+  const year = annualFlows(g), yf = year.flows;
   const receipts: Record<keyof TaxPolicy, number> = { corporate: flows.taxCorporate, property: flows.taxProperty, consumption: flows.taxConsumption, household: flows.taxHousehold, incomeTax: flows.taxIncome };
+  const annual: Record<keyof TaxPolicy, number> = { corporate: yf.taxCorporate, property: yf.taxProperty, consumption: yf.taxConsumption, household: yf.taxHousehold, incomeTax: yf.taxIncome };
   const TAX_KEYS = activeTaxKeys(g);
   const effect = estimateTaxChange(g, { ...pol, [sel]: value })[sel];
   return (
     <div className="econ-columns">
       <div className="econ-list">
-        {TAX_KEYS.map((k) => <Row key={k} icon="policies" label={`${TAX_SHORT[k]} · ${pct(pending(k) ?? pol[k], 1)}`} amount={money(receipts[k])} tone="in" active={sel === k} onClick={() => setSel(k)} testid={`econ-tax-${k}`} color={LINE_COLOR[k]} />)}
-        <Row icon="trade" label="Import tariffs" amount={money(flows.importTariff)} tone="in" onClick={go('trade')} color={LINE_COLOR.tariff} />
-        {g.world.enabled && <Row icon="soe" label="Petroleum income tax" amount={money(flows.petroleumTax)} tone="in" onClick={go('soe')} color={LINE_COLOR.petroleum} />}
-        {g.world.enabled && <Row icon="soe" label="SOE dividends" amount={money(flows.soeDividend)} tone="in" onClick={go('soe')} color={LINE_COLOR.soe} />}
-        {g.world.enabled && <Row icon="commodities" label="Commodity duties" amount={money(flows.commodityDuty)} tone="in" onClick={go('commodities')} color={LINE_COLOR.duty} />}
-        {g.baseline.nonTax && <Row icon="sources" label="Fees, licences & fines" amount={money(flows.nonTaxRevenue)} tone="in" onClick={() => undefined} color={LINE_COLOR.other} testid="econ-nontax" />}
-        <Row icon="sources" label="Other public receipts" amount={money(flows.federalGrant)} tone="in" color={LINE_COLOR.other} />
-        <Balance balance={balance} label={label} />
+        {TAX_KEYS.map((k) => <Row key={k} icon="policies" label={`${TAX_SHORT[k]} · ${pct(pending(k) ?? pol[k], 1)}`} amount={money(annual[k])} tone="in" active={sel === k} onClick={() => setSel(k)} testid={`econ-tax-${k}`} color={LINE_COLOR[k]} />)}
+        <Row icon="trade" label="Import tariffs" amount={money(yf.importTariff)} tone="in" onClick={go('trade')} color={LINE_COLOR.tariff} />
+        {g.world.enabled && <Row icon="soe" label="Petroleum income tax" amount={money(yf.petroleumTax)} tone="in" onClick={go('soe')} color={LINE_COLOR.petroleum} />}
+        {g.world.enabled && <Row icon="soe" label="SOE dividends" amount={money(yf.soeDividend)} tone="in" onClick={go('soe')} color={LINE_COLOR.soe} />}
+        {g.world.enabled && <Row icon="commodities" label="Commodity duties" amount={money(yf.commodityDuty)} tone="in" onClick={go('commodities')} color={LINE_COLOR.duty} />}
+        {g.policy?.enabled && <Row icon="policies" label="Policy levies & hub fees" amount={money(yf.policyLevy)} tone="in" onClick={go('decisions')} color={LINE_COLOR.duty} testid="econ-levies" />}
+        {g.baseline.nonTax && <Row icon="sources" label="Fees, licences & fines" amount={money(yf.nonTaxRevenue)} tone="in" onClick={() => undefined} color={LINE_COLOR.other} testid="econ-nontax" />}
+        <Row icon="sources" label="Other public receipts" amount={money(yf.federalGrant)} tone="in" color={LINE_COLOR.other} />
+        <AnnualBalance g={g} balance={balance} label={label} other="spending"
+          total={<div className="econ-total" data-testid="revenue-total"><span>TOTAL REVENUE · PER YEAR<small>{year.label}</small></span><b className="econ-amount in"><span>+</span>{money(revenueOf(yf))}</b></div>} />
       </div>
       <Detail title={meta.label} action={<button className="btn" onClick={() => setDraft({ ...draft, [sel]: pol[sel] })}>RESET</button>}>
         <label className="econ-slider reverse">
@@ -223,6 +269,7 @@ function Taxation({ g, balance, label }: { g: GameState; balance: number; label:
         </label>
         <div className="econ-section">
           <h4>REVENUES</h4>
+          <Line label={`Receipts · per year (${year.label})`} value={money(annual[sel])} tone="in" />
           <Line label={`Receipts · ${label}`} value={money(receipts[sel])} tone="in" />
           <Line label="Static estimate of change" value={money(Math.abs(effect))} tone={effect >= 0 ? 'in' : 'out'} />
         </div>

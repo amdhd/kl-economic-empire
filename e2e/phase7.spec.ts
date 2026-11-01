@@ -5,6 +5,7 @@ type Dev = { __klDev: { state: () => GameState } };
 const state = (page: import('@playwright/test').Page) => page.evaluate(() => (window as unknown as Dev).__klDev.state());
 
 test('fiscal rules, commodities, partners and state enterprises can be reviewed and applied', async ({ page }) => {
+  test.slow(); // simulates about 75 game days and drives many panels: close to the 60s budget on a loaded CI runner
   await startCampaign(page);
   await runHours(page, 24 * 40);
 

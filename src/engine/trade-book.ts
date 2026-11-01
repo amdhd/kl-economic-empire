@@ -13,6 +13,8 @@ import { PARTNER_IDS, PARTNERS } from '../data/world';
 import type { GameState, PartnerId, SectorId, TradeBookState, TradeDeal, TradeMonth } from '../types/game';
 import { exportReach } from './calibration';
 import { exportContractFlows } from './export-contracts';
+import { fdiExports } from './fdi';
+import { tourismLift } from './policy';
 import { post } from './government';
 import { BOOM, boomOn } from '../data/boom';
 import { clamp, news, pushBounded } from './util';
@@ -40,7 +42,7 @@ function driverLevels(s: GameState): Record<TradeDriver, number> {
   return {
     semis: e.drivers.semis, industrial: e.drivers.industrial, oil: e.oil, palm: w.prices.palm * w.palmVolume,
     industrialOil: Math.sqrt(e.drivers.industrial * e.oil), steel: w.prices.steel * Math.sqrt(e.drivers.industrial), gas: w.prices.gas * prod,
-    crude: e.oil * prod, consumer: e.drivers.consumer, global: e.globalDemand, tourism: e.tourism * (1 + s.government.tourismBoost), tech: e.techCycle,
+    crude: e.oil * prod, consumer: e.drivers.consumer, global: e.globalDemand, tourism: e.tourism * (1 + s.government.tourismBoost + tourismLift(s)), tech: e.techCycle,
   };
 }
 
@@ -113,6 +115,20 @@ export function policyGains(s: GameState): { promotion: Record<ExportProductId, 
   return { promotion, deals, byPartner };
 }
 
+/** Exports of operating FDI plants (core `fdiExports`, already in the core's foreign demand) in MYR/day, shared across
+ * each sector's manufactured and service products by today's base exports (D-099). Without it the ledger misses the
+ * plants' sales, which dominate Boom-mode exports. */
+export function fdiProductExports(s: GameState, base: Record<ExportProductId, number>): Record<ExportProductId, number> {
+  const out = zeroBy(EXPORT_PRODUCT_IDS), fdiX = fdiExports(s);
+  for (const j of SECTOR_IDS) {
+    if (!(fdiX[j] > 0)) continue;
+    const ids = EXPORT_PRODUCT_IDS.filter((id) => EXPORT_PRODUCTS[id].sector === j && !EXPORT_PRODUCTS[id].commodity);
+    const total = ids.reduce((a, id) => a + base[id], 0);
+    for (const id of ids) out[id] = (fdiX[j] * s.sectors[j].price * (total > 0 ? base[id] / total : 1 / ids.length));
+  }
+  return out;
+}
+
 // ------------------------------------------------------------------ daily settlement
 
 /** Before the economy step: pay promotion programmes, settle talks, and set today's policy exports and concessions. */
@@ -136,14 +152,14 @@ export function prepareTradeDay(s: GameState, day: number, purchases: Record<Sec
 
   for (const d of tb.deals) if (d.status === 'talks' && d.concludeDay !== null && day >= d.concludeDay) concludeTalks(s, d, day);
 
-  const base = baseExports(s), gains = policyGains(s), contracts = exportContractFlows(s);
+  const base = baseExports(s), gains = policyGains(s), contracts = exportContractFlows(s), fdi = fdiProductExports(s, base);
   const exports = zeroBy(EXPORT_PRODUCT_IDS);
   tb.policyReal = zeroBy(SECTOR_IDS);
   let policyExports = 0, importedContent = 0;
   for (const id of EXPORT_PRODUCT_IDS) {
     const p = EXPORT_PRODUCTS[id];
     const won = base[id] * (gains.promotion[id] + gains.deals[id]) + contracts.volume[id];
-    exports[id] = base[id] + won + contracts.hedge[id];
+    exports[id] = base[id] + won + contracts.price[id] + fdi[id];
     policyExports += won;
     // Extra exports carry imported parts: only the domestic content becomes new demand for the supplying sector.
     importedContent += won * (1 - p.domesticContent);
@@ -157,7 +173,7 @@ export function prepareTradeDay(s: GameState, day: number, purchases: Record<Sec
   for (const j of SECTOR_IDS) tb.displacement[j] = Math.min(0.05, tb.displacement[j]);
 
   // Goods exports by partner: opening destination shares, moved by each partner's access, plus deal and contract gains.
-  const goodsBase = GOODS_PRODUCT_IDS.reduce((a, id) => a + base[id] * (1 + gains.promotion[id]) + contracts.hedge[id], 0);
+  const goodsBase = GOODS_PRODUCT_IDS.reduce((a, id) => a + base[id] * (1 + gains.promotion[id]) + contracts.price[id] + fdi[id], 0);
   const weights = Object.fromEntries(PARTNER_IDS.map((k) => [k, partnerExportShare(k) * partnerAccessTerm(s, k) / tb.base.access[k]])) as Record<PartnerId, number>;
   const wSum = PARTNER_IDS.reduce((a, k) => a + weights[k], 0);
   const partners = zeroBy(PARTNER_IDS);
@@ -168,7 +184,7 @@ export function prepareTradeDay(s: GameState, day: number, purchases: Record<Sec
   tb.day = { ...tb.day, exports, partners, promotion, policyExports, importedContent };
 }
 
-export interface TradeDayInputs { inputImports: number; consumerImports: number; displaced: Record<SectorId, number>; fdiImports: number; gdpNominal: number }
+export interface TradeDayInputs { inputImports: number; consumerImports: number; displaced: Record<SectorId, number>; served: Record<SectorId, number>; fdiImports: number; gdpNominal: number }
 
 /** After the economy step: imports by end use (indexed to the core model's flows) and the month-to-date ledger. */
 export function recordTradeDay(s: GameState, x: TradeDayInputs): void {
@@ -178,7 +194,16 @@ export function recordTradeDay(s: GameState, x: TradeDayInputs): void {
   if (!tb.base.captured) {
     tb.base = { ...tb.base, inputImports: Math.max(x.inputImports, 1), consumerImports: Math.max(x.consumerImports, 1), investment: Math.max(investment, 1), gdp: Math.max(x.gdpNominal, 1), captured: true };
   }
-  const exports = tb.day.exports;
+  // Manufactures and services ship only what their sector could produce today, as in the core model (D-099);
+  // commodities sell from resource output at world prices. Partner flows, policy gains and their imported parts scale alike.
+  const before = tb.day.exports;
+  const exports = { ...before };
+  for (const id of EXPORT_PRODUCT_IDS) if (!EXPORT_PRODUCTS[id].commodity) exports[id] *= x.served[EXPORT_PRODUCTS[id].sector] ?? 1;
+  const goodsBefore = GOODS_PRODUCT_IDS.reduce((a, id) => a + before[id], 0), allBefore = EXPORT_PRODUCT_IDS.reduce((a, id) => a + before[id], 0);
+  const goodsShare = goodsBefore > 0 ? GOODS_PRODUCT_IDS.reduce((a, id) => a + exports[id], 0) / goodsBefore : 1;
+  const allShare = allBefore > 0 ? EXPORT_PRODUCT_IDS.reduce((a, id) => a + exports[id], 0) / allBefore : 1;
+  const partners = Object.fromEntries(PARTNER_IDS.map((k) => [k, tb.day.partners[k] * goodsShare])) as Record<PartnerId, number>;
+  tb.day = { ...tb.day, exports, partners, policyExports: tb.day.policyExports * allShare, importedContent: tb.day.importedContent * allShare };
   const goods0 = GOODS_PRODUCT_IDS.reduce((a, id) => a + openingDaily(s, EXPORT_PRODUCTS[id].value2025), 0);
   const goodsNow = GOODS_PRODUCT_IDS.reduce((a, id) => a + exports[id], 0);
   const opening = (c: ImportCategoryId) => openingDaily(s, IMPORT_CATEGORIES[c].value2025);
@@ -237,8 +262,10 @@ export function setProgramme(s: GameState, id: ProgrammeId, budgetAnnual: number
 
 /** The concession a partner prefers, and how deep an offer must go for it to accept our ask. */
 const PREFERRED: Record<PartnerId, ConcessionId> = { SG: 'services', US: 'services', CN: 'industrial', EU: 'procurement', JP: 'industrial', ASEAN: 'consumer', IN: 'consumer', ROW: 'consumer' };
-export function requiredDepth(s: GameState, k: PartnerId, ask: 1 | 2): number {
-  return ask * (1.3 - s.world.partners[k].relations / 100) * (boomOn(s) ? BOOM.tradeNeedScale : 1);
+/** D-097: partners accept any offer, including giving nothing, so no depth is required. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- signature kept for callers; the rule no longer reads these
+export function requiredDepth(_s: GameState, _k: PartnerId, _ask: 1 | 2): number {
+  return 0;
 }
 export const offerValue = (k: PartnerId, concession: ConcessionId, give: number, s?: Pick<GameState, 'mode'>) => give * (concession === PREFERRED[k] ? 1 : s && boomOn(s) ? BOOM.tradeOtherConcession : 0.6);
 
@@ -260,9 +287,7 @@ export function tradeDealCommand(s: GameState, cmd: TradeDealAction): string | n
     if (tb.deals.some((d) => d.partner === cmd.partner && d.product === cmd.product && ['draft', 'talks', 'inForce'].includes(d.status))) return 'A deal for this product with this partner is already open or in force.';
     const w = s.world.partners[cmd.partner];
     if (w.ourTariff > 0 || w.theirTariff > 0) return 'Remove the tariff dispute with this partner before negotiating.';
-    const need = requiredDepth(s, cmd.partner, cmd.ask);
-    if (need > 2) return `Relations with ${PARTNERS[cmd.partner].name} are too weak for this ask. Try a tariff chapter or improve relations first.`;
-    const wanted = { concession: PREFERRED[cmd.partner], give: (need <= 1 ? 1 : 2) as 1 | 2 };
+    const wanted = { concession: PREFERRED[cmd.partner], give: 1 as 1 | 2 };
     tb.deals.push({ id: tb.nextDealId++, partner: cmd.partner, product: cmd.product, ask: cmd.ask, concession: wanted.concession, give: 0, wanted, status: 'draft', rounds: 0, createdDay: today, concludeDay: null, startDay: null,
       note: `${PARTNERS[cmd.partner].name} will open its market for ${p.short} if Malaysia opens: ${CONCESSIONS[wanted.concession].label.toLowerCase()} (depth ${wanted.give}).` });
     tb.deals = tb.deals.slice(-60);
@@ -295,7 +320,7 @@ export function tradeDealCommand(s: GameState, cmd: TradeDealAction): string | n
     if (!ok) return `${name} has not accepted these terms. Revise the offer to meet its request.`;
     d.status = 'talks';
     d.concludeDay = today + dealTalkDays(s, d.ask);
-    d.note = `Formal talks under way; they conclude in about ${Math.round(dealTalkDays(s, d.ask) / 30)} months if there is no tariff dispute and relations stay above 40.`;
+    d.note = `Formal talks under way; they conclude in about ${Math.max(1, Math.round(dealTalkDays(s, d.ask) / 30))} month.`;
     return null;
   }
   if (!['draft', 'talks', 'inForce'].includes(d.status)) return 'This deal is already closed.';
@@ -308,17 +333,11 @@ export function tradeDealCommand(s: GameState, cmd: TradeDealAction): string | n
 }
 
 function concludeTalks(s: GameState, d: TradeDeal, day: number): void {
-  const w = s.world.partners[d.partner], name = PARTNERS[d.partner].name, p = EXPORT_PRODUCTS[d.product];
-  d.concludeDay = null;
-  if (w.ourTariff > 0 || w.theirTariff > 0 || w.relations < 40) {
-    d.status = 'collapsed';
-    d.note = 'Talks collapsed: a tariff dispute or poor relations made the chapter impossible to close.';
-    news(s, { kind: 'policy', tone: 'bad', title: `${p.short} talks with ${name} collapsed`, body: d.note });
-    return;
-  }
+  const name = PARTNERS[d.partner].name, p = EXPORT_PRODUCTS[d.product];
+  d.concludeDay = null; // D-097: talks always conclude; a partner never walks away
   d.status = 'inForce';
   d.startDay = day + 1;
-  d.note = `In force. ${p.short} exporters gain access over about six months${d.give ? '; the concession phases in over the same period' : ''}.`;
+  d.note = `In force. ${p.short} exporters gain access over about a month${d.give ? '; the concession phases in over the same period' : ''}.`;
   news(s, { kind: 'policy', tone: 'good', title: `${p.short} trade deal with ${name} in force`, body: `Exports of ${p.label.toLowerCase()} to ${name} can rise by up to ${(dealGain(s, d.ask) * 100).toFixed(0)}% of that market. Simulated.` });
 }
 

@@ -985,10 +985,21 @@ housing 12) from the treasury's capex line; completion adds capacity. No randomn
 
 - **Boom ledger:** trade-ledger product exports are multiplied by the same capacity reach the core uses (`exportReach`), so ledger and core trade stay consistent in Boom mode (D-091).
 
+**Boom supply limits (D-099).** Month-close capital and capacity additions are `investmentMonthly × investmentDelivery(s)`, where delivery = Σₖ IGₖ·pₖ·min(1, outputₖ/demandₖ) ÷ Σₖ IGₖ·pₖ over the closing month (IG = investment-goods shares). `exportReach` uses `capacity × infra.mult` ÷ opening capacity. The trade ledger ships each non-commodity product at `served[sector]` = output ÷ demand of that day, and adds operating FDI plants' exports (`fdiExports × price`) split across the sector's products by base exports. Realistic campaigns: delivery and served are 1 unless a sector rations, and `exportReach` stays 1.
+
 **Boom FX cap (D-093).** `BOOM.fxMaxDepreciationDaily` (0.0003) limits daily ringgit weakening in `updateExternal`.
 
 **Boom events (D-094).** `BOOM.upsideEventsOnly`, `upsideEvents` (ringgit rally), `eventFadeDays` (45): only good events start, they surge in over 7 days and fade out linearly over the last 45 days (`aggregateMods`).
 
-## Year-end review and budget outlook (D-095)
+## Year-end review and budget outlook (D-107)
 
 Read-only presentation over the closed monthly reports; no simulation rule changes. Year summary: real growth compares December's annualised real GDP with the previous December (or the opening level); deficit = revenue − outlays summed over the year's reports (borrowing and fund transfers excluded, as in the rating). Next-year outlook: revenue = trailing 12 months × (1 + last year's nominal growth, 0–30%); outlays = trailing non-operating outlays + proposed appropriations × 12 + December's operating overshoot of today's appropriations; debt/GDP adds the projected deficit; rating = `ratingScore` (the same formula as the monthly close). Service-quality target per line = `62 × (monthly / base / CPI)^0.6`, as in `ministryOutcomes`.
+
+- **Hub policies (D-098):** `hqRegime`, `financialHub`, `freeZones`, `goldenVisa`, `tourismDrive` and `ringgitPush` follow the usual lever cycle (announce → effective → ramp). Fees post as `policyLevy`, spending as `policyGrant`. In a 12-month test with all on (seed 98, no events): ringgit 4.19 → 3.92 per US$, real growth 4.2% → 6.7%, FDI pledges 4 → 12, fees about RM1.4bn a month against about RM1.1bn of grants and promotion.
+- **Regional projects (D-096):** `national` templates skip the KL-share discount in `completeProject`; otherwise they follow the same capex, asset-capitalisation and completion rules as the KL projects. A test checks that each completes and none is cancelled when cash is available.
+- **Negotiations (D-097):** counterparties in deals and trade talks accept any in-range offer; talks take one month and the access gain phases in over one month.
+- **Treasury ceiling (D-101):** `issueDebt` room is also limited by `TREASURY_LIMIT_MYR − treasury` (RM60tn). `sweepExcessCash` runs in the government month close after the cash-buffer rebuild: cash above the limit is posted as `principal` (debt buyback), and any remainder as `swfContribution` into fund MYR cash. Both are ordinary cash flows, so reconciliation holds.
+- **Reconciliation in sen (D-102):** `reconcileMonth` opens from the previous report's `closingTreasuryMinor` and `closingDebtMinor` when present.
+- **Hub fees and costs (D-103):** zone fee for sector j = `freeZones × 0.002 × GDP / 365 × share_j / 0.75` with share ind 0.3, tech 0.3, fin 0.15, subtracted from that sector's daily profit and posted as `policyLevy` (`hubFees`). `sectorTax` multiplies the corporate rate by `1 − freeZones × share_j × 0.8`. The golden visa multiplies the rent target by `1 + 0.02 × goldenVisa`. Financial-hub and visa fees remain `policyLevy` receipts from non-residents. 12-month test (seed 98, no events), each lever alone against none: free zones −RM0.74bn a month net (corporate tax −1.09bn, fees +0.35bn); golden visa +RM0.7bn a month net.
+- **Boom scenarios (D-104):** `createGame` uses `balanced` whenever Boom is on.
+- **Export contract premiums (D-105):** `exportContractFlows` returns `volume` = units × 0.5 × spot (new real demand, into `policyReal`) and `price` = units × (contract price − spot) plus the LNG hedge gain (ledger value only), where units = delivered RM-at-signing ÷ signing spot. `dailyExportContract` adds the same gap to the sector's profit, taxable profit and value added, and to nominal GDP.

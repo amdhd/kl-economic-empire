@@ -163,7 +163,7 @@ function NewGameModal() {
         </p>
         <div className="mt-4 grid grid-cols-2 gap-3">
           {SCENARIOS.map(({ id, title, description }) => (
-            <button key={id} onClick={() => setScenario(id)} aria-pressed={scenario === id} className={`rounded-xl p-3 text-left ring-1 transition ${scenario === id ? 'bg-emerald-500/15 ring-emerald-400/50' : 'bg-slate-800/50 ring-slate-600/30 hover:bg-slate-700/50'}`} data-testid={`scenario-${id}`}>
+            <button key={id} onClick={() => setScenario(id)} aria-pressed={scenario === id} disabled={boom && id !== 'balanced'} title={boom && id !== 'balanced' ? 'Boom mode always starts from the balanced opening.' : undefined} className={`rounded-xl p-3 text-left ring-1 transition disabled:cursor-not-allowed disabled:opacity-40 ${scenario === id ? 'bg-emerald-500/15 ring-emerald-400/50' : 'bg-slate-800/50 ring-slate-600/30 hover:bg-slate-700/50'}`} data-testid={`scenario-${id}`}>
               <div className="text-[13.5px] font-bold text-white">{title}</div>
               <div className="text-[11.5px] text-slate-400">{description}</div>
             </button>
@@ -177,8 +177,8 @@ function NewGameModal() {
             <span className="text-slate-400">≈ {((m) => `${(m * 0.205).toFixed(0)} hours at 3×, ${(m * 0.123).toFixed(0)} at 5×`)(months)}</span>
           </div>
           <label className="mt-3 flex items-start gap-2 text-[12px] text-slate-300">
-            <input type="checkbox" className="mt-0.5" checked={boom} onChange={(e) => setBoom(e.target.checked)} data-testid="boom-mode" />
-            <span><b className="text-amber-200">Boom mode (sandbox, for fun)</b> — removes realistic speed limits: a productivity and investment boom, migrants arriving with jobs, foreign demand that grows with capacity, a ringgit that strengthens as the economy outgrows its size, mega FDI pledges and Deal Room offers for the whole term. Aim for US$2tn by year 3 and the world's largest economy by year 10. Not a realistic forecast.</span>
+            <input type="checkbox" className="mt-0.5" checked={boom} onChange={(e) => { setBoom(e.target.checked); if (e.target.checked) setScenario('balanced'); }} data-testid="boom-mode" />
+            <span><b className="text-amber-200">Boom mode (sandbox, for fun)</b> — removes realistic speed limits: a productivity and investment boom, migrants arriving with jobs, foreign demand that grows with capacity, a ringgit that strengthens as the economy outgrows its size, mega FDI pledges and Deal Room offers for the whole term. Aim for US$2tn by year 3 and the world's largest economy by year 10. Always starts from the balanced opening, with no recession or shock scenario. Not a realistic forecast.</span>
           </label>
         </div>
         <label className="mt-3 flex items-center gap-2 text-[12px] text-slate-400">

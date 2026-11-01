@@ -37,7 +37,7 @@ interface Store {
   skip: { kind: SkipKind; plan: SkipPlan } | null;
   /** Serialized state taken just before the last skip; null once play resumes or a game is loaded. */
   undoSnapshot: string | null;
-  /** Calendar year shown in the year-in-review window (D-095), or null. Not saved. */
+  /** Calendar year shown in the year-in-review window (D-107), or null. Not saved. */
   yearReview: number | null;
   /** Last year the window opened for on its own, so each year-end shows it once. */
   lastReviewedYear: number | null;
@@ -288,7 +288,7 @@ export const useGame = create<Store>((set, get) => ({
 
 let lastAutosaveDay = 0;
 
-/** Opens the year-in-review window the first time a December close is seen (D-095). It pauses through the dialog counter. */
+/** Opens the year-in-review window the first time a December close is seen (D-107). It pauses through the dialog counter. */
 function checkYearEnd() {
   const st = useGame.getState();
   const y = latestClosedYear(st.game);

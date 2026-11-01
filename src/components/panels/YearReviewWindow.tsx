@@ -9,7 +9,7 @@ import { Section, SimTag, Stat } from '../ui';
 const pts = (v: number) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(1)}`;
 const pctChange = (v: number) => `${v >= 0 ? '+' : '−'}${Math.abs(v * 100).toFixed(1)}%`;
 
-/** End-of-year window (D-095): what happened in the year that just closed, then the budget for the next one. */
+/** End-of-year window (D-107): what happened in the year that just closed, then the budget for the next one. */
 export function YearReviewWindow({ year }: { year: number }) {
   const g = useGameState();
   const close = useGame.getState().closeYearReview;

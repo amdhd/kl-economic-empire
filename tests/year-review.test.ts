@@ -4,7 +4,7 @@ import { budgetOutlook, currentBudget, indexedBudget, latestClosedYear, planGrow
 
 const runMonths = (s: ReturnType<typeof createGame>, months: number) => runHeadless(s, months * 24 * 30.5);
 
-describe('year in review (D-095)', () => {
+describe('year in review (D-107)', () => {
   it('has no closed year until a December report exists, then summarises it', () => {
     const s = createGame(11);
     expect(latestClosedYear(s)).toBeNull();

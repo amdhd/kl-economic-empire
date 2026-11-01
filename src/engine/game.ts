@@ -16,7 +16,7 @@ import { CAMPAIGN_LENGTHS, type CampaignMonths } from '../data/boom';
 import { initialControls, controlCommand } from './policy-controls';
 import { COMPANIES } from '../data/companies';
 import { BASE_TAX, BASELINE, LEGACY_BASELINE, LEGACY_BUDGET, LEGACY_TREND, NATIONAL_TREND, BUDGET_LABELS, SECTOR_IDS, SECTORS, TAX_LABELS } from '../data/economic-baseline';
-import { BASE_BUDGET as nationalBudget } from '../data/economic-baseline';
+import { BASE_BUDGET as nationalBudget, nationalV2 } from '../data/economic-baseline';
 import { initialCentralBank, interveneFx } from './trade-fx';
 import { setMonetaryPolicy, tradeBills, tradeBonds } from './central-bank';
 import { DEVELOPMENT_ANNUAL0, RESOURCE_VA0 } from '../data/world';
@@ -49,7 +49,7 @@ import { seedRng } from './rng';
 import { klDay, klParts, klToEpochMin, monthKey } from './time';
 import { clamp, news, pushBounded, toMinor } from './util';
 
-export const SCHEMA_VERSION = 15;
+export const SCHEMA_VERSION = 16;
 export const START = { year: 2027, month: 1, day: 1, hour: 8 };
 export const CAMPAIGN_MONTHS = 24;
 
@@ -59,7 +59,9 @@ export function createGame(seed = 20270101, scenario: ScenarioId = 'balanced', p
   const base = profile === 'legacy-kl' ? LEGACY_BASELINE : BASELINE;
   const cal = profile === 'legacy-kl' ? LEGACY_CAL : CAL;
   const months = CAMPAIGN_LENGTHS.includes(options.months ?? 24) ? options.months ?? 24 : 24;
-  return createWithProfile(seed, scenario, profile, base, cal, { months, boom: profile === 'malaysia' && !!options.boom });
+  const boom = profile === 'malaysia' && !!options.boom;
+  // Boom mode starts no adverse events (D-094), so it also ignores the shock scenarios and opens balanced (D-104).
+  return createWithProfile(seed, boom ? 'balanced' : scenario, profile, base, cal, { months, boom });
 }
 
 function createWithProfile(seed: number, scenario: ScenarioId, profile: 'malaysia' | 'legacy-kl', BASELINE: typeof LEGACY_BASELINE, CAL: typeof LEGACY_CAL, mode: GameState['mode']): GameState {
@@ -447,6 +449,7 @@ function dispatch(s: GameState, cmd: Command, atMin: number): CommandResult {
     case 'startProject': {
       const t = PROJECT_BY_ID[cmd.templateId];
       if (!t) return { ok: false, message: 'Unknown project' };
+      if (t.national && !nationalV2(s)) return { ok: false, message: 'Regional projects need a national Malaysia campaign.' };
       if (gov.projects.some((p) => p.templateId === t.id && p.status !== 'cancelled')) return { ok: false, message: `${t.name} has already been commissioned.` };
       gov.projects.push({ id: gov.nextId++, templateId: t.id, name: t.name, kind: t.kind, cost: t.cost, spent: 0, work: 0, startDay: klDay(atMin), durationDays: t.durationDays, status: 'building' });
       logPolicy(s, atMin, atMin, `Commissioned ${t.name} (RM ${(t.cost / 1e9).toFixed(1)}bn over ${Math.round(t.durationDays / 30)} months)`);

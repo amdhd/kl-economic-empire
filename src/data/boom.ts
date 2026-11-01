@@ -43,7 +43,7 @@ export const BOOM = {
   /** Trade deals (D-088): export gain by chapter depth (realistic 10% / 20%), talks and phase-in days, how much of the partner's
    * demand we must meet (realistic 1×), the worth of a non-preferred concession (realistic 0.6) and negotiation rounds (realistic 3). */
   tradeDealGain: [0, 0.25, 0.5],
-  tradeTalkDays: [0, 30, 45],
+  tradeTalkDays: [0, 30, 30],
   tradeRampDays: 60,
   tradeNeedScale: 0.5,
   tradeOtherConcession: 0.9,
@@ -67,3 +67,7 @@ export const campaignMonths = (s: Pick<GameState, 'mode'>) => s.mode?.months ?? 
 /** Money is stored in sen with exact integer accounting, which caps any balance at about RM90 trillion. New public debt
  * stops at this level so a runaway boom cannot overflow the ledger. */
 export const DEBT_LIMIT_MYR = 85e12;
+/** Treasury cash has the same sen ceiling (D-101). Borrowing cannot lift cash above this level, and any cash above it at a
+ * month close first buys back debt, then moves to the sovereign fund. About two-thirds of the ceiling, so a month of
+ * surpluses still fits. */
+export const TREASURY_LIMIT_MYR = 60e12;
