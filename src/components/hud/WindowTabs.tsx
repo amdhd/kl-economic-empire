@@ -8,7 +8,7 @@ export function WindowTabs({ panel }: { panel: PanelId }) {
   return (
     <div className="pointer-events-auto flex flex-wrap gap-1" role="tablist" aria-label={`${w.label} views`} data-testid="window-tabs">
       {w.tabs.map((t) => <button key={t.id} role="tab" aria-selected={panel === t.id} data-testid={`tab-${t.id}`} onClick={() => useGame.getState().setPanel(t.id)}
-        className={`rounded-md px-2.5 py-1 text-[12px] font-semibold ${panel === t.id ? 'bg-sky-500/30 text-white ring-1 ring-sky-300/50' : 'bg-slate-800/80 text-slate-300 hover:text-white'}`}>{t.label}</button>)}
+        className={`rounded-md px-3 py-1.5 text-[13px] font-bold shadow-lg ${panel === t.id ? 'bg-cyan-400 text-slate-950 ring-2 ring-white/80' : 'bg-slate-700 text-white ring-1 ring-slate-400/50 hover:bg-slate-600'}`}>{t.label}</button>)}
     </div>
   );
 }
