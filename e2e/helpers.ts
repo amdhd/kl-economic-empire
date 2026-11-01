@@ -25,8 +25,6 @@ export async function openPanel(page: Page, id: string) {
 
 /** Opens the Economy window (the money readout) on a tab: budget, taxation, loans and so on. */
 export async function openEconomyWindow(page: Page, tab: string) {
-  // Budgets and tax rates live in the Fiscal control tab of Money & debt (D-115).
-  if (tab === 'budget' || tab === 'taxation') return openPanel(page, 'reforms');
   if (!(await page.getByTestId('economy-window').isVisible())) await page.getByTestId('bottom-treasury').click();
   await page.getByTestId(`econ-tab-${tab}`).click();
 }

@@ -7,6 +7,7 @@ import { baselineFor, trendFor } from '../data/economic-baseline';
 import { EVENT_BY_ID } from '../data/events';
 import type { GameState, MonthlyReport, ScoreBreakdown } from '../types/game';
 import { fiscalTrustPain } from './fiscal-levers';
+import { housingApprovalPenalty } from './housing';
 import { debtMYR, revenueOf, treasuryMYR } from './government';
 import { nationalV2 } from '../data/economic-baseline';
 import { soeEquity } from './soe';
@@ -112,7 +113,7 @@ export function updateSatisfaction(s: GameState, realDispPerCap: number, rentBur
   const base = s.baseline;
   const employment = clamp(100 - (u - 0.02) * 1200, 0, 100);
   const income = clamp(62 + 600 * (realDispPerCap / base.realDisposablePerCapita - 1), 0, 100);
-  const affordability = clamp(66 - 500 * (rentBurden - base.rentBurden), 0, 100);
+  const affordability = clamp(66 - 500 * (rentBurden - base.rentBurden) - housingApprovalPenalty(s), 0, 100);
   const services = clamp(s.government.serviceQuality * 100 * (1 - Math.min(0.5, s.government.daysInArrears / 60)), 0, 100);
   s.policyChurn *= 0.75;
   const taxPain = 250 * Math.max(0, surchargeEquivalent(s) - 0.02) + 150 * Math.max(0, s.government.policies.tax.consumption - 0.04) + fiscalTrustPain(s);

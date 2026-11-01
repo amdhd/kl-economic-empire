@@ -7,7 +7,6 @@ import { useGame, useGameState, type PanelId } from '../../store/game-store';
 import { money, pct } from '../../utils/format';
 import { Section, Stat } from '../ui';
 import { ConfirmDialog } from './ConfirmDialog';
-import { BudgetEditor, TaxEditor } from './EconomyWindow';
 import { FiscalRuleSections } from './FiscalPanel';
 import { PolicyRateSections } from './CentralBankPanel';
 import { Fuel, Petronas } from './OilPanel';
@@ -84,12 +83,6 @@ export function FiscalControlHub() {
         <button className="btn" disabled={!(amt > 0) || amt * 1e6 > treasuryMYR(gov)} onClick={() => setReview({ cmd: { type: 'repayDebt', amount: amt * 1e6 }, title: `Repay RM ${amt}m of debt`, body: `Treasury and debt both fall by RM ${amt}m, saving ≈${money(amt * 1e6 * gov.avgDebtRate)} interest a year.` })}>Repay debt</button>
       </div>
       <p className="mt-1 text-[11.5px] text-slate-400">These are government bonds: borrowing raises debt and cash together; repaying needs treasury cash. Monthly refinancing follows the term and refinance settings above. They are not BNM bills or reserves, which are in the Central bank tab.</p>
-    </Section>
-    <Section title="Ministry budgets (queued from tomorrow)">
-      <div className="econ-embed" data-testid="hub-budget"><BudgetEditor g={g} /></div>
-    </Section>
-    <Section title="Tax rates (queued from tomorrow)">
-      <div className="econ-embed" data-testid="hub-taxes"><TaxEditor g={g} /></div>
     </Section>
     <FiscalRuleSections />
     <PolicyRateSections />
