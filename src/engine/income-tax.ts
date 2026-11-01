@@ -47,6 +47,10 @@ export function effectiveIncomeTaxRate(avgAnnualWage: number, scale = 1, surchar
 
 export const employmentOf = (s: GameState) => SECTOR_IDS.reduce((a, j) => a + s.sectors[j].employment, 0);
 
+/** Opening personal income tax receipts, RM a year (D-127; user request). The residual "other public receipts" shrinks by the
+ * difference from the old calibrated household tax, so total opening receipts do not change. */
+export const OPENING_PIT_ANNUAL = 50e9;
+
 /** Scales the shape so that opening statutory-rate receipts equal the calibrated opening household tax. */
 function levelFactor(s: GameState): number {
   const c = calibrationFor(s);
@@ -59,7 +63,17 @@ function levelFactor(s: GameState): number {
 export function incomeTaxDaily(s: GameState, wages: number, scale = s.government.policies.tax.incomeTax, surcharge = leverValue(s, 'topBandSurcharge'), relief = leverValue(s, 'personalRelief')): number {
   if (!s.baseline.pit) return 0;
   const jobs = employmentOf(s);
-  return jobs > 0 ? levelFactor(s) * wages * effectiveIncomeTaxRate((wages * 365) / jobs, scale, surcharge, relief) : 0;
+  const modelled = jobs > 0 ? levelFactor(s) * wages * effectiveIncomeTaxRate((wages * 365) / jobs, scale, surcharge, relief) : 0;
+  return modelled + incomeTaxUnmodelledDaily(s, wages) * scale;
+}
+
+/** The part of the opening income tax that households were not modelled as paying (RM50bn against the old calibrated RM12bn).
+ * It grows with the wage bill and scales with the band-rate lever, but has no bracket creep, allowance or surcharge. It is received
+ * but not charged to households at opening, so the opening economy is unchanged; a rate change moves the burden by the difference. */
+export function incomeTaxUnmodelledDaily(s: GameState, wages: number): number {
+  if (!s.baseline.pit) return 0;
+  const c = calibrationFor(s);
+  return Math.max(0, OPENING_PIT_ANNUAL / 365 - c.hh.tax) * (wages / c.hh.wages);
 }
 
 /** The old flat-surcharge equivalent of the household burden, for approval and inequality effects. */

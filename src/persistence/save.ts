@@ -89,6 +89,13 @@ const MIGRATIONS: Record<number, Migration> = {
     s.housing ??= initialHousing(s);
     return state;
   },
+  // v18 → v19: the Boom construction & industry productivity lever (D-126). It opens switched off.
+  18: state => {
+    const s = state as unknown as GameState;
+    const fresh = initialPolicy(false);
+    for (const id of Object.keys(fresh.levers) as (keyof typeof fresh.levers)[]) s.policy.levers[id] ??= fresh.levers[id];
+    return state;
+  },
   // v16 → v17: fiscal reform levers (D-114): pension, subsidy and advanced-tax levers. They open at their neutral
   // settings (retirement age 60, full indexation, allowance RM13,000, everything else off), so nothing in an existing campaign changes.
   16: state => {

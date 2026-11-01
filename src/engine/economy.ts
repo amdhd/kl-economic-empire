@@ -7,7 +7,7 @@ import { baselineFor, demandFor, nationalV2, trendFor } from '../data/economic-b
 import { COMMODITY_IMPORT, UTILITY_FUEL_PASSTHROUGH, FUEL_CPI_WEIGHT, HOUSEHOLD_EQUITY0, PUBLIC_CAPITAL_ELASTICITY, WEALTH_MPC } from '../data/world';
 import { publicCapitalFactor } from './fiscal-rules';
 import { ageingMismatch, LEVY_PASS_THROUGH, sectorTaxDaily } from './fiscal-levers';
-import { aiMismatch, aiProductivity, carbonCost, EMISSION_INTENSITY, greenFuelSaving, hiringBoost, labourCostMultiplier, tourismLift, visaRentPressure, wageMultiplier, zoneFeeDaily, abatement } from './policy';
+import { aiMismatch, aiProductivity, buildProductivity, carbonCost, EMISSION_INTENSITY, greenFuelSaving, hiringBoost, labourCostMultiplier, tourismLift, visaRentPressure, wageMultiplier, zoneFeeDaily, abatement } from './policy';
 import { fdiExports } from './fdi';
 import { infraCapacityMult } from './infrastructure';
 import { palmHouseholdDelta } from './soe';
@@ -22,7 +22,7 @@ import {
 } from './calibration';
 import type { AggregatedMods } from './external';
 import { post, type GovDay } from './government';
-import { incomeTaxDaily } from './income-tax';
+import { incomeTaxDaily, incomeTaxUnmodelledDaily } from './income-tax';
 import { clamp, toMinor } from './util';
 
 /** Monthly amounts are 'per average month'; daily flow = monthly × 12/365. */
@@ -105,7 +105,7 @@ export function importCost(s: GameState, j: SectorId) {
 /** Public infrastructure and capital raise every sector's productivity (model 2), 1 at opening. */
 export function productivityBoost(s: GameState, j: SectorId): number {
   const pcf = nationalV2(s) ? publicCapitalFactor(s, PUBLIC_CAPITAL_ELASTICITY) : 1;
-  return (1 + s.sectors[j].infraBoost) * pcf * aiProductivity(s, j);
+  return (1 + s.sectors[j].infraBoost) * pcf * aiProductivity(s, j) * buildProductivity(s, j);
 }
 
 /**
@@ -147,7 +147,7 @@ export function householdDemand(s: GameState, transfersPaid: number) {
   const other = hh.otherIncomeMonthly * PER_DAY + palmHouseholdDelta(s);
   const surcharge = toMinor(tax.household * wages * SURCHARGE_BASE_SHARE) / 100;
   const incomeTax = toMinor(incomeTaxDaily(s, wages)) / 100;
-  const householdTax = surcharge + incomeTax;
+  const householdTax = surcharge + incomeTax - toMinor(incomeTaxUnmodelledDaily(s, wages)) / 100;
   const hhRate = bank.lendingRate + HOUSEHOLD_RATE_PREMIUM;
   const interestH = (bank.loansH * hhRate) / 365;
   const amortH = bank.loansH * HOUSEHOLD_AMORT_MONTHLY * PER_DAY;

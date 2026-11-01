@@ -4,7 +4,7 @@
 // the ramp; second-round effects (prices, hiring, wages, investment) then play out through the existing lags.
 import { SECTOR_IDS } from '../data/economic-baseline';
 import type { GameState, LeverId, PolicyLever, PolicyState, SectorId } from '../types/game';
-import { leverRampDays } from '../data/boom';
+import { boomOn, leverRampDays } from '../data/boom';
 import { post } from './government';
 import { fiscalFx, householdTaxDaily } from './fiscal-levers';
 import { clamp, news, pushBounded } from './util';
@@ -56,6 +56,8 @@ export const LEVERS: Record<LeverId, LeverSpec> = {
     cycle: 'Phased in over six months. Power and industrial prices rise first; firms then abate, cutting emissions. Revenue accrues to the treasury.' },
   greenIncentive: { group: 'green', label: 'Renewables & EV incentive programme', kind: 'slider', min: 0, max: 5e9, step: 0.25e9, initial: 0, unit: 'RMbnYr', timing: 'tomorrow', rampDays: 90,
     cycle: 'Grants buy solar, grid and EV investment straight away. Green capital builds over years, lowering emissions and power-sector fuel imports and drawing green FDI.' },
+  buildProductivity: { group: 'green', label: 'Construction & industry productivity programme (Boom mode)', kind: 'slider', min: 0, max: 1, step: 0.1, initial: 0, unit: 'share', timing: 'tomorrow', rampDays: 60,
+    cycle: 'Fast-track permits, prefab building and automation credits. Costs up to RM30bn a year, paid to firms (not spent in the sector). Output per worker rises over a month or two, most in property & construction (up to +60%) and industry (up to +50%), so over-stretched sectors can supply more without new buildings. Start around 50%: at 100% a sector that is not overheated is left with spare capacity and prices fall.' },
   // Hub and free-zone policies (D-098): Singapore- and Dubai-style playbooks. Fictional game-balance settings, not estimates of any real regime.
   hqRegime: { group: 'hub', label: 'Regional headquarters regime (Singapore style): tax breaks, fast visas, office grants', kind: 'toggle', min: 0, max: 1, step: 1, initial: 0, unit: 'toggle', timing: 'tomorrow', rampDays: 120,
     cycle: 'Announced at once: multinationals read it as a pro-business signal, so FDI interest rises, headquarters most of all. Costs about 0.4% of GDP a year in office and relocation grants, which pay local finance, property and retail.' },
@@ -191,6 +193,13 @@ export function aiProductivity(s: GameState, j: SectorId): number {
   if (!s.policy?.enabled) return 1;
   return 1 + AI_ELASTICITY[j] * (s.policy.aiEffective - AI_ADOPTION0);
 }
+/** Boom mode only (D-126): output-per-worker multiplier from the construction & industry productivity programme. */
+const BUILD_PRODUCTIVITY: Record<SectorId, number> = { fin: 0.1, prop: 0.6, util: 0.3, tech: 0.4, cons: 0.2, health: 0.1, ind: 0.5 };
+export const BUILD_PROGRAMME_COST = 30e9; // RM a year at full setting
+export function buildProductivity(s: GameState, j: SectorId): number {
+  if (!s.policy?.enabled || !boomOn(s)) return 1;
+  return 1 + BUILD_PRODUCTIVITY[j] * leverValue(s, 'buildProductivity');
+}
 /** Price-driven and capital-driven abatement share of emissions. */
 export function abatement(s: GameState): number {
   if (!s.policy?.enabled) return 0;
@@ -271,6 +280,7 @@ export function dailyPolicy(s: GameState, purchases: Record<SectorId, number>): 
   p.mtd.reskilling += spend(s, purchases, leverValue(s, 'reskilling'), { health: 0.7, tech: 0.3 });
   const green = spend(s, purchases, leverValue(s, 'greenIncentive'), { ind: 0.4, prop: 0.4, tech: 0.2 });
   p.mtd.greenGrants += green;
+  if (boomOn(s)) p.mtd.greenGrants += spend(s, purchases, leverValue(s, 'buildProductivity') * BUILD_PROGRAMME_COST, {}); // a credit to firms: no purchases
   const pInv = (s.sectors.ind.price + s.sectors.prop.price + s.sectors.tech.price) / 3;
   p.greenCapital = p.greenCapital * (1 - 0.04 * PER_YEAR) + green / pInv;
   p.mtd.workerLevy += post(s.government, 'policyLevy', leverValue(s, 'workerLevy') * p.foreignWorkers * 1e6 * PER_YEAR);

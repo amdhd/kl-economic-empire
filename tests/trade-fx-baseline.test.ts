@@ -14,6 +14,7 @@ import { quoteIntervention } from '../src/engine/trade-fx';
 import { deserialize, serialize } from '../src/persistence/save';
 import { fullMoneyMinor } from '../src/utils/format';
 import { clone, runUntil, withoutEvents } from './helpers';
+import { OPENING_PIT_ANNUAL } from '../src/engine/income-tax';
 
 const act = (s: ReturnType<typeof createGame>, c: Parameters<typeof applyCommand>[1]) => applyCommand(s, c, s.clock.hour * 60);
 
@@ -37,7 +38,7 @@ describe('dated Malaysia opening, with separate legacy calibration', () => {
   it('calibrates omitted fiscal receipts to the published total without making them respond to tax sliders', () => {
     const s = createGame(702);
     const taxesDaily = SECTOR_IDS.reduce((a, j) => a + Math.max(0, CAL.profit0[j]) * BASE_TAX.corporate, 0)
-      + BASE_TAX.property * 0.5 * CAL.Y0.prop + CAL.levyBase + CAL.hh.tax;
+      + BASE_TAX.property * 0.5 * CAL.Y0.prop + CAL.levyBase + OPENING_PIT_ANNUAL / 365;
     const other = otherPublicReceiptsMonthly(s);
     // Schema 9 posts the opening foreign-worker levy on its own line.
     expect(taxesDaily * 365 + modelledResourceRevenue0() + other * 12 + NON_TAX_ANNUAL_2027 + WORKER_LEVY0 * FOREIGN_WORKERS0 * 1e6).toBeCloseTo(380_816_996_000, 2);
