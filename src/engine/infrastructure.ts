@@ -2,7 +2,7 @@
 // Load follows real GDP (and the workforce for housing); capacity grows only through player orders that take years to
 // build. Overload throttles sector output capacity via `infraCapacityMult`, which the daily economy reads.
 import { INFRA, NETWORKS, NETWORK_SPECS, type NetworkId } from '../data/infrastructure';
-import { boomOn } from '../data/boom';
+import { BOOM, boomOn } from '../data/boom';
 import { SECTOR_IDS } from '../data/economic-baseline';
 import type { GameState, InfraState, SectorId } from '../types/game';
 import { news } from './util';
@@ -71,7 +71,7 @@ export function dailyInfra(s: GameState, gdpRealDaily: number): void {
 export function orderCost(s: GameState, n: NetworkId, steps: number): number {
   const st = s.infra;
   const size = st ? Math.max(1, st.gdpFast / st.openingGdpReal) : 1;
-  return NETWORK_SPECS[n].costGdpShare * steps * INFRA.step * s.baseline.nominalGdpAnnual * (s.indicators.cpi / 100) * Math.pow(size, INFRA.costScale);
+  return BOOM.infraCostFactor * NETWORK_SPECS[n].costGdpShare * steps * INFRA.step * s.baseline.nominalGdpAnnual * (s.indicators.cpi / 100) * Math.pow(size, INFRA.costScale);
 }
 
 export function orderInfra(s: GameState, n: NetworkId, steps: number, day: number): string | null {

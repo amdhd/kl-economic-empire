@@ -144,7 +144,7 @@ export function prepareTradeDay(s: GameState, day: number, purchases: Record<Sec
     promotion += paid;
     // Unpaid programmes stop building; the boost then fades at the same speed it built.
     const target = 1 - Math.exp(-(paid * 365) / PROGRAMMES[id].scale);
-    pr.boost += (target - pr.boost) * PROGRAMME_SPEED;
+    pr.boost += (target - pr.boost) * (boomOn(s) ? BOOM.programmeSpeed : PROGRAMME_SPEED);
   }
   purchases.fin += promotion * 0.4;
   purchases.tech += promotion * 0.2;

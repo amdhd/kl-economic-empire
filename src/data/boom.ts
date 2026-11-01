@@ -57,9 +57,27 @@ export const BOOM = {
   eventFadeDays: 45,
   exportMaxPrice: 1.3,
   supplyMinPrice: 0.85,
+  /** Build times (D-109): projects take one to two months (template days ÷ 9, clamped), infrastructure orders cost this share of the
+   * realistic price, new capacity arrives after this many months (realistic 6), policy phase-ins and export promotion last at most a month. */
+  projectMinDays: 30,
+  projectMaxDays: 60,
+  infraCostFactor: 0.25,
+  capacityLagMonths: 2,
+  leverRampDays: 30,
+  programmeSpeed: 1 / 30,
   fdiSizeBase: 3,
   fdiSizePerYear: 2,
 };
+
+/** Days a government or concession project takes to build: the template's days in realistic mode, one to two months in Boom. */
+export const projectBuildDays = (s: Pick<GameState, 'mode'>, days: number) =>
+  boomOn(s) ? Math.min(BOOM.projectMaxDays, Math.max(BOOM.projectMinDays, Math.round(days / 9))) : days;
+
+/** Index in a sector's six-slot capacity pipeline where new capacity lands: the last slot (six months) in realistic mode. */
+export const capacitySlot = (s: Pick<GameState, 'mode'>) => (boomOn(s) ? BOOM.capacityLagMonths - 1 : 5);
+
+/** Days a policy lever takes to reach full effect: its own phase-in, at most a month in Boom mode. */
+export const leverRampDays = (s: Pick<GameState, 'mode'>, days: number) => (boomOn(s) ? Math.min(days, BOOM.leverRampDays) : days);
 
 export const boomOn = (s: Pick<GameState, 'mode'>) => !!s.mode?.boom;
 export const campaignMonths = (s: Pick<GameState, 'mode'>) => s.mode?.months ?? 24;

@@ -4,6 +4,7 @@
 // the ramp; second-round effects (prices, hiring, wages, investment) then play out through the existing lags.
 import { SECTOR_IDS } from '../data/economic-baseline';
 import type { GameState, LeverId, PolicyLever, PolicyState, SectorId } from '../types/game';
+import { leverRampDays } from '../data/boom';
 import { post } from './government';
 import { clamp, news, pushBounded } from './util';
 import { daysInMonth, klDayStartMin, klParts } from './time';
@@ -123,8 +124,8 @@ export function setLever(s: GameState, id: LeverId, value: number, atMin: number
   const effectiveDay = spec.timing === 'tomorrow' ? d
     : d + (daysInMonth(p.year, p.month) - p.day); // the 1st of next month, as a settled KL day (no lever uses it since D-072)
   // A new decision ramps from wherever the previous change had reached.
-  s.policy.levers[id] = { value: v, from: leverValue(s, id, Math.max(d, effectiveDay)), announcedDay: today(s), effectiveDay, rampDays: spec.rampDays };
-  const label = `${spec.label}: ${formatLever(id, v)} (effective ${spec.timing === 'tomorrow' ? 'tomorrow' : 'on the 1st of next month'}, full effect after ~${spec.rampDays} days)`;
+  s.policy.levers[id] = { value: v, from: leverValue(s, id, Math.max(d, effectiveDay)), announcedDay: today(s), effectiveDay, rampDays: leverRampDays(s, spec.rampDays) };
+  const label = `${spec.label}: ${formatLever(id, v)} (effective ${spec.timing === 'tomorrow' ? 'tomorrow' : 'on the 1st of next month'}, full effect after ~${leverRampDays(s, spec.rampDays)} days)`;
   pushBounded(s.policyLog, { atMin, effectiveMin: klDayStartMin(effectiveDay), label }, 2000);
   news(s, { kind: 'policy', tone: 'neutral', title: `Policy decided: ${spec.label}`, body: `${formatLever(id, v)}. ${spec.cycle}` });
   return null;

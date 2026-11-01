@@ -11,7 +11,7 @@ import { cancelInfra, initialInfra, orderInfra } from './infrastructure';
 import type { NetworkId } from '../data/infrastructure';
 import { initialTradeBook, setProgramme, tradeDealCommand, type TradeDealAction } from './trade-book';
 import type { ProgrammeId } from '../data/trade';
-import { CAMPAIGN_LENGTHS, type CampaignMonths } from '../data/boom';
+import { CAMPAIGN_LENGTHS, capacitySlot, projectBuildDays, type CampaignMonths } from '../data/boom';
 // Game construction, typed player commands, and the real-time driver.
 import { initialControls, controlCommand } from './policy-controls';
 import { COMPANIES } from '../data/companies';
@@ -84,7 +84,8 @@ function createWithProfile(seed: number, scenario: ScenarioId, profile: 'malaysi
       employment: CAL.L0[j],
       productivity: 1,
       capital: CAL.K0[j],
-      pipeline: Array.from({ length: 6 }, () => inv / CAL.capitalPerCap[j]),
+      // Boom capacity lands after BOOM.capacityLagMonths (D-109), so only that many slots start full.
+      pipeline: Array.from({ length: 6 }, (_, i) => (i <= capacitySlot({ mode }) ? inv / CAL.capitalPerCap[j] : 0)),
       investmentMonthly: inv,
       infraBoost: 0,
       retained: 0,
@@ -449,11 +450,12 @@ function dispatch(s: GameState, cmd: Command, atMin: number): CommandResult {
     case 'startProject': {
       const t = PROJECT_BY_ID[cmd.templateId];
       if (!t) return { ok: false, message: 'Unknown project' };
+      const days = projectBuildDays(s, t.durationDays);
       if (t.national && !nationalV2(s)) return { ok: false, message: 'Regional projects need a national Malaysia campaign.' };
       if (gov.projects.some((p) => p.templateId === t.id && p.status !== 'cancelled')) return { ok: false, message: `${t.name} has already been commissioned.` };
-      gov.projects.push({ id: gov.nextId++, templateId: t.id, name: t.name, kind: t.kind, cost: t.cost, spent: 0, work: 0, startDay: klDay(atMin), durationDays: t.durationDays, status: 'building' });
-      logPolicy(s, atMin, atMin, `Commissioned ${t.name} (RM ${(t.cost / 1e9).toFixed(1)}bn over ${Math.round(t.durationDays / 30)} months)`);
-      news(s, { kind: 'policy', tone: 'neutral', title: `Commissioned: ${t.name}`, body: `RM ${(t.cost / 1e9).toFixed(1)}bn disbursed over ~${Math.round(t.durationDays / 30)} months. Benefits begin on completion.` });
+      gov.projects.push({ id: gov.nextId++, templateId: t.id, name: t.name, kind: t.kind, cost: t.cost, spent: 0, work: 0, startDay: klDay(atMin), durationDays: days, status: 'building' });
+      logPolicy(s, atMin, atMin, `Commissioned ${t.name} (RM ${(t.cost / 1e9).toFixed(1)}bn over ${Math.round(days / 30)} months)`);
+      news(s, { kind: 'policy', tone: 'neutral', title: `Commissioned: ${t.name}`, body: `RM ${(t.cost / 1e9).toFixed(1)}bn disbursed over ~${Math.round(days / 30)} months. Benefits begin on completion.` });
       return { ok: true, message: `${t.name} commissioned.` };
     }
     case 'buildInfra': {
