@@ -11,6 +11,7 @@ import { money, num, pct } from '../../utils/format';
 import { Bar, Section } from '../ui';
 import { ConfirmDialog } from './ConfirmDialog';
 import { PanelShell } from './PanelShell';
+import { FiscalControlHub } from './FiscalControlHub';
 
 export const GROUPS: { id: LeverGroup; title: string }[] = [
   { id: 'ai', title: 'AI investment & productivity' },
@@ -47,7 +48,7 @@ export function DecisionsPanel() {
 }
 
 /** Lever sliders for a set of groups with one draft and one review step; shared by Policy decisions and Fiscal reforms. */
-export function LeverPanel({ groups, title, subtitle, intro }: { groups: LeverGroup[]; title: string; subtitle: string; intro?: ReactNode }) {
+export function LeverPanel({ groups, title, subtitle, intro, width = 760 }: { groups: LeverGroup[]; title: string; subtitle: string; intro?: ReactNode; width?: number }) {
   const g = useGameState();
   const command = useGame.getState().command;
   const [draft, setDraft] = useState<Partial<Record<LeverId, number>>>({});
@@ -72,7 +73,7 @@ export function LeverPanel({ groups, title, subtitle, intro }: { groups: LeverGr
     green: `Emissions ${(p.emissionsIndex * 100).toFixed(1)} (opening output mix = 100), abatement ${pct(abatement(g))}. Carbon tax last month ${money(p.lastMonth.carbonTax)}; green grants ${money(p.lastMonth.greenGrants)}.`,
   };
   return (
-    <PanelShell title={title} subtitle={subtitle} width={760}>
+    <PanelShell title={title} subtitle={subtitle} width={width}>
       {intro}
       {GROUPS.filter(group => groups.includes(group.id)).map(group => (
         <Section key={group.id} title={group.title}>
@@ -125,8 +126,11 @@ export function LeverPanel({ groups, title, subtitle, intro }: { groups: LeverGr
   );
 }
 
-/** Fiscal reforms tab of the Money & debt window (D-114): pensions, subsidies and advanced taxes. */
+/** Fiscal control tab of the Money & debt window (D-115): everything that moves the rating, deficit or debt cost, then the reform levers (D-114). */
 export function FiscalReformsPanel() {
-  return <LeverPanel groups={FISCAL_GROUPS} title="Fiscal reforms" subtitle="Cut pension and subsidy bills or raise new taxes. Each reform saves or raises money and costs you something: approval, inequality, evasion, prices or investment."
-    intro={<p className="mb-2 text-[11.5px] text-slate-400" data-testid="reforms-intro">Fictional simulated policy levers modelled on debates in Europe and the US, not forecasts of any real programme. Estimates are annual and all else equal; the real result also depends on growth, prices and how households and investors react.</p>} />;
+  return <LeverPanel groups={FISCAL_GROUPS} title="Fiscal control" width={1180} subtitle="Rating, deficit and debt readout on top; below it the development budget, borrowing, debt terms, ministry budgets and tax rates, then pension, subsidy and tax reforms. Each reform saves or raises money and costs you something."
+    intro={<>
+      <FiscalControlHub />
+      <p className="mb-2 mt-2 text-[11.5px] text-slate-400" data-testid="reforms-intro">Fictional simulated policy levers modelled on debates in Europe and the US, not forecasts of any real programme. Estimates are annual and all else equal; the real result also depends on growth, prices and how households and investors react.</p>
+    </>} />;
 }

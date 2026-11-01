@@ -11,6 +11,7 @@ test('all four economic controls can be reviewed, applied and observed in simula
   await page.getByTestId('confirm-btn').click();
   await page.getByRole('button',{name:'Review ministry plan',exact:true}).click();
   await page.getByTestId('confirm-btn').click();
+  await openPanel(page, 'reforms');
   await page.getByLabel('New debt term').selectOption('36');
   await page.getByRole('button',{name:'Review debt strategy',exact:true}).click();
   await page.getByTestId('confirm-btn').click();

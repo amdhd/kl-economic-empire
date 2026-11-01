@@ -23,8 +23,6 @@ export function DebtPanel() {
   const g = useGameState();
   const command = useGame.getState().command;
   const gov = g.government;
-  const [buf, setBuf] = useState(gov.policies.borrowing.cashBufferMonths);
-  const [cap, setCap] = useState(gov.policies.borrowing.maxDebtToGdp);
   const [amt, setAmt] = useState(1000);
   const [confirm, setConfirm] = useState<'issue' | 'repay' | null>(null);
   const last = g.reports.at(-1);
@@ -65,20 +63,7 @@ export function DebtPanel() {
           </div>
         </Section>
       </div>
-      <Section title="Borrowing rule (applies immediately)">
-        <div className="grid grid-cols-2 gap-4 text-[12.5px]">
-          <label>
-            <div className="mb-1 flex justify-between"><span>Cash buffer</span><b className="num">{buf.toFixed(2)} months of outlays</b></div>
-            <input type="range" min={0.25} max={4} step={0.25} value={buf} onChange={(e) => setBuf(Number(e.target.value))} />
-          </label>
-          <label>
-            <div className="mb-1 flex justify-between"><span>Debt cap</span><b className="num">{pct(cap, 0)} of GDP</b></div>
-            <input type="range" min={0.1} max={0.8} step={0.05} value={cap} onChange={(e) => setCap(Number(e.target.value))} />
-          </label>
-        </div>
-        <p className="mt-1 text-[11.5px] text-slate-400">Monthly principal is debt divided by the weighted amortisation term ({g.controls.debt.averageMonths.toFixed(1)} months). The refinancing strategy adjusts cash-buffer rebuilding; essential bridge financing still obeys the debt cap and market access. Debt above {g.baseline.profile === 'malaysia' ? '65%' : '35%'} of GDP or deficits above 3% raise the risk premium. Set terms and refinancing in Economic controls.</p>
-        <button className="btn mt-2" disabled={buf === gov.policies.borrowing.cashBufferMonths && cap === gov.policies.borrowing.maxDebtToGdp} onClick={() => command({ type: 'setBorrowing', patch: { cashBufferMonths: buf, maxDebtToGdp: cap } })}>Apply rule</button>
-      </Section>
+      <p className="text-[11.5px] text-slate-400">The cash buffer, debt cap, development budget and debt terms are set in the Fiscal control tab. Debt above {g.baseline.profile === 'malaysia' ? '65%' : '35%'} of GDP or deficits above 3% raise the risk premium.</p>
       <Section title="Discretionary operations">
         <div className="flex items-center gap-2 text-[12.5px]">
           <input className="input num !w-32" type="number" min={1} value={amt} onChange={(e) => setAmt(Math.max(0, Number(e.target.value)))} aria-label="Amount RM millions" />

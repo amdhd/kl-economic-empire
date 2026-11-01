@@ -23,7 +23,6 @@ test('tax policy takes effect the next day; a zero levy still has a positive rei
   s = await state(page);
   expect(s.reports[1].gov.taxConsumption).toBe(0);
   // Reopen to start a fresh proposal at the currently effective rates.
-  await page.getByTestId('bottom-treasury').click(); // closes the Economy window
   await openPanel(page, 'reports');
   await expect(page.getByTestId('panel')).toContainText('GDP by sector (value added)');
   await page.getByRole('button', { name: 'Close panel' }).click();

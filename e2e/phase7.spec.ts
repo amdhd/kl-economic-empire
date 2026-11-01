@@ -12,6 +12,7 @@ test('fiscal rules, commodities, partners and state enterprises can be reviewed 
   await openPanel(page, 'fiscal');
   await expect(page.getByTestId('fiscal-summary')).toContainText('Deficit');
   await expect(page.getByTestId('credibility')).toContainText('/100');
+  await openPanel(page, 'reforms');
   await page.getByTestId('dev-budget').fill('70');
   await page.getByTestId('review-dev').click();
   await expect(page.getByRole('dialog')).toContainText('RM70bn');

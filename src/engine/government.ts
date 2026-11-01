@@ -386,11 +386,23 @@ export function monthCloseGovernment(s: GameState, otherCorporateTax = 0): GovMo
   return { flows, corporateTax, propertyLevy };
 }
 
+/** What moves the credit rating score (notches; 9 = AA before any penalty). Shared by `ratingScore` and the Fiscal control panel. */
+export function ratingBreakdown(s: GameState, debtToGdp: number, deficit: number, arrears: 0 | 1) {
+  const ratingFree = nationalV2(s) ? 0.045 : 0.025;
+  const debtFree = s.baseline.profile === 'malaysia' ? 0.6 : 0.3;
+  return {
+    debtFree, deficitFree: ratingFree,
+    debt: -15 * Math.max(0, debtToGdp - debtFree),
+    deficit: -40 * Math.max(0, deficit - ratingFree),
+    arrears: -3 * arrears,
+    credibility: nationalV2(s) ? (s.fiscal.credibility - 60) / 40 : 0,
+  };
+}
+
 /** Credit rating score 0–10 (8 = A): debt above 60% of GDP, a deficit above the free level, arrears and fiscal credibility. */
 export function ratingScore(s: GameState, debtToGdp: number, deficit: number, arrears: 0 | 1): number {
-  const ratingFree = nationalV2(s) ? 0.045 : 0.025;
-  const credibilityNotches = nationalV2(s) ? (s.fiscal.credibility - 60) / 40 : 0;
-  return clamp(9 - 15 * Math.max(0, debtToGdp - (s.baseline.profile === 'malaysia' ? 0.6 : 0.3)) - 40 * Math.max(0, deficit - ratingFree) - 3 * arrears + credibilityNotches, 0, 10);
+  const b = ratingBreakdown(s, debtToGdp, deficit, arrears);
+  return clamp(9 + b.debt + b.deficit + b.arrears + b.credibility, 0, 10);
 }
 
 export function ratingLabel(r: number): string {
