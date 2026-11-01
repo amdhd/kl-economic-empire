@@ -490,6 +490,8 @@ export interface MonthlyReport {
   fundNetFlows: number; // cumulative treasury→fund injections minus withdrawals, MYR
   fundReturnMoM: number; // excludes transfers
   approval: number;
+  /** House price index at this month's close (D-118); absent in reports made before it. */
+  housingIndex?: number;
   investment: number;
   newLoans: number;
   npl: number;
@@ -562,6 +564,8 @@ export interface GameState {
   tradeBook: TradeBookState;
   /** Boom-mode infrastructure limits (D-084). Absent in realistic campaigns and in saves made before it. */
   infra?: InfraState;
+  /** House price index readout (D-118). */
+  housing: HousingState;
   events: { active: ActiveEvent[]; nextId: number; log: ActiveEvent[] };
   indicators: Indicators;
   baseline: BaselineSnapshot;
@@ -656,6 +660,8 @@ export interface InfraNetwork {
   loadSlow: number;
   congested: boolean;
 }
+/** House price index (D-118): opening 100, with the opening references the fair-value model measures change against. */
+export interface HousingState { index: number; oprRef: number; unemploymentRef: number; utilRef: number; loadRef: number }
 export interface InfraState {
   nextId: number;
   openingGdpReal: number;

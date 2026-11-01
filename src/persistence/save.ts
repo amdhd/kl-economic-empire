@@ -15,6 +15,7 @@ import { initialWorld, validateCommodityPolicy, validateWorld } from '../engine/
 import { initialPolicy, validatePolicy } from '../engine/policy';
 import { initialFdi, validateFdi } from '../engine/fdi';
 import { initialTradeBook, validateTradeBook } from '../engine/trade-book';
+import { initialHousing, validateHousing } from '../engine/housing';
 import { validateInfra } from '../engine/infrastructure';
 import { addMissingListings } from '../engine/stock-market';
 import { CAMPAIGN_LENGTHS } from '../data/boom';
@@ -79,6 +80,13 @@ const MIGRATIONS: Record<number, Migration> = {
   // fundamental price, with history on their exchange's existing dates; the save's rng and every existing account are untouched.
   14: state => {
     addMissingListings(state as unknown as GameState);
+    return state;
+  },
+  // v17 → v18: house price index (D-118). Older campaigns open it at 100 with today's rate, jobs and capacity as its
+  // references, so it starts neutral and nothing already settled changes; older reports simply have no index.
+  17: state => {
+    const s = state as unknown as GameState;
+    s.housing ??= initialHousing(s);
     return state;
   },
   // v16 → v17: fiscal reform levers (D-114): pension, subsidy and advanced-tax levers. They open at their neutral
@@ -273,6 +281,7 @@ export function deserialize(json: string): GameState {
   validateFdi(s.fdi);
   validateTradeBook(s.tradeBook);
   validateInfra(s.infra);
+  validateHousing(s.housing);
   if (!s.mode || typeof s.mode.boom !== 'boolean' || !CAMPAIGN_LENGTHS.includes(s.mode.months)) throw new Error('Corrupt save: campaign mode');
   if (s.policy.enabled !== s.fdi.enabled || (s.policy.enabled && s.baseline.model !== 3)) throw new Error('Corrupt save: inconsistent policy generation');
   if (![1, 2, 3].includes(s.baseline.model) || !(s.households.equityIndex > 0)

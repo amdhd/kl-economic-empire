@@ -24,6 +24,7 @@ import type { GameState, MonthlyReport, SectorId } from '../types/game';
 import { monthCloseBank } from './banks';
 import { monthCloseCentralBank } from './central-bank';
 import { dailyCompanies, monthCloseCompanies } from './companies';
+import { monthCloseHousing } from './housing';
 import { dailyInfra } from './infrastructure';
 import { daily, monthClose as economyMonthClose, resetMonthToDate, weekly } from './economy';
 import { expireEvents, weeklyEvents } from './events';
@@ -192,6 +193,7 @@ function closeMonth(s: GameState, key: number, mods: AggregatedMods): void {
 
   monthCloseBank(s, mods, u);
   economyMonthClose(s, ind.inflationYoY, u, incomeTrend, days, coreInflation);
+  monthCloseHousing(s);
   updateSatisfaction(s, realDispPerCap, rentBurden, ind.inflationYoY);
 
   ind.debtToGdp = debtMYR(s.government) / ind.nominalGdpAnnual;
@@ -235,6 +237,7 @@ function closeMonth(s: GameState, key: number, mods: AggregatedMods): void {
     fundNetFlows: s.fund.totalInjectedMYR - s.fund.totalWithdrawnMYR,
     fundReturnMoM: navBefore > 0 ? (nav - (s.fund.totalInjectedMYR - s.fund.totalWithdrawnMYR - flowsBefore)) / navBefore - 1 : 0,
     approval: ind.approval,
+    housingIndex: s.housing.index,
     investment,
     newLoans: s.bank.mtdNewLoans,
     npl: s.bank.nplRate,
