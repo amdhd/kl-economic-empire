@@ -74,3 +74,15 @@ describe('Deal Room variety (D-116)', () => {
     }
   });
 });
+
+describe('start-up stakes are billion-ringgit deals (D-123)', () => {
+  it('a 20% start-up stake costs billions and fits inside the private-holding cap', async () => {
+    const { createGame } = await import('../src/engine/game');
+    const { enterpriseOffers } = await import('../src/engine/private-enterprises');
+    const s = createGame(5);
+    enterpriseOffers(s);
+    const d = s.deals.items.filter((x) => x.kind === 'startup').at(-1)!;
+    expect(d.priceMinor / 100).toBeGreaterThan(1e9);
+    expect(d.priceMinor / 100).toBeLessThan(4e9);
+  });
+});
