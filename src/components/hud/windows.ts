@@ -21,7 +21,7 @@ export const WINDOW_GROUPS: { title: string; items: WindowDef[] }[] = [
   ] },
   { title: 'Government', items: [
     win('controls', 'Policy', '#a6d582', [['controls', 'Economic controls'], ['decisions', 'Policy decisions']]),
-    win('debt', 'Money & debt', '#aebdf1', [['debt', 'Treasury & debt'], ['fiscal', 'Fiscal rules'], ['central', 'Central bank']]),
+    win('debt', 'Money & debt', '#aebdf1', [['debt', 'Treasury & debt'], ['fiscal', 'Fiscal rules'], ['reforms', 'Fiscal control'], ['central', 'Central bank']]),
     win('projects', 'Build', '#ecb77d', [['projects', 'Projects'], ['infra', 'Infrastructure']]),
   ] },
   { title: 'Trade & resources', items: [

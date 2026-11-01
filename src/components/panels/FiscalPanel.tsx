@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { DEVELOPMENT_ANNUAL0 } from '../../data/world';
 import { OFFICIAL_DEFICIT, OFFICIAL_FISCAL_OUTLOOK } from '../../data/national-baseline';
 import type { Command } from '../../engine/game';
 import { credibilityPremium, deficitTarget, escapeJustified, ESCAPE_MAX_MONTHS } from '../../engine/fiscal-rules';
 import { outputGap } from '../../engine/scheduler';
-import { formatKL, monthKeyLabel } from '../../engine/time';
+import { monthKeyLabel } from '../../engine/time';
 import { useGame, useGameState } from '../../store/game-store';
 import { money, pct } from '../../utils/format';
 import { TimeChart } from '../charts/TimeChart';
@@ -17,14 +16,7 @@ const ok = (b: boolean) => <span className={`chip ${b ? 'bg-emerald-500/15 text-
 export function FiscalPanel() {
   const g = useGameState();
   const f = g.fiscal;
-  const command = useGame.getState().command;
   const last = f.history.at(-1);
-  const pendingDev = g.government.pending.filter((p) => p.kind === 'development').at(-1);
-  const [dev, setDev] = useState(((pendingDev?.patch as { annual: number } | undefined)?.annual ?? f.developmentAnnual) / 1e9);
-  const [deficitCap, setDeficitCap] = useState(f.rule.deficitCap * 100);
-  const [debtCap, setDebtCap] = useState(f.rule.debtCap * 100);
-  const [golden, setGolden] = useState(f.rule.goldenRule);
-  const [review, setReview] = useState<{ cmd: Command; title: string; body: string } | null>(null);
   if (!g.world.enabled) {
     return <PanelShell title="Fiscal rules & deficit" subtitle="Deficit, debt and the golden rule">
       <p className="text-[12px] text-amber-200">Fiscal rules, the development budget and state enterprises are modelled in new Malaysia campaigns. This save keeps its original calibration.</p>
@@ -33,7 +25,6 @@ export function FiscalPanel() {
   const gap = outputGap(g);
   const target = deficitTarget(f, g.reports.length);
   const headroom = last ? (target - last.deficit) * g.indicators.nominalGdpAnnual : 0;
-  const loosening = deficitCap / 100 > f.rule.deficitCap || debtCap / 100 > f.rule.debtCap || (f.rule.goldenRule && !golden);
   // Official annual deficits for 2021–2025 (outturns) and 2026 (revised), then simulated monthly 12-month windows.
   const official = OFFICIAL_DEFICIT.filter((d) => d.kind !== 'estimate').map((d) => ({ t: `${d.year}${d.kind === 'revised' ? ' (rev.)' : ''}`, official: d.deficit * 100 } as Record<string, number | string>));
   const chart = [...official, ...f.history.map((h) => ({ t: monthKeyLabel(h.monthKey), deficit: h.deficit * 100, target: h.target * 100, structural: h.structuralDeficit * 100 }))];
@@ -62,14 +53,24 @@ export function FiscalPanel() {
       <TimeChart data={chart} xKey="t" unit="% of GDP" dataLabel="Official 2021–26 · then simulated" yFormat={(v) => `${v.toFixed(1)}%`} series={[{ key: 'official', name: 'Official (annual)', color: '#e2e8f0' }, { key: 'deficit', name: 'Simulated (12-month)', color: '#f43f5e' }, { key: 'target', name: 'Glide-path target', color: '#94a3b8' }, { key: 'structural', name: 'Structural', color: '#60a5fa' }]} />
       <p className="mt-1 text-[11.5px] text-slate-400">Official: 2021–2025 outturns, 2026 revised estimate; Budget 2027 targets {pct(budget2027.deficit, 1)} of 2027 GDP. The simulation measures its deficit against opening (2025) GDP, so the same ringgit deficit reads higher here.</p>
     </Section>
-    <Section title="Development expenditure · effective tomorrow">
-      <label className="block text-[12px]">Federal development programme · RM{dev.toFixed(0)}bn a year <span className="text-slate-400">(in force RM{(f.developmentAnnual / 1e9).toFixed(1)}bn; Budget 2027 net estimate RM{(DEVELOPMENT_ANNUAL0 / 1e9).toFixed(1)}bn)</span>
-        <input type="range" min={0} max={160} step={1} value={dev} onChange={(e) => setDev(Number(e.target.value))} aria-label="Development expenditure" data-testid="dev-budget" />
-      </label>
-      <p className="mt-1 text-[12px] text-slate-400">Development spending buys construction, equipment, ICT and social programmes now, and builds public capital that raises productivity in every sector slowly (output elasticity 0.05). Cutting it is the quickest way to shrink the deficit, and the most costly for future growth. Public capital index {(f.publicCapital / f.publicCapital0).toFixed(3)}.</p>
-      <button className="btn btn-primary mt-2" data-testid="review-dev" onClick={() => setReview({ cmd: { type: 'setDevelopment', annual: dev * 1e9 }, title: 'Change development expenditure', body: `Set development spending to RM${dev.toFixed(0)}bn a year from tomorrow (now RM${(f.developmentAnnual / 1e9).toFixed(1)}bn). The deficit changes by roughly ${pct((dev * 1e9 - f.developmentAnnual) / g.indicators.nominalGdpAnnual, 2, true)} of GDP before second-round effects.` })}>Review development budget</button>
-      {pendingDev && <p className="mt-2 text-[12px] text-amber-200">{pendingDev.label} · from {formatKL(pendingDev.effectiveMin).date}</p>}
-    </Section>
+    <p className="text-[11.5px] text-slate-400">The development budget, borrowing rule and debt terms are set in the Fiscal control tab.</p>
+    <p className="text-[12px] text-slate-400">The deficit and debt ceilings, golden rule and escape clause are set in Money & debt, Fiscal control.</p>
+  </PanelShell>;
+}
+
+/** Deficit and debt ceilings, golden rule and escape clause. Shown in the Fiscal control tab (D-115). */
+export function FiscalRuleSections() {
+  const g = useGameState();
+  const f = g.fiscal;
+  const command = useGame.getState().command;
+  const [deficitCap, setDeficitCap] = useState(f.rule.deficitCap * 100);
+  const [debtCap, setDebtCap] = useState(f.rule.debtCap * 100);
+  const [golden, setGolden] = useState(f.rule.goldenRule);
+  const [review, setReview] = useState<{ cmd: Command; title: string; body: string } | null>(null);
+  if (!g.world.enabled) return null;
+  const gap = outputGap(g);
+  const loosening = deficitCap / 100 > f.rule.deficitCap || debtCap / 100 > f.rule.debtCap || (f.rule.goldenRule && !golden);
+  return <>
     <Section title="Rule settings">
       <div className="flex flex-wrap items-center gap-4 text-[12px]">
         <label>Deficit ceiling % <input className="input num ml-1 !w-20" type="number" min="0" max="10" step="0.5" value={deficitCap} onChange={(e) => setDeficitCap(Number(e.target.value))} aria-label="Deficit ceiling" /></label>
@@ -86,5 +87,5 @@ export function FiscalPanel() {
       <button className="btn mt-2" data-testid="escape-btn" onClick={() => setReview({ cmd: { type: 'fiscalEscape', invoke: !f.escape?.active }, title: f.escape?.active ? 'End the escape clause' : 'Invoke the escape clause', body: f.escape?.active ? 'The rules apply again from the next month close.' : escapeJustified(g, gap) ? 'Conditions justify an escape: credibility falls by 2 points.' : 'No downturn is under way: credibility falls by 20 points and stays capped while the escape lasts.' })}>{f.escape?.active ? 'End escape' : 'Invoke escape'}</button>
     </Section>
     {review && <ConfirmDialog title={review.title} confirmLabel="Confirm" onCancel={() => setReview(null)} onConfirm={() => { command(review.cmd); setReview(null); }}><p>{review.body}</p></ConfirmDialog>}
-  </PanelShell>;
+  </>;
 }

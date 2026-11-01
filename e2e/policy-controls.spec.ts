@@ -4,13 +4,15 @@ import type { GameState } from '../src/types/game';
 type Dev = {__klDev:{state:()=>GameState}};
 
 test('all four economic controls can be reviewed, applied and observed in simulation',async({page})=>{
+  test.slow(); // the Fiscal control tab is a long page: on a loaded CI runner these steps come close to the 60s budget
   await startCampaign(page);
-  await openPanel(page, 'controls');
+  await openPanel(page, 'reforms');
   await page.getByTestId('review-incentive').click();
   await expect(page.getByRole('dialog')).toContainText('5pp relief');
   await page.getByTestId('confirm-btn').click();
   await page.getByRole('button',{name:'Review ministry plan',exact:true}).click();
   await page.getByTestId('confirm-btn').click();
+  await openPanel(page, 'reforms');
   await page.getByLabel('New debt term').selectOption('36');
   await page.getByRole('button',{name:'Review debt strategy',exact:true}).click();
   await page.getByTestId('confirm-btn').click();
@@ -31,12 +33,13 @@ test('all four economic controls can be reviewed, applied and observed in simula
   const after=await page.evaluate(()=>(window as unknown as Dev).__klDev.state());
   expect(after.centralBank.tx.some(t=>t.side==='sellUSD')).toBe(true);
   expect(after.centralBank.usdReserves).toBeLessThan(before.centralBank.usdReserves);
+  await openPanel(page, 'reforms');
   await expect(page.getByTestId('panel')).toContainText('Health coverage');
 });
 
 test('queuing a manual budget for a planned ministry warns, then replaces the plan',async({page})=>{
   await startCampaign(page);
-  await openPanel(page, 'controls');
+  await openPanel(page, 'reforms');
   await page.getByRole('button',{name:'Review ministry plan',exact:true}).click();
   await page.getByTestId('confirm-btn').click();
   const s=await page.evaluate(()=>(window as unknown as Dev).__klDev.state());

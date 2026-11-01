@@ -6,6 +6,7 @@ import { COMPANY_BY_ID } from '../data/companies';
 import { BASE_TAX, SECTOR_IDS } from '../data/economic-baseline';
 import type { FdiKind, FdiPledge, FdiState, GameState, SectorId, TickerId } from '../types/game';
 import { post } from './government';
+import { fiscalClimate } from './fiscal-levers';
 import { hubClimate, leverTarget, leverValue, LEVERS, MIN_WAGE0, WORKER_LEVY0 } from './policy';
 import { rand, seedRng } from './rng';
 import { clamp, news, pushBounded } from './util';
@@ -55,6 +56,7 @@ export function attractiveness(s: GameState, kind: FdiKind): number {
     - 15 * Math.max(0, leverTarget(s, 'minimumWage') / MIN_WAGE0 - 1) * (kind === 'ev' || kind === 'semiconductor' ? 1.5 : 0.5)
     - 4 * (leverTarget(s, 'workerLevy') / WORKER_LEVY0 - 1)
     + hubClimate(s, kind)
+    + fiscalClimate(s)
     + 10 * Math.log(Math.max(0.2, s.world?.exportAccess ?? 1));
   if (kind === 'datacentre') x += 25 * Math.min(1, leverTarget(s, 'aiProgramme') / 5e9) + 6 * leverTarget(s, 'aiAdoptionCredit') - 40 * (s.sectors.util.price - 1);
   if (kind === 'semiconductor') x += 8 * Math.min(1, leverTarget(s, 'reskilling') / 2e9) + 6 * Math.min(1, leverTarget(s, 'aiProgramme') / 5e9);
@@ -93,13 +95,13 @@ export function prunePledges(f: FdiState, limit = 120): void {
   }
 }
 
-/** The investors this campaign's pledges draw from: a seeded shuffle of the kind's list, keeping about 60% of it (D-113). */
+/** The investors this campaign's pledges draw from: a seeded shuffle of the kind's list, keeping about 60% of it (D-116). */
 export function campaignInvestors(s: GameState, kind: FdiKind): TickerId[] {
   const all = FDI_KINDS[kind].investors;
   return all.length < 3 ? all : flavourShuffle(s, `investors:${kind}`, all).slice(0, Math.max(2, Math.ceil(all.length * 0.6)));
 }
 const OPENING_KINDS: FdiKind[] = ['datacentre', 'renewables', 'hq'];
-/** New campaigns open with one headline pledge, so the mechanic is visible early. D-113: its kind, investor, size and ask come
+/** New campaigns open with one headline pledge, so the mechanic is visible early. D-116: its kind, investor, size and ask come
  * from the campaign seed (hash draws, no RNG); the kinds on offer build within 18 months so the opening decision pays off. */
 export function openingPledge(s: GameState, today: number): void {
   if (!s.fdi?.enabled) return;

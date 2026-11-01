@@ -16,7 +16,7 @@ export function rescueOffers(s: GameState): void {
   if (!s.deals.enabled) return;
   const round = kindRound(s, 'rescue') / 2;
   for (const insolvent of [false, true]) {
-    const t = rescueTarget(s, insolvent, Math.floor(round)); // D-113: the troubled firm is drawn from the campaign seed
+    const t = rescueTarget(s, insolvent, Math.floor(round)); // D-116: the troubled firm is drawn from the campaign seed
     const d = addDeal(
       s,
       insolvent ? 'rescue:textiles' : 'rescue:clinics',

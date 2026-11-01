@@ -1,12 +1,12 @@
 import { useState, type ReactNode } from 'react';
 import { budgetFor, BUDGET_LABELS, SECTOR_IDS, SECTORS, TAX_LABELS } from '../../data/economic-baseline';
-import { DEVELOPMENT_ANNUAL0, FUEL_SUBSIDY0, SUBSIDY_REFERENCE } from '../../data/world';
+import { FUEL_SUBSIDY0, SUBSIDY_REFERENCE } from '../../data/world';
 import { fuelSubsidyDaily, wheatSubsidyDaily } from '../../engine/world';
 import { debtMYR, outlaysOf, ratingLabel, revenueOf, treasuryMYR } from '../../engine/government';
 import { estimateTaxChange } from '../../engine/policy-preview';
 import { useGame, useGameState, type PanelId } from '../../store/game-store';
 import type { BudgetCategory, GameState, GovMonthFlows, SectorId, TaxPolicy } from '../../types/game';
-import { daysInMonth } from '../../engine/time';
+import { daysInMonth, formatKL } from '../../engine/time';
 import { fullMoneyMinor, gdpUsd, money, num as numFmt, pct } from '../../utils/format';
 import { NON_TAX_REVENUE_2027 } from '../../data/non-tax-revenue';
 import { householdDemand } from '../../engine/economy';
@@ -14,11 +14,9 @@ import { activeTaxKeys, effectiveIncomeTaxRate, employmentOf, INCOME_TAX_BANDS }
 import { HudIcon } from '../hud/HudIcon';
 import { StatsStrip } from '../hud/StatsStrip';
 
-type Tab = 'summary' | 'budget' | 'taxation' | 'loans' | 'production';
+type Tab = 'summary' | 'loans' | 'production';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'summary', label: 'Summary' },
-  { id: 'budget', label: 'Budget' },
-  { id: 'taxation', label: 'Taxation' },
   { id: 'loans', label: 'Loans' },
   { id: 'production', label: 'Production' },
 ];
@@ -32,14 +30,13 @@ const LINE_COLOR: Record<string, string> = {
   household: '#c9a3ef', incomeTax: '#c9a3ef', tariff: '#e2c778', petroleum: '#f59e0b', soe: '#9fb6e8', duty: '#84cc16', other: '#a2b7cc', debt: '#aebdf1',
 };
 
-const BUDGET_INFO: Record<BudgetCategory | 'devex', { icon: string; text: string }> = {
+const BUDGET_INFO: Record<BudgetCategory, { icon: string; text: string }> = {
   health: { icon: 'population', text: 'Hospitals and clinics. Real funding drives health coverage and service quality with a lag; cuts lower satisfaction and, if deep, trust.' },
   services: { icon: 'overview', text: 'Education and higher education. Raises service quality and the services outcome; most of it is wages that households spend.' },
   safety: { icon: 'debt', text: 'Defence and home affairs. Keeps the safety outcome up; spending buys from health/industry/tech sectors.' },
   development: { icon: 'projects', text: 'Works and transport operating allocations. Supports demand for technology, finance and construction services.' },
   admin: { icon: 'sources', text: 'Everything else in federal operations. Pure purchases: cutting it is the least visible saving, but it still lowers demand.' },
   transfers: { icon: 'population', text: 'Pensions and cash transfers. Go straight to household income; cutting them is unpopular and widens inequality.' },
-  devex: { icon: 'projects', text: 'Federal development programme (capital). Builds public capital that raises productivity in every sector slowly. Allowed under the golden rule even when borrowing.' },
 };
 
 function Row({ icon, label, amount, tone, active, onClick, testid, color }: { icon: string; label: string; amount: string; tone: 'in' | 'out' | 'neutral'; active?: boolean; onClick?: () => void; testid?: string; color?: string }) {
@@ -100,8 +97,6 @@ export function EconomyWindow() {
         </div>
         <div className="econ-body">
           {tab === 'summary' && <Summary g={g} balance={balance} label={label} />}
-          {tab === 'budget' && <Budget g={g} balance={balance} label={label} />}
-          {tab === 'taxation' && <Taxation g={g} balance={balance} label={label} />}
           {tab === 'loans' && <Loans g={g} balance={balance} label={label} />}
           {tab === 'production' && <Production g={g} balance={balance} label={label} />}
         </div>
@@ -122,7 +117,8 @@ function Balance({ balance, label }: { balance: number; label: string }) {
 
 /** Pinned list footer: the tab's yearly total, the other side of the budget, and the annual balance (the same measure
  * as the fiscal rule's deficit) above the last closed month. */
-function AnnualBalance({ g, balance, label, total, other }: { g: GameState; balance: number; label: string; total: ReactNode; other: 'revenue' | 'spending' }) {
+function AnnualBalance({ g, balance, label, total, other, bare }: { g: GameState; balance: number; label: string; total: ReactNode; other: 'revenue' | 'spending'; bare?: boolean }) {
+  if (bare) return <div className="econ-annual">{total}</div>; // the Fiscal control tab shows the balance once, with the budget editor
   const year = annualFlows(g);
   const revenue = revenueOf(year.flows), spending = outlaysOf(year.flows), net = revenue - spending;
   return (
@@ -169,37 +165,37 @@ function Summary({ g, balance, label }: { g: GameState; balance: number; label: 
   );
 }
 
+export function BudgetEditor({ g }: { g: GameState }) {
+  const { flows, label } = monthFlows(g);
+  return <Budget g={g} balance={revenueOf(flows) - outlaysOf(flows)} label={label} />;
+}
 function Budget({ g, balance, label }: { g: GameState; balance: number; label: string }) {
   const command = useGame.getState().command;
   const base = budgetFor(g);
   const pol = g.government.policies.budget;
   const pending = (k: BudgetCategory) => g.government.pending.filter((p) => p.kind === 'budget' && k in p.patch).map((p) => (p.patch as Record<string, number>)[k]).at(-1);
-  const devPending = (g.government.pending.filter((p) => p.kind === 'development').at(-1)?.patch as { annual: number } | undefined)?.annual;
-  const [selRaw, setSel] = useState<BudgetCategory | 'devex' | 'subsidy'>('health');
+  const [selRaw, setSel] = useState<BudgetCategory | 'subsidy'>('health');
   const isSub = selRaw === 'subsidy';
-  const sel: BudgetCategory | 'devex' = isSub ? 'health' : selRaw;
-  const isDev = sel === 'devex';
-  const current = isDev ? (devPending ?? g.fiscal.developmentAnnual) / 12 : pending(sel) ?? pol[sel];
-  const opening = isDev ? DEVELOPMENT_ANNUAL0 / 12 : base[sel];
+  const sel: BudgetCategory = isSub ? 'health' : selRaw;
+  const current = pending(sel) ?? pol[sel];
+  const opening = base[sel];
   const [draft, setDraft] = useState<Record<string, number>>({});
   const value = draft[sel] ?? current;
   const share = opening > 0 ? value / opening : 1;
   const year = annualFlows(g);
   const yf = year.flows;
   const builds = Math.max(0, yf.capex - year.development);
-  const budgetTotal = CATS.reduce((a, k) => a + 12 * (pending(k) ?? pol[k]), 0) + (g.world.enabled ? devPending ?? g.fiscal.developmentAnnual : 0)
+  const budgetTotal = CATS.reduce((a, k) => a + 12 * (pending(k) ?? pol[k]), 0) + (g.world.enabled ? g.fiscal.developmentAnnual : 0)
     + builds + yf.policyGrant + yf.exportSupport + yf.emergency + yf.interest + yf.subsidy;
   const outcome = sel === 'health' || sel === 'services' || sel === 'safety' ? g.controls.outcomes[sel] : null;
   const apply = () => {
-    if (isDev) command({ type: 'setDevelopment', annual: value * 12 });
-    else command({ type: 'queueBudget', patch: { [sel]: value } });
+    command({ type: 'queueBudget', patch: { [sel]: value } });
     setDraft({ ...draft, [sel]: undefined as unknown as number });
   };
   return (
     <div className="econ-columns">
       <div className="econ-list">
         {CATS.map((k) => <Row key={k} icon={BUDGET_INFO[k].icon} label={BUDGET_LABELS[k]} amount={money(12 * (pending(k) ?? pol[k]))} tone="out" active={selRaw === k} onClick={() => setSel(k)} testid={`econ-budget-${k}`} color={LINE_COLOR[k]} />)}
-        {g.world.enabled && <Row icon="projects" label="Development (capital)" amount={money(devPending ?? g.fiscal.developmentAnnual)} tone="out" active={selRaw === 'devex'} onClick={() => setSel('devex')} testid="econ-budget-devex" color={LINE_COLOR.devex} />}
         <Row icon="projects" label="Projects & infrastructure builds" amount={money(builds)} tone="out" onClick={go(g.infra ? 'infra' : 'projects')} color={LINE_COLOR.devex} testid="econ-budget-builds" />
         <Row icon="fdi" label="FDI & policy grants" amount={money(yf.policyGrant)} tone="out" onClick={go('fdi')} color={LINE_COLOR.transfers} testid="econ-budget-grants" />
         {yf.exportSupport > 0 && <Row icon="trade" label="Export support" amount={money(yf.exportSupport)} tone="out" onClick={go('trade')} color={LINE_COLOR.tariff} />}
@@ -210,7 +206,7 @@ function Budget({ g, balance, label }: { g: GameState; balance: number; label: s
           total={<div className="econ-total" data-testid="budget-total"><span>TOTAL SPENDING · PER YEAR<small>budget lines in force; other lines {year.label}</small></span><b className="econ-amount out"><span>−</span>{money(budgetTotal)}</b></div>} />
       </div>
       {isSub ? <SubsidyDetail g={g} paid={yf.subsidy} label={year.label} /> : <>
-      <Detail title={isDev ? 'Development (capital)' : BUDGET_LABELS[sel]} action={<button className="btn" onClick={() => setDraft({ ...draft, [sel]: opening })}>RESET</button>}>
+      <Detail title={BUDGET_LABELS[sel]} action={<button className="btn" onClick={() => setDraft({ ...draft, [sel]: opening })}>RESET</button>}>
         <label className="econ-slider">
           <span>Budget</span><span className="num">{Math.round(share * 100)} %</span>
           <input type="range" min={0} max={2.5} step={0.01} value={share} onChange={(e) => setDraft({ ...draft, [sel]: Math.round(Number(e.target.value) * opening / 1e6) * 1e6 })} aria-label="Budget share of opening" data-testid="econ-budget-slider" />
@@ -218,21 +214,21 @@ function Budget({ g, balance, label }: { g: GameState; balance: number; label: s
         <div className="econ-section">
           <h4>ANNUAL AMOUNTS · PER YEAR</h4>
           <Line label="Proposed" value={money(value * 12)} tone="out" />
-          <Line label="In force" value={money(isDev ? g.fiscal.developmentAnnual : pol[sel] * 12)} tone="out" />
+          <Line label="In force" value={money(pol[sel] * 12)} tone="out" />
           <Line label="Opening (Budget 2027)" value={money(opening * 12)} />
         </div>
-        {!isDev && g.controls.plans.some((p) => p.category === sel) && Math.abs(value - current) >= 1 && <p className="econ-note" data-testid={`plan-replaced-${sel}`}>This line follows a ministry plan that raises it over time. Queuing a new amount replaces that plan.</p>}
+        {g.controls.plans.some((p) => p.category === sel) && Math.abs(value - current) >= 1 && <p className="econ-note" data-testid={`plan-replaced-${sel}`}>This line follows a ministry plan that raises it over time. Queuing a new amount replaces that plan.</p>}
         <button className="btn btn-primary" disabled={Math.abs(value - current) < 1} onClick={apply} data-testid="econ-budget-apply">Queue from tomorrow</button>
       </Detail>
       <div className="econ-info">
-        <div className="econ-info-head"><span className="econ-info-icon" style={{ color: LINE_COLOR[sel] }}><HudIcon name={BUDGET_INFO[sel].icon} size={34} /></span><h3>{isDev ? 'DEVELOPMENT' : BUDGET_LABELS[sel].toUpperCase()}</h3></div>
+        <div className="econ-info-head"><span className="econ-info-icon" style={{ color: LINE_COLOR[sel] }}><HudIcon name={BUDGET_INFO[sel].icon} size={34} /></span><h3>{BUDGET_LABELS[sel].toUpperCase()}</h3></div>
         <p>{BUDGET_INFO[sel].text}</p>
         <div className="econ-effects">
           {outcome !== null && <Line label="Outcome index" value={`${outcome.toFixed(0)}/100`} />}
-          {isDev && <Line label="Public capital index" value={(g.fiscal.publicCapital / g.fiscal.publicCapital0).toFixed(3)} />}
-          <Line label="Change vs in force" value={`${pct(value / Math.max(1, isDev ? g.fiscal.developmentAnnual / 12 : pol[sel]) - 1, 1, true)}`} />
+          <Line label="Change vs in force" value={`${pct(value / Math.max(1, pol[sel]) - 1, 1, true)}`} />
           <Line label="Annual cost of change" value={money((value - current) * 12)} />
         </div>
+        <QueuedPolicies g={g} />
       </div>
       </>}
     </div>
@@ -274,7 +270,11 @@ function SubsidyDetail({ g, paid, label }: { g: GameState; paid: number; label: 
   </>;
 }
 
-function Taxation({ g, balance, label }: { g: GameState; balance: number; label: string }) {
+export function TaxEditor({ g }: { g: GameState }) {
+  const { flows, label } = monthFlows(g);
+  return <Taxation g={g} balance={revenueOf(flows) - outlaysOf(flows)} label={label} bare />;
+}
+function Taxation({ g, balance, label, bare }: { g: GameState; balance: number; label: string; bare?: boolean }) {
   const command = useGame.getState().command;
   const pol = g.government.policies.tax;
   const pending = (k: keyof TaxPolicy) => g.government.pending.filter((p) => p.kind === 'tax' && k in p.patch).map((p) => (p.patch as TaxPolicy)[k]).at(-1);
@@ -300,7 +300,7 @@ function Taxation({ g, balance, label }: { g: GameState; balance: number; label:
         {g.policy?.enabled && <Row icon="policies" label="Policy levies & hub fees" amount={money(yf.policyLevy)} tone="in" onClick={go('decisions')} color={LINE_COLOR.duty} testid="econ-levies" />}
         {g.baseline.nonTax && <Row icon="sources" label="Fees, licences & fines" amount={money(yf.nonTaxRevenue)} tone="in" onClick={() => undefined} color={LINE_COLOR.other} testid="econ-nontax" />}
         <Row icon="sources" label="Other public receipts" amount={money(yf.federalGrant)} tone="in" color={LINE_COLOR.other} />
-        <AnnualBalance g={g} balance={balance} label={label} other="spending"
+        <AnnualBalance g={g} balance={balance} label={label} other="spending" bare={bare}
           total={<div className="econ-total" data-testid="revenue-total"><span>TOTAL REVENUE · PER YEAR<small>{year.label}</small></span><b className="econ-amount in"><span>+</span>{money(revenueOf(yf))}</b></div>} />
       </div>
       <Detail title={meta.label} action={<button className="btn" onClick={() => setDraft({ ...draft, [sel]: pol[sel] })}>RESET</button>}>
@@ -327,8 +327,28 @@ function Taxation({ g, balance, label }: { g: GameState; balance: number; label:
             <p className="econ-note">Fees, licences, fines and rentals from the MOF revenue estimates grow with nominal GDP. Investment returns come through SOE dividends.</p>
           </div>
         )}
+        <QueuedPolicies g={g} />
         <p>The estimate holds demand, prices and profits fixed. Real receipts also move as the economy responds, and every change takes effect tomorrow.</p>
       </div>
+    </div>
+  );
+}
+
+/** Tax, budget and development changes waiting for their start day, with Withdraw, and the latest policy log lines. */
+function QueuedPolicies({ g }: { g: GameState }) {
+  const command = useGame.getState().command;
+  return (
+    <div className="econ-section" data-testid="queued-policies">
+      <h4>QUEUED CHANGES</h4>
+      {g.government.pending.length === 0 && <p className="econ-note">Nothing queued.</p>}
+      {g.government.pending.map((p) => (
+        <div key={p.id} className="econ-line" data-testid={`queued-${p.id}`}>
+          <span>{p.label} · from {formatKL(p.effectiveMin).date}</span>
+          <button className="btn !px-2 !py-0.5 !text-[11px]" onClick={() => command({ type: 'cancelPolicy', id: p.id })}>Withdraw</button>
+        </div>
+      ))}
+      <h4>RECENT POLICY</h4>
+      {[...g.policyLog].reverse().slice(0, 6).map((l, i) => <p key={i} className="econ-note">{formatKL(l.atMin).date} — {l.label}</p>)}
     </div>
   );
 }

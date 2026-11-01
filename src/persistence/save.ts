@@ -81,6 +81,15 @@ const MIGRATIONS: Record<number, Migration> = {
     addMissingListings(state as unknown as GameState);
     return state;
   },
+  // v16 → v17: fiscal reform levers (D-114): pension, subsidy and advanced-tax levers. They open at their neutral
+  // settings (retirement age 60, full indexation, allowance RM13,000, everything else off), so nothing in an existing campaign changes.
+  16: state => {
+    const s = state as unknown as GameState;
+    const fresh = initialPolicy(false);
+    for (const id of Object.keys(fresh.levers) as (keyof typeof fresh.levers)[]) s.policy.levers[id] ??= fresh.levers[id];
+    for (const m of [s.policy.mtd, s.policy.lastMonth]) { m.reformTax ??= 0; m.pensionSaved ??= 0; m.subsidySaved ??= 0; m.cashAid ??= 0; }
+    return state;
+  },
   // v15 → v16: hub and free-zone policy levers (D-098). They open switched off, so nothing in an existing campaign changes.
   15: state => {
     const s = state as unknown as GameState;

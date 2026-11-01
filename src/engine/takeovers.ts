@@ -8,7 +8,7 @@ import { flavourScale, kindRound, takeoverTarget } from './deal-flavour';
 
 export function takeoverOffers(s: GameState): void {
   if (!s.deals.enabled) return;
-  // D-113: target and size come from the campaign seed (every balance-sheet figure scales together).
+  // D-116: target and size come from the campaign seed (every balance-sheet figure scales together).
   const round = kindRound(s, 'takeover'), t = takeoverTarget(s, round), k = flavourScale(s, `takeover:${round}`, 0.25);
   const d = addDeal(s, 'takeover:nusa', 'takeover', `${t.name}: controlling acquisition`, 'strategic', 113.827e6 * k, 'ind');
   d.counterparty = `${t.name} shareholders (fictional)`;

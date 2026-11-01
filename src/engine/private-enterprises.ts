@@ -16,7 +16,7 @@ export function privateValue(s: GameState, payer: Deal['payer']): number {
 }
 export function enterpriseOffers(s: GameState): void {
   if (!s.deals.enabled) return;
-  // D-113: the start-up, its archetype and its size come from the campaign seed; the stake, fee and caps are unchanged.
+  // D-116: the start-up, its archetype and its size come from the campaign seed; the stake, fee and caps are unchanged.
   const round = kindRound(s, 'startup'), f = startupFlavour(s, round), k = flavourScale(s, `startup:${round}`, 0.3);
   const d = addDeal(s, 'startup:awan', 'startup', `${f.name}: ${f.kind}`, 'fund', 80e6 * k * 0.2525, f.sector);
   d.counterparty = `${f.founders} (fictional)`;

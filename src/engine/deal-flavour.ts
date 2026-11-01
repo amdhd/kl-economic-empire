@@ -1,4 +1,4 @@
-// Deal Room variety (D-113). Every counterparty, backstory and headline figure in the Deal Room is drawn from the campaign
+// Deal Room variety (D-116). Every counterparty, backstory and headline figure in the Deal Room is drawn from the campaign
 // seed, so one seed always shows the same history while different seeds show visibly different offers. The draws are pure
 // hashes of (state.seed, salt): they consume no random numbers, so the main, deals and FDI rng streams are untouched and
 // saves round-trip with no new state. Every name is fictional; the mechanics keyed on `Deal.template` are unchanged.

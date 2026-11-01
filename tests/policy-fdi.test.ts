@@ -99,7 +99,7 @@ describe('policy effects (paired, events off)', () => {
 describe('foreign direct investment', () => {
   it('opens with a headline pledge; approval builds, pays grants, supports the ringgit and adds exports', () => withoutEvents(() => {
     const s = createGame(1201);
-    const google = s.fdi.pledges[0]; // D-113: the opening investor, kind and size are drawn from the campaign seed
+    const google = s.fdi.pledges[0]; // D-116: the opening investor, kind and size are drawn from the campaign seed
     expect(google.status).toBe('offered');
     expect(google.amount).toBeGreaterThanOrEqual(FDI_KINDS[google.kind].amount[0]);
     expect(google.amount).toBeLessThanOrEqual(FDI_KINDS[google.kind].amount[1]);

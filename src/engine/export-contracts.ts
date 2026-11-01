@@ -58,7 +58,7 @@ export function exportOffers(s: GameState): void {
   for (const template of EXPORT_CONTRACT_IDS) {
     if (s.deals.items.some((d) => d.template === template && ['opportunity', 'negotiating', 'agreed', 'active'].includes(d.status))) continue;
     const c = EXPORT_CONTRACTS[template];
-    // D-113: the buyer, its backstory and the contracted volume come from the campaign seed; the product, partner and
+    // D-116: the buyer, its backstory and the contracted volume come from the campaign seed; the product, partner and
     // term limits stay with the template. A returning buyer in a later quarter is a different firm from the same pool.
     const round = s.deals.items.filter((x) => x.template === template).length, b = exportBuyer(s, template, round);
     const volume = Math.round((c.volume * flavourScale(s, `export:${template}:${round}`, 0.25)) / 1e8) * 1e8;

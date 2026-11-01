@@ -9,6 +9,7 @@ import { DEBT_LIMIT_MYR, TREASURY_LIMIT_MYR } from '../data/boom';
 import { injectFund } from './sovereign-fund';
 import { FOREIGN_WORKERS0, WORKER_LEVY0 } from './policy';
 import { modelledResourceRevenue0 } from './soe';
+import { cashAidDaily, pensionSavingShare, subsidyCut } from './fiscal-levers';
 import { fuelSubsidyDaily, wheatSubsidyDaily, scheduleRetaliation } from './world';
 // Government treasury, debt, budgets, projects and tax settlement.
 // Every treasury movement goes through post(), which rounds to whole sen and records the exact
@@ -173,7 +174,10 @@ export function dailyGovernment(s: GameState, today: number): GovDay {
   const cats = Object.keys(BUDGET_PURCHASES) as Exclude<BudgetCategory, 'transfers'>[];
   const fleetDelta=fleetAdjustment(s,today);
   const opexDue = fleetDelta + cats.reduce((a, c) => a + pol.budget[c] * PER_DAY, 0);
-  const transfersDue = pol.budget.transfers * PER_DAY;
+  // Pension reforms (D-114) shrink the pension bill; targeted cash aid is paid on top of the transfers line.
+  const pensionCut = pol.budget.transfers * PER_DAY * pensionSavingShare(s);
+  const aidDue = cashAidDaily(s);
+  const transfersDue = pol.budget.transfers * PER_DAY - pensionCut + aidDue;
   // Construction is priced at today's property & construction price index: if it rises, projects
   // cost more in ringgit (escalation) for the same real work.
   const pCons = s.sectors.prop.price;
@@ -213,6 +217,11 @@ export function dailyGovernment(s: GameState, today: number): GovDay {
   purchases.ind += maintPaid * 0.4;
   const operatingPaid = post(gov, 'opex', opexPaid + maintPaid + arrearsDue * paidFraction);
   const transfersPaid = post(gov, 'opex', transfersDue * paidFraction);
+  if (s.policy?.enabled) {
+    s.policy.mtd.pensionSaved += pensionCut * paidFraction;
+    s.policy.mtd.cashAid += aidDue * paidFraction;
+    s.policy.mtd.subsidySaved += (fuelDue + wheatDue) * subsidyCut(s) / (1 - subsidyCut(s)) * paidFraction;
+  }
   for (const { id, amt } of capexDueBy) {
     const p = gov.projects.find((x) => x.id === id)!;
     const paid = post(gov, 'capex', amt * paidFraction);
@@ -378,11 +387,23 @@ export function monthCloseGovernment(s: GameState, otherCorporateTax = 0): GovMo
   return { flows, corporateTax, propertyLevy };
 }
 
+/** What moves the credit rating score (notches; 9 = AA before any penalty). Shared by `ratingScore` and the Fiscal control panel. */
+export function ratingBreakdown(s: GameState, debtToGdp: number, deficit: number, arrears: 0 | 1) {
+  const ratingFree = nationalV2(s) ? 0.045 : 0.025;
+  const debtFree = s.baseline.profile === 'malaysia' ? 0.6 : 0.3;
+  return {
+    debtFree, deficitFree: ratingFree,
+    debt: -15 * Math.max(0, debtToGdp - debtFree),
+    deficit: -40 * Math.max(0, deficit - ratingFree),
+    arrears: -3 * arrears,
+    credibility: nationalV2(s) ? (s.fiscal.credibility - 60) / 40 : 0,
+  };
+}
+
 /** Credit rating score 0–10 (8 = A): debt above 60% of GDP, a deficit above the free level, arrears and fiscal credibility. */
 export function ratingScore(s: GameState, debtToGdp: number, deficit: number, arrears: 0 | 1): number {
-  const ratingFree = nationalV2(s) ? 0.045 : 0.025;
-  const credibilityNotches = nationalV2(s) ? (s.fiscal.credibility - 60) / 40 : 0;
-  return clamp(9 - 15 * Math.max(0, debtToGdp - (s.baseline.profile === 'malaysia' ? 0.6 : 0.3)) - 40 * Math.max(0, deficit - ratingFree) - 3 * arrears + credibilityNotches, 0, 10);
+  const b = ratingBreakdown(s, debtToGdp, deficit, arrears);
+  return clamp(9 + b.debt + b.deficit + b.arrears + b.credibility, 0, 10);
 }
 
 export function ratingLabel(r: number): string {

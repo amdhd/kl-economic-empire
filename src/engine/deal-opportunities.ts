@@ -59,7 +59,7 @@ export function periodicDealOffers(s: GameState, day: number): void {
     rescueOffers(s);
   } else takeoverOffers(s);
   for (const [index, d] of s.deals.items.slice(first).entries()) {
-    // D-113: counterparties are already drawn from the campaign seed; mark the cohort and add its campaign angle.
+    // D-116: counterparties are already drawn from the campaign seed; mark the cohort and add its campaign angle.
     d.template = `${d.kind}:cohort-${episode}-${index}`;
     d.note = `${dealTheme(s).label} campaign: ${cohortAngle(s, episode, index)}. ${d.note}`;
   }

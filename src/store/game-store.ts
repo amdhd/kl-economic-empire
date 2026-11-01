@@ -16,7 +16,7 @@ import { deserialize, serialize } from '../persistence/save';
 import { readSlot, writeSlot, type SlotId } from '../persistence/storage';
 import type { GameSpeed, GameState, ScenarioId, TickerId } from '../types/game';
 
-export type PanelId = 'ministry' | 'deals' | 'decisions' | 'fdi' | 'standing' | 'explain' | 'settings' | 'finance' | 'population' | 'controls' | 'trade' | 'central' | 'sources' | 'fiscal' | 'commodities' | 'oil' | 'partners' | 'soe' | 'overview' | 'projects' | 'debt' | 'markets' | 'fund' | 'economy' | 'reports' | 'objectives' | 'infra' | 'gdphistory';
+export type PanelId = 'ministry' | 'deals' | 'decisions' | 'reforms' | 'fdi' | 'standing' | 'explain' | 'settings' | 'finance' | 'population' | 'controls' | 'trade' | 'central' | 'sources' | 'fiscal' | 'commodities' | 'oil' | 'partners' | 'soe' | 'overview' | 'projects' | 'debt' | 'markets' | 'fund' | 'economy' | 'reports' | 'objectives' | 'infra' | 'gdphistory';
 export type Selection = { kind: 'company'; id: TickerId } | { kind: 'district'; id: string } | null;
 export interface Toast {
   id: number;

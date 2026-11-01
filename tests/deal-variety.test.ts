@@ -14,7 +14,7 @@ const view = (s: ReturnType<typeof room>) => ({
   pledges: s.fdi.pledges.map((p) => [p.investor, p.kind, p.amount, p.ask]),
 });
 
-describe('Deal Room variety (D-113)', () => {
+describe('Deal Room variety (D-116)', () => {
   it('is identical for one seed and survives a save round trip', () => {
     expect(view(room(4242))).toEqual(view(room(4242)));
     const a = room(4242, false, 200), b = deserialize(serialize(a));

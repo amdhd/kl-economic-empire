@@ -9,6 +9,7 @@ import {
   PALM_DUTY0, PARTNER_IDS, PARTNERS, RETALIATION_LAG_DAYS, fuelEffectivePrice, fuelSubsidyAnnual,
 } from '../data/world';
 import type { CommodityId, CommodityPolicy, GameState, PartnerId, PartnerState, WorldState } from '../types/game';
+import { subsidyCut } from './fiscal-levers';
 import { rand, randInt, randnClipped, seedRng } from './rng';
 import { klDay } from './time';
 import { dealsInForce } from './trade-book';
@@ -218,11 +219,19 @@ export function fuelMarketPrice(s: GameState): number {
   return FUEL_MARKET0 * (1 - FUEL_CRUDE_SHARE + FUEL_CRUDE_SHARE * s.external.oil * fxf);
 }
 
+/** Subsidy targeting (D-114): the saving per litre that higher-income households now pay at the pump (RM/litre). */
+function targetingPremium(s: GameState): number {
+  const cut = subsidyCut(s);
+  if (cut <= 0) return 0;
+  const pol = s.world.policy;
+  return cut * fuelSubsidyAnnual(fuelMarketPrice(s), pol.fuelCeiling, pol.fuelEligible) / FUEL_VOLUME;
+}
+
 /** Household pump-price index relative to opening (1 = opening mix of capped and market prices). */
 export function fuelPriceIndex(s: GameState): number {
   if (!nationalV2(s)) return 1;
   const pol = s.world.policy;
-  return fuelEffectivePrice(fuelMarketPrice(s), pol.fuelCeiling, pol.fuelEligible) / FUEL_EFFECTIVE0;
+  return (fuelEffectivePrice(fuelMarketPrice(s), pol.fuelCeiling, pol.fuelEligible) + targetingPremium(s)) / FUEL_EFFECTIVE0;
 }
 
 /** CPI excluding the administered pump-price component (model 2), same base as the CPI. */
@@ -231,16 +240,18 @@ export function coreCpiOf(s: GameState): number {
   return (s.indicators.cpi - 100 * FUEL_CPI_WEIGHT * fuelPriceIndex(s)) / (1 - FUEL_CPI_WEIGHT);
 }
 
-/** Extra household fuel spending versus opening (MYR/day): pump prices × volume. Model 2 only. */
+/** Extra household fuel and food spending versus opening (MYR/day): pump prices × volume, plus the food subsidy targeting removes. Model 2 only. */
 export function householdFuelBillDelta(s: GameState): number {
   if (!nationalV2(s)) return 0;
   const pol = s.world.policy;
-  return (FUEL_VOLUME / 365) * (fuelEffectivePrice(fuelMarketPrice(s), pol.fuelCeiling, pol.fuelEligible) - FUEL_EFFECTIVE0);
+  const foodSaved = subsidyCut(s) * rawWheatSubsidyDaily(s);
+  return (FUEL_VOLUME / 365) * (fuelEffectivePrice(fuelMarketPrice(s), pol.fuelCeiling, pol.fuelEligible) + targetingPremium(s) - FUEL_EFFECTIVE0) + foodSaved;
 }
 
+/** Fuel subsidy owed today (MYR/day), after the share targeting removes. */
 export function fuelSubsidyDaily(s: GameState): number {
   if (!nationalV2(s)) return 0;
-  return fuelSubsidyAnnual(fuelMarketPrice(s), s.world.policy.fuelCeiling, s.world.policy.fuelEligible) / 365;
+  return fuelSubsidyAnnual(fuelMarketPrice(s), s.world.policy.fuelCeiling, s.world.policy.fuelEligible) / 365 * (1 - subsidyCut(s));
 }
 
 /** Food import price paid by importers after the subsidy (index). It covers part of any rise above reference. */
@@ -251,14 +262,17 @@ export function foodUserPrice(s: GameState, c: 'wheat' | 'rice'): number {
 /** Back-compatible name for the wheat leg. */
 export const wheatUserPrice = (s: GameState) => foodUserPrice(s, 'wheat');
 
-/** Food subsidy owed for yesterday's wheat and rice imports (MYR/day). */
-export function wheatSubsidyDaily(s: GameState): number {
+/** Food subsidy owed for yesterday's wheat and rice imports (MYR/day), before subsidy targeting. */
+function rawWheatSubsidyDaily(s: GameState): number {
   if (!nationalV2(s) || s.world.policy.wheatSubsidy <= 0) return 0;
   const w = s.world;
   const fxf = s.external.myrPerUsd / baselineFor(s).myrPerUsd;
   const owed = (qty: number, p: number) => qty * fxf * Math.max(0, p - 1);
   return (owed(w.lastWheatImports, w.prices.wheat) + owed(w.lastRiceImports, w.prices.rice)) * w.policy.wheatSubsidy;
 }
+
+/** Food subsidy owed (MYR/day), after the share targeting removes (D-114). */
+export const wheatSubsidyDaily = (s: GameState): number => rawWheatSubsidyDaily(s) * (1 - subsidyCut(s));
 
 export function validateCommodityPolicy(p: Partial<CommodityPolicy>): string | null {
   const bad = (v: number | undefined, lo: number, hi: number) => v !== undefined && !(Number.isFinite(v) && v >= lo && v <= hi);

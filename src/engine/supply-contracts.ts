@@ -15,7 +15,7 @@ export function supplyOffers(s: GameState): void {
   if (!s.deals.enabled) return;
   const round = Math.floor(kindRound(s, 'supply') / 2);
   for (const industrial of [false, true]) {
-    // D-113: supplier, size and opening price come from the campaign seed; the allowed term ranges are unchanged.
+    // D-116: supplier, size and opening price come from the campaign seed; the allowed term ranges are unchanged.
     const sup = supplier(s, industrial, round), k = flavourScale(s, `supply:${industrial}:${round}`, 0.25);
     const d = addDeal(
       s,
