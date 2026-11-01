@@ -1,7 +1,7 @@
 import type { GameState } from '../types/game';
 import type { Deal } from '../types/deals';
 import { addDeal, dealLog, releaseDeal, reserveDeal, spendDeal, DEAL_ROUNDS } from './deals';
-import { BOOM, boomOn } from '../data/boom';
+import { boomOn } from '../data/boom';
 import { toMinor } from './util';
 const active = (s: GameState, d: Deal, day = s.scheduler.lastDay) =>
   d.kind === 'supply' &&
@@ -47,7 +47,7 @@ export function offerSupply(s: GameState, d: Deal, terms: Partial<Deal['terms']>
   ))
     return 'Use 3–24 months, a 0.85–1.20 price multiplier and 0–100% indexation.';
   // A long fully fixed contract requires a larger commercial premium; the supplier counters visibly.
-  const minimum = boomOn(s) ? BOOM.supplyMinPrice : 1 + 0.0005 * t.months * (1 - t.protection); // looser supplier (D-086): was 0.002
+  const minimum = 0.85; // D-097: suppliers accept any price in the allowed range
   d.terms = { ...t, priceFactor: Math.max(t.priceFactor, Math.ceil(minimum * 1000) / 1000) };
   d.version++;
   d.rounds++;

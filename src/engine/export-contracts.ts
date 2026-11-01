@@ -9,7 +9,7 @@ import type { Deal } from '../types/deals';
 import type { GameState, PartnerId } from '../types/game';
 import { addDeal, dealLog, releaseDeal, reserveDeal, spendDeal, DEAL_ROUNDS } from './deals';
 import { post } from './government';
-import { BOOM, boomOn } from '../data/boom';
+import { boomOn } from '../data/boom';
 import { toMinor } from './util';
 
 export const EXPORT_ADDITIONALITY = 0.5;
@@ -69,7 +69,8 @@ export function exportOffers(s: GameState): void {
   }
 }
 /** The buyer pays more only for shorter or more indexed contracts (it bears the risk of a fixed price). */
-export const buyerMaxPrice = (months: number, protection: number, s?: Pick<GameState, 'mode'>) => s && boomOn(s) ? BOOM.exportMaxPrice : 1.15 - 0.0005 * months * (1 - protection); // looser buyer (D-086): was 1.04 − 0.002·months
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- signature kept for callers; the rule no longer reads these
+export const buyerMaxPrice = (_months?: number, _protection?: number, _s?: Pick<GameState, 'mode'>) => 1.3; // D-097: buyers accept any price in the allowed range
 
 export function offerExport(s: GameState, d: Deal, terms: Partial<Deal['terms']>): string | null {
   if (d.status !== 'negotiating' || d.rounds >= DEAL_ROUNDS || s.scheduler.lastDay >= d.deadline) return 'Negotiation is closed.';

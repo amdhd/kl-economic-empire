@@ -86,7 +86,8 @@ describe('negotiated FDI', () => {
         s.clock.hour * 60,
       ).ok,
     ).toBe(true);
-    expect(d.terms.incentive).toBeGreaterThan(ask);
+    expect(ask).toBeGreaterThan(0);
+    expect(d.terms.incentive).toBe(0); // D-097: the investor accepts a zero grant
     expect(d.rounds).toBe(1);
     const t = deserialize(serialize(s));
     expect(t.deals.items.find((x) => x.id === d.id)?.terms).toEqual(d.terms);
@@ -177,7 +178,7 @@ describe('supply contracts', () => {
         s.clock.hour * 60,
       ).ok,
     ).toBe(true);
-    expect(d.terms.priceFactor).toBeGreaterThan(1);
+    expect(d.terms.priceFactor).toBeCloseTo(0.95, 6); // D-097: the supplier accepts any price in range
     act(s, d.id, 'sign');
     runHeadless(s, 24 * 3);
     const escrow = d.escrowMinor;
