@@ -984,3 +984,5 @@ housing 12) from the treasury's capex line; completion adds capacity. No randomn
 **Boom max profit (D-090).** `BOOM.noMacroEvents` (D-092: no temporary macro events of any tone, since each ends in a cliff), `exportMaxPrice` (1.30), `supplyMinPrice` (0.85); export shortfall penalties, buyer walk-aways, supplier price-shock failures and concession termination claims are off. Realistic mode keeps all of them.
 
 - **Boom ledger:** trade-ledger product exports are multiplied by the same capacity reach the core uses (`exportReach`), so ledger and core trade stay consistent in Boom mode (D-091).
+
+**Boom FX cap (D-093).** `BOOM.fxMaxDepreciationDaily` (0.0003) limits daily ringgit weakening in `updateExternal`.

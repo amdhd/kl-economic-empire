@@ -36,20 +36,20 @@ describe('Boom max-profit rules (D-090)', () => {
     expect(d.terms.priceFactor).toBe(0.85);
   });
 
-  it('no month loses more than 3% of real GDP or 6% of US$ GDP in the first 18 months (no event cliffs, D-092)', () => {
+  it('no month loses more than 1% of real, ringgit or US$ GDP over 36 months on three seeds (no event cliffs, D-092; ringgit weakening cap, D-093)', () => {
     const DAYS: Record<string, number> = { Jan: 31, Feb: 28, Mar: 31, Apr: 30, May: 31, Jun: 30, Jul: 31, Aug: 31, Sep: 30, Oct: 31, Nov: 30, Dec: 31 };
-    for (const seed of [20270101, 7, 99]) {
+    for (const seed of [20270101, 99, 1234]) {
       const s = createGame(seed, 'balanced', 'malaysia', { months: 36, boom: true });
-      runHeadless(s, 24 * 31 * 19, (g) => {
+      runHeadless(s, 24 * 31 * 37, (g) => {
         infraAutopilot(g);
         if (g.clock.hour % 24 === 9) for (const p of g.fdi.pledges) if (p.status === 'offered') applyCommand(g, { type: 'decidePledge', id: p.id, approve: true, incentive: Math.min(0.3, p.ask) }, g.clock.hour * 60);
       });
-      let real = 0, usd = 0;
-      for (const r of s.reports.slice(0, 18)) {
+      let real = 0, usd = 0, myr = 0;
+      for (const r of s.reports) {
         const days = DAYS[r.label.slice(0, 3)] + (r.label.startsWith('Feb 2028') ? 1 : 0);
-        const nr = (r.realGdp * 365) / days, nu = (r.nominalGdp * 365) / days / r.myrPerUsd;
-        if (real) { expect(nr / real - 1).toBeGreaterThan(-0.03); expect(nu / usd - 1).toBeGreaterThan(-0.06); }
-        real = nr; usd = nu;
+        const nr = (r.realGdp * 365) / days, nm = (r.nominalGdp * 365) / days, nu = nm / r.myrPerUsd;
+        if (real) { expect(nr / real - 1).toBeGreaterThan(-0.01); expect(nm / myr - 1).toBeGreaterThan(-0.01); expect(nu / usd - 1).toBeGreaterThan(-0.011); }
+        real = nr; usd = nu; myr = nm;
       }
     }
   }, 300_000);

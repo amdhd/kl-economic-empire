@@ -127,7 +127,10 @@ export function updateExternal(s: GameState, mods: AggregatedMods, klInflation: 
   // Boom mode (D-079): productivity-led appreciation as the economy outgrows its opening size (Balassa–Samuelson style).
   const boom = boomOn(s);
   const catchUp = boom ? -BOOM.fxProductivityElasticity * Math.log(Math.max(1, s.indicators.realGdpAnnual / s.baseline.realGdpAnnual)) : 0;
+  const prevFx = e.myrPerUsd;
   e.myrPerUsd = clamp(BASELINE.myrPerUsd * Math.exp(catchUp + s.centralBank.pressure + monetaryEffects(s).fx + controls.fxLevel + cy.fx * (1 - controls.fxDamping) - 1.5 * diff - 0.05 * (e.oil - 1) - 0.08 * (e.riskAppetite - 0.5)) * mods.fx, boom ? BOOM.fxFloor : 3.2, 6.5);
+  // Boom mode (D-093): the ringgit may strengthen freely but weakens at most about 0.9% a month, so US$ GDP never loses more than about 1% in a month.
+  if (boom) e.myrPerUsd = Math.min(e.myrPerUsd, prevFx * (1 + BOOM.fxMaxDepreciationDaily));
 
   const d = (name: GlobalDriver, base: number) => base * (mods.drivers[name] ?? 1);
   const g = e.globalDemand, us = e.usDemand, tc = e.techCycle;

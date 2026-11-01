@@ -33,6 +33,8 @@ export const BOOM = {
   /** Productivity-led ringgit appreciation: log MYR/USD falls by this × log(real GDP ÷ opening). Floor MYR1.00. */
   fxProductivityElasticity: 0.35,
   fxFloor: 1,
+  /** Cap on how fast the ringgit can weaken a day (D-093). 0.0003 a day is about 0.9% a month; strengthening is uncapped. */
+  fxMaxDepreciationDaily: 0.0003,
   /** FDI: arrival hazard multiplier and pledge size growth (× (base + perYear × years)). */
   fdiHazard: 4,
   /** Extra climate points for every kind of pledge (an investment rush), and the build time of any pledge in months. */
