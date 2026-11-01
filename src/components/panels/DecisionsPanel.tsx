@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { formatLever, LEVER_IDS, LEVERS, leverPhase, leverValue, type LeverGroup, MIN_WAGE0, abatement, aiMismatch } from '../../engine/policy';
+import { leverRampDays } from '../../data/boom';
 import { overallAttractiveness } from '../../engine/fdi';
 import type { LeverId } from '../../types/game';
 import { useGame, useGameState, type PanelId } from '../../store/game-store';
@@ -88,7 +89,7 @@ export function DecisionsPanel() {
           setConfirm(false);
         }}>
           <ul className="list-disc space-y-1 pl-4">
-            {changes.map(id => <li key={id}><b>{LEVERS[id].label}</b>: {formatLever(id, decided(id))} → {formatLever(id, draft[id] as number)}. Effective tomorrow, full effect after ~{LEVERS[id].rampDays} days.</li>)}
+            {changes.map(id => <li key={id}><b>{LEVERS[id].label}</b>: {formatLever(id, decided(id))} → {formatLever(id, draft[id] as number)}. Effective tomorrow, full effect after ~{leverRampDays(g, LEVERS[id].rampDays)} days.</li>)}
           </ul>
           <p className="mt-2 text-[12px] text-slate-400">Investors react to the announcement at once; economic effects follow the phase-in. Fictional simulated policy.</p>
         </ConfirmDialog>

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { capacitySlot } from '../src/data/boom';
 import { createGame, runHeadless } from '../src/engine/game';
 import { investmentDelivery } from '../src/engine/economy';
 import { exportReach, calibrationFor } from '../src/engine/calibration';
@@ -26,11 +27,12 @@ describe('Boom supply limits reach capital, exports and the trade ledger (D-099)
     runUntil(a, 2027, 1, 31, 23);
     const b = clone(a);
     for (const j of SECTOR_IDS) b.sectors[j].mtd.output = b.sectors[j].mtd.demand * 0.4;
+    const carried = Object.fromEntries(SECTOR_IDS.map((j) => [j, a.sectors[j].pipeline[capacitySlot(a) + 1]]));
     runUntil(a, 2027, 2, 1, 2);
     runUntil(b, 2027, 2, 1, 2);
     expect(a.reports).toHaveLength(1);
     expect(b.reports).toHaveLength(1);
-    const added = (x: typeof a, j: (typeof SECTOR_IDS)[number]) => x.sectors[j].pipeline.at(-1)! / x.sectors[j].investmentMonthly;
+    const added = (x: typeof a, j: (typeof SECTOR_IDS)[number]) => (x.sectors[j].pipeline[capacitySlot(x)]! - carried[j]) / x.sectors[j].investmentMonthly;
     for (const j of SECTOR_IDS) expect(added(b, j)).toBeLessThan(added(a, j) * 0.6);
   }));
 

@@ -3,7 +3,7 @@ import type { Deal } from '../types/deals';
 import { PROJECT_BY_ID } from '../data/projects';
 import { addDeal, dealLog, releaseDeal, reserveDeal, spendDeal, DEAL_ROUNDS } from './deals';
 import { completeProject, post } from './government';
-import { boomOn } from '../data/boom';
+import { boomOn, projectBuildDays } from '../data/boom';
 import { toMinor } from './util';
 
 export function concessionOffers(s: GameState): void {
@@ -87,7 +87,7 @@ export function signConcession(s: GameState, d: Deal): string | null {
     spent: 0,
     work: 0,
     startDay: s.scheduler.lastDay + 1,
-    durationDays: t.durationDays,
+    durationDays: projectBuildDays(s, t.durationDays),
     status: 'building' as const,
     concessionDealId: d.id,
   };

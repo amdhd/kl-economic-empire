@@ -45,17 +45,17 @@ export const INFRA = {
 export const NETWORK_SPECS: Record<NetworkId, NetworkSpec> = {
   power: {
     label: 'Power grid', blurb: 'Generation and transmission. Factories and data centres stall first.',
-    loadElasticity: 0.85, costGdpShare: 0.06, buildDays: 540,
+    loadElasticity: 0.85, costGdpShare: 0.06, buildDays: 30,
     weights: { fin: 0.3, prop: 0.4, util: 0.5, tech: 0.9, cons: 0.5, health: 0.5, ind: 1 },
   },
   transport: {
     label: 'Transport & ports', blurb: 'Roads, rail, ports and airports. Freight and shops slow down.',
-    loadElasticity: 0.7, costGdpShare: 0.08, buildDays: 720,
+    loadElasticity: 0.7, costGdpShare: 0.08, buildDays: 60,
     weights: { fin: 0.3, prop: 0.7, util: 0.3, tech: 0.3, cons: 0.9, health: 0.4, ind: 1 },
   },
   housing: {
     label: 'Housing & services', blurb: 'Homes, water and schools for a bigger workforce. Firms cannot hire people who cannot live nearby.',
-    loadElasticity: 1, costGdpShare: 0.06, buildDays: 360,
+    loadElasticity: 1, costGdpShare: 0.06, buildDays: 30,
     weights: { fin: 0.6, prop: 0.2, util: 0.3, tech: 0.6, cons: 0.8, health: 0.6, ind: 0.5 },
   },
 };
