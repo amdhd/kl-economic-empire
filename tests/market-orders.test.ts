@@ -140,7 +140,7 @@ describe('sovereign fund orders', () => {
   it('splitting an order does not avoid the liquidity cap or price impact', () => {
     const s = openBursa();
     const adv = avgDailyValue(s, MBB);
-    const lot = Math.floor((0.2 * adv) / s.market.quotes[MBB].price / 100) * 100;
+    const lot = Math.floor((1.1 * adv) / s.market.quotes[MBB].price / 100) * 100;
     const one = quoteFill(s, MBB, 'buy', lot);
     expect(applyCommand(s, { type: 'placeOrder', ticker: MBB, side: 'buy', units: lot }, atMin(s)).ok).toBe(true);
     const second = quoteFill(s, MBB, 'buy', lot);

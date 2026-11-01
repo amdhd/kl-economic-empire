@@ -214,7 +214,7 @@ function TargetAllocation({ myPct, usPct }: { myPct: number; usPct: number }) {
           <input type="range" min={0} max={100} value={us} onChange={(e) => setUs(Math.min(Number(e.target.value), 100 - my))} aria-label="Target US equities" />
         </label>
       </div>
-      <div className="mt-1 text-[12px] text-slate-400">Cash target: <b className="text-slate-200">{cash}%</b> · now MY {pct(myPct, 0)} / US {pct(usPct, 0)}. Buys are cap-weighted across the exchange’s 20 names within the 20% and liquidity limits; sells are pro-rata. Liquidity caps each stock at 25% of its daily value per session, so large shifts take several sessions — rebalance again on later days.</div>
+      <div className="mt-1 text-[12px] text-slate-400">Cash target: <b className="text-slate-200">{cash}%</b> · now MY {pct(myPct, 0)} / US {pct(usPct, 0)}. Buys are cap-weighted across the exchange’s 20 names within the 20% and liquidity limits; sells are pro-rata. Liquidity caps each stock at 200% of its daily value per session, so large shifts take several sessions — rebalance again on later days.</div>
       {plan && (
         <div className="mt-2 flex items-center justify-between gap-2 text-[12px]">
           <span className="num text-slate-300">{plan.legs.length} orders{plan.fxMinorMYR > 0 ? ` · convert ${money(plan.fxMinorMYR / 100)} to USD` : ''} · est. costs {money(plan.estCostsMYR)}</span>
