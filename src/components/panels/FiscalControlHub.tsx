@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { DEVELOPMENT_ANNUAL0 } from '../../data/world';
 import type { Command } from '../../engine/game';
-import { newIssueCoupon, ratingBreakdown, ratingLabel } from '../../engine/government';
+import { newIssueCoupon, ratingBreakdown, ratingLabel, treasuryMYR } from '../../engine/government';
 import { fuelSubsidyDaily, wheatSubsidyDaily } from '../../engine/world';
 import { formatKL } from '../../engine/time';
 import { useGame, useGameState, type PanelId } from '../../store/game-store';
@@ -23,6 +23,7 @@ export function FiscalControlHub() {
   const [cap, setCap] = useState(gov.policies.borrowing.maxDebtToGdp);
   const [term, setTerm] = useState(g.controls.debt.newTermMonths);
   const [refi, setRefi] = useState(g.controls.debt.refinance * 100);
+  const [amt, setAmt] = useState(1000);
   const [review, setReview] = useState<{ cmd: Command; title: string; body: string } | null>(null);
   const deficit = last?.deficit ?? g.indicators.deficitToGdp;
   const rb = ratingBreakdown(g, g.indicators.debtToGdp, deficit, gov.mtdArrearsDays > 0 ? 1 : 0);
@@ -70,6 +71,15 @@ export function FiscalControlHub() {
         <button className="btn" data-testid="review-debt" disabled={term === g.controls.debt.newTermMonths && refi / 100 === g.controls.debt.refinance}
           onClick={() => setReview({ cmd: { type: 'debtStrategy', termMonths: term, refinance: refi / 100 }, title: 'Change debt strategy', body: `Future issuance uses ${term / 12}-year amortisation. Refinance ${refi}% of principal paid; a lower setting uses treasury cash. Existing debt keeps its coupon.` })}>Review debt strategy</button>
       </div>
+    </Section>
+    <Section title="Issue bonds or repay debt (discretionary)">
+      <div className="flex flex-wrap items-center gap-2 text-[12.5px]">
+        <input className="input num !w-32" type="number" min={1} value={amt} onChange={e => setAmt(Math.max(0, Number(e.target.value)))} aria-label="Amount RM millions" />
+        <span className="text-slate-400">RM m</span>
+        <button className="btn" disabled={!(amt > 0) || !gov.marketAccess} onClick={() => setReview({ cmd: { type: 'issueBonds', amount: amt * 1e6 }, title: `Issue RM ${amt}m of bonds`, body: `Treasury +RM ${amt}m and debt +RM ${amt}m at ≈${pct(newIssueCoupon(g), 2)}. Borrowing is not income; net worth is unchanged until the money is spent.` })}>Issue bonds</button>
+        <button className="btn" disabled={!(amt > 0) || amt * 1e6 > treasuryMYR(gov)} onClick={() => setReview({ cmd: { type: 'repayDebt', amount: amt * 1e6 }, title: `Repay RM ${amt}m of debt`, body: `Treasury and debt both fall by RM ${amt}m, saving ≈${money(amt * 1e6 * gov.avgDebtRate)} interest a year.` })}>Repay debt</button>
+      </div>
+      <p className="mt-1 text-[11.5px] text-slate-400">These are government bonds: borrowing raises debt and cash together; repaying needs treasury cash. Monthly refinancing follows the term and refinance settings above. They are not BNM bills or reserves, which are in the Central bank tab.</p>
     </Section>
     <Section title="Ministry budgets (queued from tomorrow)">
       <div className="econ-embed" data-testid="hub-budget"><BudgetEditor g={g} /></div>

@@ -1,12 +1,10 @@
-import { useState } from 'react';
 import { debtMYR, isInflow, newIssueCoupon, ratingLabel, treasuryMYR } from '../../engine/government';
 import type { GovMonthFlows } from '../../types/game';
 import { klDayLabel } from '../../engine/time';
-import { useGame, useGameState } from '../../store/game-store';
+import { useGameState } from '../../store/game-store';
 import { bnTick, money, pct } from '../../utils/format';
 import { TimeChart } from '../charts/TimeChart';
 import { OFFICIAL_FEDERAL_DEBT } from '../../data/official-history';
-import { ConfirmDialog } from './ConfirmDialog';
 import { PanelShell } from './PanelShell';
 import { Section, Stat } from '../ui';
 
@@ -21,10 +19,7 @@ const FLOW_LABEL: Record<keyof GovMonthFlows, string> = {
 
 export function DebtPanel() {
   const g = useGameState();
-  const command = useGame.getState().command;
   const gov = g.government;
-  const [amt, setAmt] = useState(1000);
-  const [confirm, setConfirm] = useState<'issue' | 'repay' | null>(null);
   const last = g.reports.at(-1);
   const data = g.daily.slice(-400).map((d) => ({ t: d.t, treasury: d.treasury / 1e9, debt: d.debt / 1e9 }));
   return (
@@ -64,19 +59,7 @@ export function DebtPanel() {
         </Section>
       </div>
       <p className="text-[11.5px] text-slate-400">The cash buffer, debt cap, development budget and debt terms are set in the Fiscal control tab. Debt above {g.baseline.profile === 'malaysia' ? '65%' : '35%'} of GDP or deficits above 3% raise the risk premium.</p>
-      <Section title="Discretionary operations">
-        <div className="flex items-center gap-2 text-[12.5px]">
-          <input className="input num !w-32" type="number" min={1} value={amt} onChange={(e) => setAmt(Math.max(0, Number(e.target.value)))} aria-label="Amount RM millions" />
-          <span className="text-slate-400">RM m</span>
-          <button className="btn" disabled={!(amt > 0) || !gov.marketAccess} onClick={() => setConfirm('issue')}>Issue bonds</button>
-          <button className="btn" disabled={!(amt > 0) || amt * 1e6 > treasuryMYR(gov)} onClick={() => setConfirm('repay')}>Repay debt</button>
-        </div>
-      </Section>
-      {confirm && (
-        <ConfirmDialog title={confirm === 'issue' ? `Issue RM ${amt}m of bonds` : `Repay RM ${amt}m of debt`} confirmLabel="Confirm" onCancel={() => setConfirm(null)} onConfirm={() => { command({ type: confirm === 'issue' ? 'issueBonds' : 'repayDebt', amount: amt * 1e6 }); setConfirm(null); }}>
-          {confirm === 'issue' ? `Treasury +RM ${amt}m and debt +RM ${amt}m at ≈${pct(newIssueCoupon(g), 2)}. Borrowing is not income; net worth is unchanged until the money is spent.` : `Treasury and debt both fall by RM ${amt}m, saving ≈${money(amt * 1e6 * gov.avgDebtRate)} interest a year.`}
-        </ConfirmDialog>
-      )}
+      <p className="text-[11.5px] text-slate-400">Issuing bonds and repaying debt are in the Fiscal control tab, next to the borrowing rule and debt terms.</p>
     </PanelShell>
   );
 }

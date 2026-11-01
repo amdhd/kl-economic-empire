@@ -35,7 +35,7 @@ export function CentralBankPanel() {
   const bondRoom = QE_MAX_SHARE * gdp - cb.qeHoldings;
   const billRoom = BILLS_MAX_SHARE * g.bank.reserves;
   return (
-    <PanelShell title="Central bank · BNM" subtitle="Fictional powers over Bank Negara: interest rate, bank rules, bond buying and the reserves. Simulated; not real policy." width={720}>
+    <PanelShell title="Central bank · BNM" subtitle="Fictional powers over Bank Negara: interest rate, bank rules, bond buying and the reserves. Simulated; not real policy. BNM bills and reserves are the central bank's own balance sheet; government bonds and debt repayment are in Money & debt, Fiscal control." width={720}>
       <div className="grid grid-cols-4 gap-3 rounded-xl bg-slate-900/40 p-3">
         <Stat label="Policy rate (OPR)" value={pct(g.external.opr, 2)} sub={`next meeting ${nextMeeting(g.clock.hour)}`} />
         <Stat label="Market trust in BNM" value={`${cb.credibility.toFixed(0)}`} sub={credLabel} tone={cb.credibility < 50 ? 'down' : undefined} />
