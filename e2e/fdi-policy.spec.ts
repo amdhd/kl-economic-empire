@@ -59,6 +59,6 @@ test('fiscal control tab: rating readout on top, development and borrowing contr
   await page.getByTestId('review-dev').click();
   await page.getByTestId('confirm-btn').click();
   expect((await state(page)).government.pending.some(p => p.kind === 'development')).toBe(true);
-  await page.getByTestId('hub-go-oil').click();
+  await page.getByTestId('hub-go-central').click();
   await expect(page.getByTestId('panel')).toBeVisible();
 });

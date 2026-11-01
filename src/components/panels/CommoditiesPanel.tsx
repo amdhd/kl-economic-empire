@@ -14,11 +14,6 @@ import { PanelShell } from './PanelShell';
 export function CommoditiesPanel() {
   const g = useGameState();
   const w = g.world;
-  const command = useGame.getState().command;
-  const pending = g.government.pending.filter((p) => p.kind === 'commodity');
-  const proposed = { ...w.policy, ...Object.assign({}, ...pending.map((p) => p.patch)) } as CommodityPolicy;
-  const [pol, setPol] = useState(proposed);
-  const [confirm, setConfirm] = useState(false);
   const [group, setGroup] = useState<'energy' | 'agri' | 'metals'>('energy');
   if (!w.enabled) {
     return <PanelShell title="Commodities & subsidies" subtitle="World prices, fuel ceilings and duties">
@@ -26,9 +21,7 @@ export function CommoditiesPanel() {
     </PanelShell>;
   }
   const fxf = g.external.myrPerUsd / baselineFor(g).myrPerUsd;
-  const changed = (Object.keys(pol) as (keyof CommodityPolicy)[]).filter((k) => k !== 'fuelCeiling' && k !== 'fuelEligible' && Math.abs(pol[k] - proposed[k]) > 1e-9); // fuel is set in the Oil window
   const chart = w.history.slice(-365).map((h) => ({ t: formatKL(h.t * 1440).date, ...Object.fromEntries(Object.keys(COMMODITIES).map((c) => [c, (h[c as keyof typeof COMMODITIES] ?? 1) * 100])) }));
-  const set = (k: keyof CommodityPolicy, v: number) => setPol({ ...pol, [k]: v });
   return <PanelShell title="Commodities & subsidies" subtitle="World prices are exogenous; you control domestic ceilings, subsidies and duties" width={760}>
     <div className="space-y-2 rounded-xl bg-slate-900/40 p-3" data-testid="commodity-prices">
       {COMMODITY_GROUPS.map((grp) => <div key={grp.id} className="grid grid-cols-5 gap-3">
@@ -53,6 +46,23 @@ export function CommoditiesPanel() {
       </div>
       <p className="mt-2 text-[12px] text-slate-400">Oil, LNG, palm oil and rubber are value added outside the seven industries: higher prices raise nominal GDP, PETRONAS profits, petroleum income tax, palm duty and smallholder income. LNG and coal set power costs; steel, aluminium and copper feed construction, industry and chipmakers; wheat and rice feed food prices. Households and firms pay more for fuel and inputs. Resource value added this month {gdpUsd(w.mtd.resourceVa, g.external.myrPerUsd)}.</p>
     </Section>
+    <p className="text-[12px] text-slate-400">The food subsidy and the steel and palm duties are set in Money & debt, Fiscal control.</p>
+  </PanelShell>;
+}
+
+/** Food subsidy and steel and palm duties: queued from tomorrow. Shown in the Fiscal control tab (D-115). */
+export function CommodityPolicySection() {
+  const g = useGameState();
+  const w = g.world;
+  const command = useGame.getState().command;
+  const pending = g.government.pending.filter((p) => p.kind === 'commodity');
+  const proposed = { ...w.policy, ...Object.assign({}, ...pending.map((p) => p.patch)) } as CommodityPolicy;
+  const [pol, setPol] = useState(proposed);
+  const [confirm, setConfirm] = useState(false);
+  if (!w.enabled) return null;
+  const changed = (Object.keys(pol) as (keyof CommodityPolicy)[]).filter((k) => k !== 'fuelCeiling' && k !== 'fuelEligible' && Math.abs(pol[k] - proposed[k]) > 1e-9); // fuel is set with the petrol subsidy
+  const set = (k: keyof CommodityPolicy, v: number) => setPol({ ...pol, [k]: v });
+  return <>
     <Section title="Domestic policy · effective tomorrow">
       <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-[12px]">
         <label className="block">Food import subsidy (wheat & rice) · covers {pct(pol.wheatSubsidy, 0)} of price rises
@@ -66,12 +76,11 @@ export function CommoditiesPanel() {
           <input type="range" min={0} max={0.2} step={0.005} value={pol.palmExportDuty} onChange={(e) => set('palmExportDuty', Number(e.target.value))} aria-label="Palm export duty" data-testid="palm-duty" />
         </label>
       </div>
-      <p className="mt-2 text-[12px] text-slate-400">The petrol subsidy (pump ceiling and who gets it) moved to the <button className="underline" onClick={() => useGame.getState().setPanel('oil')}>Oil window</button>.</p>
-      <button className="btn btn-primary mt-2" disabled={!changed.length} onClick={() => setConfirm(true)} data-testid="review-commodity">Review changes</button>
+      <button className="btn btn-primary mt-2" disabled={!changed.length} onClick={() => setConfirm(true)} data-testid="review-food-duties">Review changes</button>
       {pending.map((p) => <div key={p.id} className="mt-2 flex items-center justify-between gap-2 text-[12px] text-amber-200"><span>{p.label} · from {formatKL(p.effectiveMin).date}</span><button className="btn" onClick={() => command({ type: 'cancelPolicy', id: p.id })}>Withdraw</button></div>)}
     </Section>
     {confirm && <ConfirmDialog title="Queue commodity policy" confirmLabel="Queue policy" onCancel={() => setConfirm(false)} onConfirm={() => { command({ type: 'queueCommodity', patch: Object.fromEntries(changed.map((k) => [k, pol[k]])) }); setConfirm(false); }}>
       <ul className="list-disc space-y-1 pl-4">{changed.map((k) => <li key={k}>{k}: {k === 'fuelCeiling' ? `RM${proposed[k].toFixed(2)} → RM${pol[k].toFixed(2)}` : `${pct(proposed[k], 1)} → ${pct(pol[k], 1)}`}</li>)}<li>Effective from tomorrow.</li></ul>
     </ConfirmDialog>}
-  </PanelShell>;
+  </>;
 }

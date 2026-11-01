@@ -6,8 +6,7 @@ const state = (page: import('@playwright/test').Page) => page.evaluate(() => (wi
 
 test('central bank panel: take control of the rate, tighten banks, buy bonds, issue bills and share reserve income', async ({ page }) => {
   await startCampaign(page);
-  await openPanel(page, 'central');
-  await expect(page.getByTestId('panel')).toContainText('Central bank');
+  await openPanel(page, 'reforms');
   await page.getByTestId('cb-mode-manual').click();
   await page.getByTestId('cb-target').fill('0.02');
   await page.getByTestId('cb-set-target').click();
@@ -18,6 +17,8 @@ test('central bank panel: take control of the rate, tighten banks, buy bonds, is
   await page.getByTestId('cb-srr').fill('0.04');
   await page.getByTestId('cb-set-srr').click();
   await page.getByTestId('confirm-btn').click();
+  await openPanel(page, 'central');
+  await expect(page.getByTestId('panel')).toContainText('Central bank');
   await page.getByTestId('cb-buy-bonds').click();
   await page.getByTestId('confirm-btn').click();
   await page.getByTestId('cb-issue-bills').click();

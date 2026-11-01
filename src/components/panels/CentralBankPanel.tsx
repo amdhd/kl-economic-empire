@@ -22,14 +22,10 @@ export function CentralBankPanel() {
   const g = useGameState();
   const command = useGame.getState().command;
   const cb = g.centralBank;
-  const [target, setTarget] = useState(cb.targetOpr);
-  const [srr, setSrr] = useState(cb.srr);
   const [remit, setRemit] = useState(cb.remitShare);
   const [bn, setBn] = useState(10);
   const [confirm, setConfirm] = useState<Action>(null);
   const gdp = g.indicators.nominalGdpAnnual;
-  const lastMpc = cb.mpc.at(-1);
-  const rateDirection = target > cb.targetOpr ? 'raise' : 'cut';
   const credLabel = cb.credibility >= 80 ? 'Strong' : cb.credibility >= 50 ? 'Shaky' : 'Weak';
   const ask = (a: Action) => setConfirm(a);
   const bondRoom = QE_MAX_SHARE * gdp - cb.qeHoldings;
@@ -43,40 +39,9 @@ export function CentralBankPanel() {
         <Stat label="MYR float" value={money(cb.myrCash / 100)} sub="BNM’s own ringgit" />
       </div>
 
-      <Section title="1 · Interest rate (OPR)">
-        <p className="text-[12.5px] text-slate-300">
-          The rate banks pay to borrow. <b>Raise</b> it to fight rising prices and support the ringgit; loans get more expensive and growth slows.
-          <b> Cut</b> it to boost loans and jobs; prices may rise and the ringgit may weaken. BNM meets every two months and moves at most 0.50% per meeting, in 0.25% steps.
-        </p>
-        <div className="mt-2 flex flex-wrap items-center gap-3 text-[12.5px]">
-          <button className={`btn ${cb.mode === 'auto' ? 'btn-primary' : ''}`} onClick={() => command({ type: 'cbPolicy', mode: 'auto' })} data-testid="cb-mode-auto">Automatic (BNM decides)</button>
-          <button className={`btn ${cb.mode === 'manual' ? 'btn-primary' : ''}`} onClick={() => command({ type: 'cbPolicy', mode: 'manual' })} data-testid="cb-mode-manual">I set the rate</button>
-        </div>
-        {cb.mode === 'manual' ? (
-          <div className="mt-2">
-            <label className="block text-[12.5px]">Rate I want: <b>{pct(target, 2)}</b> <span className="text-slate-400">(now {pct(g.external.opr, 2)}, target in force {pct(cb.targetOpr, 2)})</span>
-              <input type="range" min={OPR_MIN} max={OPR_MAX} step={0.0025} value={target} onChange={(e) => setTarget(Number(e.target.value))} aria-label="Target OPR" data-testid="cb-target" />
-            </label>
-            <button className="btn btn-primary mt-1" disabled={Math.abs(target - cb.targetOpr) < 1e-9} data-testid="cb-set-target"
-              onClick={() => ask({ title: 'Set rate target', body: `BNM will ${rateDirection} the OPR towards ${pct(target, 2)} at its next meetings, starting ${nextMeeting(g.clock.hour)}. Moving far from what inflation and demand call for costs the market’s trust.`, run: () => command({ type: 'cbPolicy', targetOpr: target }) })}>Set target</button>
-          </div>
-        ) : <p className="mt-2 text-[12px] text-slate-400">BNM follows inflation and demand on its own. Switch to “I set the rate” to take control.</p>}
-        <p className="mt-2 text-[12px] text-slate-400">
-          Trust is {cb.credibility.toFixed(0)}/100 (healthy is {CREDIBILITY_START}+). Setting rates far from what inflation and demand call for lowers it, which raises prices, lifts bond yields and weakens the ringgit. It rebuilds when BNM runs on automatic.
-          {lastMpc && ` Last meeting: ${pct(lastMpc.from, 2)} → ${pct(lastMpc.to, 2)} (the automatic rule wanted ${pct(lastMpc.rule, 2)}).`}
-        </p>
-      </Section>
+      <p className="text-[12px] text-slate-400">The policy rate (OPR) and the bank reserve rule (SRR) are set in Money & debt, Fiscal control, beside the debt costs they move.</p>
 
-      <Section title="2 · Bank reserve rule (SRR)">
-        <p className="text-[12.5px] text-slate-300">The share of deposits banks must lock away at BNM. <b>Higher</b> = banks lend less and loans cost more (cools the economy). <b>Lower</b> = more lending.</p>
-        <label className="mt-2 block text-[12.5px]">Requirement: <b>{pct(srr, 1)}</b> <span className="text-slate-400">(now {pct(cb.srr, 1)})</span>
-          <input type="range" min={SRR_MIN} max={SRR_MAX} step={0.005} value={srr} onChange={(e) => setSrr(Number(e.target.value))} aria-label="Reserve requirement" data-testid="cb-srr" />
-        </label>
-        <button className="btn btn-primary mt-1" disabled={Math.abs(srr - cb.srr) < 1e-9} data-testid="cb-set-srr"
-          onClick={() => ask({ title: 'Change bank reserve rule', body: `Banks must hold ${pct(srr, 1)} of deposits at BNM (now ${pct(cb.srr, 1)}). Loan rates and lending change at the next month close.`, run: () => command({ type: 'cbPolicy', srr }) })}>Apply</button>
-      </Section>
-
-      <Section title="3 · Bond buying (QE) and selling (QT)">
+      <Section title="1 · Bond buying (QE) and selling (QT)">
         <p className="text-[12.5px] text-slate-300">BNM creates money to buy government bonds. This <b>lowers the interest the government pays</b> and eases loans, but pushes prices up and weakens the ringgit. It does not give the treasury cash. Selling bonds back does the reverse.</p>
         <div className="mt-2 grid grid-cols-3 gap-3">
           <Stat label="Bonds BNM holds" value={money(cb.qeHoldings)} sub={`${pct(cb.qeHoldings / gdp, 1)} of GDP (max ${QE_MAX_SHARE * 100}%)`} />
@@ -91,7 +56,7 @@ export function CentralBankPanel() {
         </div>
       </Section>
 
-      <Section title="4 · The FX reserves: how to grow and use them">
+      <Section title="2 · The FX reserves: how to grow and use them">
         <div className="grid grid-cols-3 gap-3">
           <Stat label="Foreign-currency reserves" value={fullMoneyMinor(cb.usdReserves, 'USD')} />
           <Stat label="Reserve income last month" value={money(cb.lastIncome / 100)} sub="after bill interest" />
@@ -126,4 +91,53 @@ export function CentralBankPanel() {
       {confirm && <ConfirmDialog title={confirm.title} confirmLabel="Confirm" onCancel={() => setConfirm(null)} onConfirm={() => { confirm.run(); setConfirm(null); }}><p>{confirm.body}</p></ConfirmDialog>}
     </PanelShell>
   );
+}
+
+/** Policy rate and bank reserve rule. Shown in the Fiscal control tab (D-115). */
+export function PolicyRateSections() {
+  const g = useGameState();
+  const command = useGame.getState().command;
+  const cb = g.centralBank;
+  const [target, setTarget] = useState(cb.targetOpr);
+  const [srr, setSrr] = useState(cb.srr);
+  const [confirm, setConfirm] = useState<Action>(null);
+  const lastMpc = cb.mpc.at(-1);
+  const rateDirection = target > cb.targetOpr ? 'raise' : 'cut';
+  const ask = (a: Action) => setConfirm(a);
+  return <>
+      <Section title="Interest rate (OPR)">
+        <p className="text-[12.5px] text-slate-300">
+          The rate banks pay to borrow. <b>Raise</b> it to fight rising prices and support the ringgit; loans get more expensive and growth slows.
+          <b> Cut</b> it to boost loans and jobs; prices may rise and the ringgit may weaken. BNM meets every two months and moves at most 0.50% per meeting, in 0.25% steps.
+        </p>
+        <div className="mt-2 flex flex-wrap items-center gap-3 text-[12.5px]">
+          <button className={`btn ${cb.mode === 'auto' ? 'btn-primary' : ''}`} onClick={() => command({ type: 'cbPolicy', mode: 'auto' })} data-testid="cb-mode-auto">Automatic (BNM decides)</button>
+          <button className={`btn ${cb.mode === 'manual' ? 'btn-primary' : ''}`} onClick={() => command({ type: 'cbPolicy', mode: 'manual' })} data-testid="cb-mode-manual">I set the rate</button>
+        </div>
+        {cb.mode === 'manual' ? (
+          <div className="mt-2">
+            <label className="block text-[12.5px]">Rate I want: <b>{pct(target, 2)}</b> <span className="text-slate-400">(now {pct(g.external.opr, 2)}, target in force {pct(cb.targetOpr, 2)})</span>
+              <input type="range" min={OPR_MIN} max={OPR_MAX} step={0.0025} value={target} onChange={(e) => setTarget(Number(e.target.value))} aria-label="Target OPR" data-testid="cb-target" />
+            </label>
+            <button className="btn btn-primary mt-1" disabled={Math.abs(target - cb.targetOpr) < 1e-9} data-testid="cb-set-target"
+              onClick={() => ask({ title: 'Set rate target', body: `BNM will ${rateDirection} the OPR towards ${pct(target, 2)} at its next meetings, starting ${nextMeeting(g.clock.hour)}. Moving far from what inflation and demand call for costs the market’s trust.`, run: () => command({ type: 'cbPolicy', targetOpr: target }) })}>Set target</button>
+          </div>
+        ) : <p className="mt-2 text-[12px] text-slate-400">BNM follows inflation and demand on its own. Switch to “I set the rate” to take control.</p>}
+        <p className="mt-2 text-[12px] text-slate-400">
+          Trust is {cb.credibility.toFixed(0)}/100 (healthy is {CREDIBILITY_START}+). Setting rates far from what inflation and demand call for lowers it, which raises prices, lifts bond yields and weakens the ringgit. It rebuilds when BNM runs on automatic.
+          {lastMpc && ` Last meeting: ${pct(lastMpc.from, 2)} → ${pct(lastMpc.to, 2)} (the automatic rule wanted ${pct(lastMpc.rule, 2)}).`}
+        </p>
+      </Section>
+
+      <Section title="Bank reserve rule (SRR)">
+        <p className="text-[12.5px] text-slate-300">The share of deposits banks must lock away at BNM. <b>Higher</b> = banks lend less and loans cost more (cools the economy). <b>Lower</b> = more lending.</p>
+        <label className="mt-2 block text-[12.5px]">Requirement: <b>{pct(srr, 1)}</b> <span className="text-slate-400">(now {pct(cb.srr, 1)})</span>
+          <input type="range" min={SRR_MIN} max={SRR_MAX} step={0.005} value={srr} onChange={(e) => setSrr(Number(e.target.value))} aria-label="Reserve requirement" data-testid="cb-srr" />
+        </label>
+        <button className="btn btn-primary mt-1" disabled={Math.abs(srr - cb.srr) < 1e-9} data-testid="cb-set-srr"
+          onClick={() => ask({ title: 'Change bank reserve rule', body: `Banks must hold ${pct(srr, 1)} of deposits at BNM (now ${pct(cb.srr, 1)}). Loan rates and lending change at the next month close.`, run: () => command({ type: 'cbPolicy', srr }) })}>Apply</button>
+      </Section>
+
+    {confirm && <ConfirmDialog title={confirm.title} confirmLabel="Confirm" onCancel={() => setConfirm(null)} onConfirm={() => { confirm.run(); setConfirm(null); }}><p>{confirm.body}</p></ConfirmDialog>}
+  </>;
 }

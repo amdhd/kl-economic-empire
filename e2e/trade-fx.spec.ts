@@ -31,7 +31,7 @@ test('shows full cash balances beside month close and exposes dated national sou
 
 test('queues trade for tomorrow, settles reserve-backed FX and reconciles the new flows', async ({ page }) => {
   await startCampaign(page);
-  await openPanel(page, 'trade');
+  await openPanel(page, 'reforms');
   await page.getByTestId('trade-tariff').fill('10');
   await page.getByTestId('export-support').fill('100');
   await page.getByTestId('queue-trade').click();
@@ -39,6 +39,7 @@ test('queues trade for tomorrow, settles reserve-backed FX and reconciles the ne
   await page.getByTestId('confirm-btn').click();
   const before = await page.evaluate(() => (window as unknown as Dev).__klDev.state());
   expect(before.trade.policy.tariff).toBe(0);
+  await openPanel(page, 'trade');
   await page.getByTestId('review-intervention').click();
   await expect(page.getByRole('dialog')).toContainText('$100,000,000');
   await page.getByTestId('confirm-btn').click();

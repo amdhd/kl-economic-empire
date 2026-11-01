@@ -25,8 +25,8 @@ export const GROUPS: { id: LeverGroup; title: string }[] = [
   { id: 'tax', title: 'Advanced taxes' },
 ];
 /** The groups shown in the Policy window and in the Money & debt window (D-114). */
-const POLICY_GROUPS: LeverGroup[] = ['ai', 'fdi', 'labour', 'capital', 'hub', 'green'];
-export const FISCAL_GROUPS: LeverGroup[] = ['pension', 'subsidy', 'tax'];
+const POLICY_GROUPS: LeverGroup[] = ['ai', 'fdi', 'capital', 'hub', 'green'];
+export const FISCAL_GROUPS: LeverGroup[] = ['pension', 'subsidy', 'tax', 'labour'];
 const OTHER: { id: PanelId; label: string }[] = [
   { id: 'finance', label: 'Taxes & budget (Finances window)' }, { id: 'controls', label: 'Sector relief, ministry plans, FX band' },
   { id: 'oil', label: 'Fuel subsidy & PETRONAS' }, { id: 'commodities', label: 'Food subsidy & commodity duties' }, { id: 'trade', label: 'Tariffs & export support' },

@@ -2,13 +2,18 @@ import { useState } from 'react';
 import { DEVELOPMENT_ANNUAL0 } from '../../data/world';
 import type { Command } from '../../engine/game';
 import { newIssueCoupon, ratingBreakdown, ratingLabel, treasuryMYR } from '../../engine/government';
-import { fuelSubsidyDaily, wheatSubsidyDaily } from '../../engine/world';
 import { formatKL } from '../../engine/time';
 import { useGame, useGameState, type PanelId } from '../../store/game-store';
 import { money, pct } from '../../utils/format';
 import { Section, Stat } from '../ui';
 import { ConfirmDialog } from './ConfirmDialog';
 import { BudgetEditor, TaxEditor } from './EconomyWindow';
+import { FiscalRuleSections } from './FiscalPanel';
+import { PolicyRateSections } from './CentralBankPanel';
+import { Fuel, Petronas } from './OilPanel';
+import { CommodityPolicySection } from './CommoditiesPanel';
+import { TradePolicySection } from './TradePanel';
+import { SectorReliefAndPlans } from './ControlsPanel';
 
 const notch = (v: number) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(2)}`;
 
@@ -28,7 +33,6 @@ export function FiscalControlHub() {
   const deficit = last?.deficit ?? g.indicators.deficitToGdp;
   const rb = ratingBreakdown(g, g.indicators.debtToGdp, deficit, gov.mtdArrearsDays > 0 ? 1 : 0);
   const go = (id: PanelId) => () => useGame.getState().setPanel(id);
-  const subsidyBill = (fuelSubsidyDaily(g) + wheatSubsidyDaily(g)) * 365;
   return <div className="space-y-3" data-testid="fiscal-hub">
     <div className="sticky -top-4 z-10 -mx-4 -mt-4 border-b border-slate-700/60 bg-slate-950/90 px-4 py-2 backdrop-blur" data-testid="hub-readout">
       <div className="grid grid-cols-5 gap-3">
@@ -87,15 +91,19 @@ export function FiscalControlHub() {
     <Section title="Tax rates (queued from tomorrow)">
       <div className="econ-embed" data-testid="hub-taxes"><TaxEditor g={g} /></div>
     </Section>
-    <Section title="Rules, subsidies and other fiscal levers">
+    <FiscalRuleSections />
+    <PolicyRateSections />
+    <Fuel />
+    <CommodityPolicySection />
+    <Petronas />
+    <TradePolicySection />
+    <SectorReliefAndPlans />
+    <Section title="Other levers">
       <div className="grid grid-cols-2 gap-2 text-[12px]">
         {([
-          ['fiscal', 'Fiscal rules', `deficit and debt ceilings, golden rule, escape clause · credibility ${f.credibility.toFixed(0)}`],
-          ['controls', 'Ministry plans and sector tax relief', `${g.controls.plans.length} plan(s), ${g.controls.incentives.length} sector relief(s)`],
-          ['oil', 'Fuel subsidy & PETRONAS', `fuel and food subsidy bill ${money(subsidyBill)} a year`],
-          ['commodities', 'Food subsidy & commodity duties', 'wheat and rice subsidy, palm and steel duties'],
-          ['central', 'Central bank', 'policy rate and reserve requirement move the cost of new debt'],
-          ['ministry', 'Trade ministry', 'export support and tariffs'],
+          ['central', 'Central bank: bond buying, bills and FX reserves', 'BNM balance sheet and the ringgit, not government debt'],
+          ['ministry', 'Trade ministry', 'export programmes, trade deals and talks'],
+          ['soe', 'State enterprises', 'Khazanah payout and special dividends'],
         ] as [PanelId, string, string][]).map(([id, label, sub]) => <button key={id} className="btn !h-auto !items-start !text-left" data-testid={`hub-go-${id}`} onClick={go(id)}><span className="block font-semibold">{label}</span><span className="block text-[11px] font-normal text-slate-400">{sub}</span></button>)}
       </div>
     </Section>

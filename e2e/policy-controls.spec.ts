@@ -5,7 +5,7 @@ type Dev = {__klDev:{state:()=>GameState}};
 
 test('all four economic controls can be reviewed, applied and observed in simulation',async({page})=>{
   await startCampaign(page);
-  await openPanel(page, 'controls');
+  await openPanel(page, 'reforms');
   await page.getByTestId('review-incentive').click();
   await expect(page.getByRole('dialog')).toContainText('5pp relief');
   await page.getByTestId('confirm-btn').click();
@@ -32,12 +32,13 @@ test('all four economic controls can be reviewed, applied and observed in simula
   const after=await page.evaluate(()=>(window as unknown as Dev).__klDev.state());
   expect(after.centralBank.tx.some(t=>t.side==='sellUSD')).toBe(true);
   expect(after.centralBank.usdReserves).toBeLessThan(before.centralBank.usdReserves);
+  await openPanel(page, 'reforms');
   await expect(page.getByTestId('panel')).toContainText('Health coverage');
 });
 
 test('queuing a manual budget for a planned ministry warns, then replaces the plan',async({page})=>{
   await startCampaign(page);
-  await openPanel(page, 'controls');
+  await openPanel(page, 'reforms');
   await page.getByRole('button',{name:'Review ministry plan',exact:true}).click();
   await page.getByTestId('confirm-btn').click();
   const s=await page.evaluate(()=>(window as unknown as Dev).__klDev.state());

@@ -16,12 +16,7 @@ const ok = (b: boolean) => <span className={`chip ${b ? 'bg-emerald-500/15 text-
 export function FiscalPanel() {
   const g = useGameState();
   const f = g.fiscal;
-  const command = useGame.getState().command;
   const last = f.history.at(-1);
-  const [deficitCap, setDeficitCap] = useState(f.rule.deficitCap * 100);
-  const [debtCap, setDebtCap] = useState(f.rule.debtCap * 100);
-  const [golden, setGolden] = useState(f.rule.goldenRule);
-  const [review, setReview] = useState<{ cmd: Command; title: string; body: string } | null>(null);
   if (!g.world.enabled) {
     return <PanelShell title="Fiscal rules & deficit" subtitle="Deficit, debt and the golden rule">
       <p className="text-[12px] text-amber-200">Fiscal rules, the development budget and state enterprises are modelled in new Malaysia campaigns. This save keeps its original calibration.</p>
@@ -30,7 +25,6 @@ export function FiscalPanel() {
   const gap = outputGap(g);
   const target = deficitTarget(f, g.reports.length);
   const headroom = last ? (target - last.deficit) * g.indicators.nominalGdpAnnual : 0;
-  const loosening = deficitCap / 100 > f.rule.deficitCap || debtCap / 100 > f.rule.debtCap || (f.rule.goldenRule && !golden);
   // Official annual deficits for 2021–2025 (outturns) and 2026 (revised), then simulated monthly 12-month windows.
   const official = OFFICIAL_DEFICIT.filter((d) => d.kind !== 'estimate').map((d) => ({ t: `${d.year}${d.kind === 'revised' ? ' (rev.)' : ''}`, official: d.deficit * 100 } as Record<string, number | string>));
   const chart = [...official, ...f.history.map((h) => ({ t: monthKeyLabel(h.monthKey), deficit: h.deficit * 100, target: h.target * 100, structural: h.structuralDeficit * 100 }))];
@@ -60,6 +54,23 @@ export function FiscalPanel() {
       <p className="mt-1 text-[11.5px] text-slate-400">Official: 2021–2025 outturns, 2026 revised estimate; Budget 2027 targets {pct(budget2027.deficit, 1)} of 2027 GDP. The simulation measures its deficit against opening (2025) GDP, so the same ringgit deficit reads higher here.</p>
     </Section>
     <p className="text-[11.5px] text-slate-400">The development budget, borrowing rule and debt terms are set in the Fiscal control tab.</p>
+    <p className="text-[12px] text-slate-400">The deficit and debt ceilings, golden rule and escape clause are set in Money & debt, Fiscal control.</p>
+  </PanelShell>;
+}
+
+/** Deficit and debt ceilings, golden rule and escape clause. Shown in the Fiscal control tab (D-115). */
+export function FiscalRuleSections() {
+  const g = useGameState();
+  const f = g.fiscal;
+  const command = useGame.getState().command;
+  const [deficitCap, setDeficitCap] = useState(f.rule.deficitCap * 100);
+  const [debtCap, setDebtCap] = useState(f.rule.debtCap * 100);
+  const [golden, setGolden] = useState(f.rule.goldenRule);
+  const [review, setReview] = useState<{ cmd: Command; title: string; body: string } | null>(null);
+  if (!g.world.enabled) return null;
+  const gap = outputGap(g);
+  const loosening = deficitCap / 100 > f.rule.deficitCap || debtCap / 100 > f.rule.debtCap || (f.rule.goldenRule && !golden);
+  return <>
     <Section title="Rule settings">
       <div className="flex flex-wrap items-center gap-4 text-[12px]">
         <label>Deficit ceiling % <input className="input num ml-1 !w-20" type="number" min="0" max="10" step="0.5" value={deficitCap} onChange={(e) => setDeficitCap(Number(e.target.value))} aria-label="Deficit ceiling" /></label>
@@ -76,5 +87,5 @@ export function FiscalPanel() {
       <button className="btn mt-2" data-testid="escape-btn" onClick={() => setReview({ cmd: { type: 'fiscalEscape', invoke: !f.escape?.active }, title: f.escape?.active ? 'End the escape clause' : 'Invoke the escape clause', body: f.escape?.active ? 'The rules apply again from the next month close.' : escapeJustified(g, gap) ? 'Conditions justify an escape: credibility falls by 2 points.' : 'No downturn is under way: credibility falls by 20 points and stays capped while the escape lasts.' })}>{f.escape?.active ? 'End escape' : 'Invoke escape'}</button>
     </Section>
     {review && <ConfirmDialog title={review.title} confirmLabel="Confirm" onCancel={() => setReview(null)} onConfirm={() => { command(review.cmd); setReview(null); }}><p>{review.body}</p></ConfirmDialog>}
-  </PanelShell>;
+  </>;
 }
