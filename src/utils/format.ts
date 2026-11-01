@@ -78,7 +78,9 @@ export function fullMoneyMinor(minor: number, currency: Currency = 'MYR'): strin
 }
 
 /** Axis label for an amount in billions: "RM850bn" below 1,000bn, then "RM1.4tn" (never "RM1400bn"). */
-export function bnTick(valueBn: number, prefix = 'RM'): string {
+export function bnTick(valueBn: number, prefix: string = 'RM'): string {
+  // Chart axes call a bare formatter as (value, index): never let the index become the currency prefix.
+  if (typeof prefix !== 'string') prefix = 'RM';
   if (!Number.isFinite(valueBn)) return '—';
   const sign = valueBn < 0 ? '−' : '';
   const a = Math.abs(valueBn);

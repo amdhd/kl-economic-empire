@@ -971,7 +971,7 @@ per offer), term end. Tested in `tests/skip.test.ts`.
 Three networks, each with a capacity index (opening load = 1.00, capacity 1.25) and a load index driven by smoothed real
 GDP (housing: workforce and income per worker). Overload multiplies sector output capacity by
 `max(0.35, 1/(1 + 1.2 × Σ weight × overload))`; the existing demand-versus-capacity logic then lifts prices and utilisation.
-Capacity grows only through player orders (+0.25 × 1, 2 or 4) paid over the build time (power 18 months, transport 24,
+Capacity grows only through player orders (+0.25 × 1, 2 or 4) paid over the build time (power 1 month, transport 24,
 housing 12) from the treasury's capex line; completion adds capacity. No randomness. Realistic campaigns have no
 `infra` and are bit-for-bit unchanged. Tests: `tests/infrastructure.test.ts`.
 
@@ -1003,3 +1003,10 @@ Read-only presentation over the closed monthly reports; no simulation rule chang
 - **Hub fees and costs (D-103):** zone fee for sector j = `freeZones × 0.002 × GDP / 365 × share_j / 0.75` with share ind 0.3, tech 0.3, fin 0.15, subtracted from that sector's daily profit and posted as `policyLevy` (`hubFees`). `sectorTax` multiplies the corporate rate by `1 − freeZones × share_j × 0.8`. The golden visa multiplies the rent target by `1 + 0.02 × goldenVisa`. Financial-hub and visa fees remain `policyLevy` receipts from non-residents. 12-month test (seed 98, no events), each lever alone against none: free zones −RM0.74bn a month net (corporate tax −1.09bn, fees +0.35bn); golden visa +RM0.7bn a month net.
 - **Boom scenarios (D-104):** `createGame` uses `balanced` whenever Boom is on.
 - **Export contract premiums (D-105):** `exportContractFlows` returns `volume` = units × 0.5 × spot (new real demand, into `policyReal`) and `price` = units × (contract price − spot) plus the LNG hedge gain (ledger value only), where units = delivered RM-at-signing ÷ signing spot. `dailyExportContract` adds the same gap to the sector's profit, taxable profit and value added, and to nominal GDP.
+
+**Boom power and supply offers (D-108).** Power-grid builds take 1 month (`NETWORK_SPECS.power.buildDays` = 30); transport and housing are unchanged. In Boom mode the fuel and steel supply offers return every quarterly cohort, not once in year two; realistic mode keeps its existing schedule.
+
+**Boom build times and cost (D-109).** Projects 30–60 days (`projectBuildDays`), infrastructure power/housing 30 and transport 60 days at 25% of the realistic price (`BOOM.infraCostFactor`), sector capacity pipeline lag 2 months (`BOOM.capacityLagMonths`; new capacity is written to `pipeline[capacitySlot]`), policy-lever ramps ≤ 30 days, export promotion speed 1/30 a day. Realistic mode keeps the original values. Capex is paid from treasury cash first, then bridge bonds, and counts in outlays, the deficit and the rating.
+
+**Boom company earnings (D-110).** For Malaysian-listed companies in Boom mode: labour cost index = `wageIndex ÷ sector productivity` (realistic: `wageIndex`); foreign-sales revenue term and volume term × `exportReach(sector)`. US-listed firms and realistic campaigns are unchanged.
+

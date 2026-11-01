@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applyCommand, createGame, runHeadless } from '../src/engine/game';
+import { BOOM } from '../src/data/boom';
 import { INFRA, NETWORKS, NETWORK_SPECS } from '../src/data/infrastructure';
 import { dailyInfra, infraCapacityMult, orderCost, projectedLoad, utilisation } from '../src/engine/infrastructure';
 import { deserialize, findNonFinite, serialize } from '../src/persistence/save';
@@ -41,16 +42,16 @@ describe('infrastructure capacity (D-084)', () => {
     expect(applyCommand(s, { type: 'buildInfra', network: 'power', steps: 3 }, 0).ok).toBe(false);
     expect(applyCommand(s, { type: 'buildInfra', network: 'nope' as never, steps: 1 }, 0).ok).toBe(false);
     const cost = orderCost(s, 'power', 2);
-    expect(cost).toBeCloseTo(NETWORK_SPECS.power.costGdpShare * 2 * INFRA.step * s.baseline.nominalGdpAnnual * (s.indicators.cpi / 100), 0);
+    expect(cost).toBeCloseTo(BOOM.infraCostFactor * NETWORK_SPECS.power.costGdpShare * 2 * INFRA.step * s.baseline.nominalGdpAnnual * (s.indicators.cpi / 100), 0);
     expect(orderCost(s, 'power', 4)).toBeCloseTo(cost * 2, 0);
     s.infra!.gdpFast = s.infra!.openingGdpReal * 4;
     expect(orderCost(s, 'power', 2)).toBeGreaterThan(cost * 1.8); // size^0.5
     s.infra!.gdpFast = s.infra!.openingGdpReal;
     for (let i = 0; i < INFRA.maxBuildsPerNetwork; i++) expect(applyCommand(s, { type: 'buildInfra', network: 'power', steps: 1 }, s.clock.hour * 60).ok).toBe(true);
     expect(applyCommand(s, { type: 'buildInfra', network: 'power', steps: 1 }, s.clock.hour * 60).ok).toBe(false);
-    runHeadless(s, 24 * (NETWORK_SPECS.power.buildDays - 30));
+    runHeadless(s, 24 * 10);
     expect(s.infra!.nets.power.capacity).toBe(INFRA.openingCapacity);
-    runHeadless(s, 24 * 90);
+    runHeadless(s, 24 * (NETWORK_SPECS.power.buildDays + 30));
     expect(s.infra!.nets.power.capacity).toBeCloseTo(INFRA.openingCapacity + 4 * INFRA.step, 9);
     expect(s.infra!.builds).toHaveLength(0);
     expect(s.news.some((n) => n.title.startsWith('Completed: Power grid'))).toBe(true);
@@ -59,7 +60,7 @@ describe('infrastructure capacity (D-084)', () => {
   it('a cancelled build stops spending and adds nothing', () => withoutEvents(() => {
     const s = boom();
     applyCommand(s, { type: 'buildInfra', network: 'housing', steps: 1 }, 0);
-    runHeadless(s, 24 * 30);
+    runHeadless(s, 24 * 10);
     const id = s.infra!.builds[0].id;
     expect(applyCommand(s, { type: 'cancelInfra', id }, s.clock.hour * 60).ok).toBe(true);
     runHeadless(s, 24 * 400);
@@ -78,7 +79,7 @@ describe('infrastructure capacity (D-084)', () => {
     runHeadless(lazy, 24 * 31 * 40);
     runHeadless(keen, 24 * 31 * 40, infraAutopilot);
     expect(lazy.scheduler.campaignEnded && keen.scheduler.campaignEnded).toBe(true);
-    expect(usd(keen, 'Dec 2029')).toBeGreaterThan(usd(lazy, 'Dec 2029') * 1.15);
+    expect(usd(keen, 'Dec 2029')).toBeGreaterThan(usd(lazy, 'Dec 2029') * 1.1); // was 1.15 before power took one month (D-096): the whole bill now lands at once
     expect(usd(keen, 'Dec 2029')).toBeGreaterThan(1.6e12);
     expect(Math.min(...NETWORKS.map((n) => utilisation(lazy.infra!, n)))).toBeLessThan(10);
     expect(Math.max(...NETWORKS.map((n) => utilisation(lazy.infra!, n)))).toBeGreaterThan(1.3);

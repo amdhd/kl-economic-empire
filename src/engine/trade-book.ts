@@ -70,8 +70,9 @@ export const dealsInForce = (s: GameState, k: PartnerId) => (s.tradeBook?.enable
 export const dealGain = (s: Pick<GameState, 'mode'>, ask: number) => boomOn(s) ? BOOM.tradeDealGain[ask] : DEAL_ACCESS_GAIN[ask];
 export const dealTalkDays = (s: Pick<GameState, 'mode'>, ask: number) => boomOn(s) ? BOOM.tradeTalkDays[ask] : DEAL_TALK_DAYS[ask];
 export const dealRounds = (s: Pick<GameState, 'mode'>) => boomOn(s) ? BOOM.tradeRounds : 3;
-const rampDays = (s: GameState) => boomOn(s) ? BOOM.tradeRampDays : DEAL_RAMP_DAYS;
-const ramp = (s: GameState, d: TradeDeal) => d.startDay === null ? 0 : clamp((s.scheduler.lastDay - d.startDay + 1) / rampDays(s), 0, 1);
+export const dealRampDays = (s: GameState) => boomOn(s) ? BOOM.tradeRampDays : DEAL_RAMP_DAYS;
+/** Share of a deal's access gain in effect today: 0 until it is in force, then rising to 1 over the phase-in. */
+export const dealRamp = (s: GameState, d: TradeDeal) => d.startDay === null ? 0 : clamp((s.scheduler.lastDay - d.startDay + 1) / dealRampDays(s), 0, 1);
 
 /** Export value of each product today before policy gains (MYR/day), from the simulation's drivers. */
 export function baseExports(s: GameState): Record<ExportProductId, number> {
@@ -108,7 +109,7 @@ export function policyGains(s: GameState): { promotion: Record<ExportProductId, 
   }
   for (const d of tb.deals) {
     if (d.status !== 'inForce') continue;
-    const gain = partnerExportShare(d.partner) * dealGain(s, d.ask) * ramp(s, d);
+    const gain = partnerExportShare(d.partner) * dealGain(s, d.ask) * dealRamp(s, d);
     deals[d.product] += gain;
     byPartner[d.partner][d.product] += gain;
   }
@@ -144,7 +145,7 @@ export function prepareTradeDay(s: GameState, day: number, purchases: Record<Sec
     promotion += paid;
     // Unpaid programmes stop building; the boost then fades at the same speed it built.
     const target = 1 - Math.exp(-(paid * 365) / PROGRAMMES[id].scale);
-    pr.boost += (target - pr.boost) * PROGRAMME_SPEED;
+    pr.boost += (target - pr.boost) * (boomOn(s) ? BOOM.programmeSpeed : PROGRAMME_SPEED);
   }
   purchases.fin += promotion * 0.4;
   purchases.tech += promotion * 0.2;
@@ -168,7 +169,7 @@ export function prepareTradeDay(s: GameState, day: number, purchases: Record<Sec
   tb.displacement = zeroBy(SECTOR_IDS);
   for (const d of tb.deals) {
     if (d.status !== 'inForce' || d.give === 0) continue;
-    tb.displacement[CONCESSIONS[d.concession].sector] += DEAL_DISPLACEMENT[d.give] * partnerImportShare(d.partner) * 10 * ramp(s, d);
+    tb.displacement[CONCESSIONS[d.concession].sector] += DEAL_DISPLACEMENT[d.give] * partnerImportShare(d.partner) * 10 * dealRamp(s, d);
   }
   for (const j of SECTOR_IDS) tb.displacement[j] = Math.min(0.05, tb.displacement[j]);
 

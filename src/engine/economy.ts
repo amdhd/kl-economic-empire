@@ -1,5 +1,5 @@
 import { contractedSteel } from './supply-contracts';
-import { BOOM, boomOn } from '../data/boom';
+import { BOOM, boomOn, capacitySlot } from '../data/boom';
 import { sectorTax } from './policy-controls';
 import { confidenceChannels, householdBehaviour, householdSpending } from './household-behavior';
 import { calibrationFor, exportReach } from './calibration';
@@ -461,7 +461,8 @@ export function monthClose(s: GameState, inflationYoY: number, unemployment: num
     const pInv = SECTOR_IDS.reduce((a, k) => a + (INVESTMENT_GOODS[k] ?? 0) * s.sectors[k].price, 0);
     sec.capital += sec.investmentMonthly * delivered - (sec.capital * BASELINE.depreciation) / 12;
     const matured = sec.pipeline.shift() ?? 0;
-    sec.pipeline.push((sec.investmentMonthly * delivered) / pInv / CAL.capitalPerCap[j]);
+    sec.pipeline.push(0);
+    sec.pipeline[capacitySlot(s)] += (sec.investmentMonthly * delivered) / pInv / CAL.capitalPerCap[j];
     sec.capacity += matured - (sec.capacity * BASELINE.depreciation) / 12;
     // Boom mode: the productivity boom also lifts output per machine, not only per worker.
     if (boom) sec.capacity *= 1 + BOOM.productivity / 12;

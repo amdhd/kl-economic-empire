@@ -4,6 +4,7 @@ import { closeRescue, rescuePayments, liquidateEnterprise } from './rescues';
 import type { GameState, SectorId } from '../types/game';
 import type { Deal } from '../types/deals';
 import { addDeal, dealLog, reserveDeal, DEAL_ROUNDS } from './deals';
+import { capacitySlot } from '../data/boom';
 import { calibrationFor } from './calibration';
 import { navMYR } from './sovereign-fund';
 import { rand } from './rng';
@@ -206,7 +207,7 @@ export function dailyEnterprise(
     purchases.tech += (capex / 100) * 0.7;
     purchases.ind += (capex / 100) * 0.3;
     s.sectors[d.sector].capital += (capex / 100) * 0.8;
-    s.sectors[d.sector].pipeline[5] += ((capex / 100) * 0.8) / cal.capitalPerCap[d.sector];
+    s.sectors[d.sector].pipeline[capacitySlot(s)] += ((capex / 100) * 0.8) / cal.capitalPerCap[d.sector];
   }
   // This company is a sample within sector sales: operating sales/costs are not added to GDP again.
   const maturity = d.kind === 'startup' ? Math.min(2, 0.5 + (day - e.openedDay) / 365) : 1;

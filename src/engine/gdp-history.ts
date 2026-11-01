@@ -4,6 +4,7 @@
 import { baselineFor, SECTOR_IDS, SECTORS } from '../data/economic-baseline';
 import type { GameState, MonthlyReport } from '../types/game';
 import { calibrationFor } from './calibration';
+import { bnTick } from '../utils/format';
 import { daysInMonth } from './time';
 
 export interface GdpMonth {
@@ -20,8 +21,9 @@ export interface GdpMonth {
 }
 
 const annualFactor = (r: MonthlyReport) => 365 / daysInMonth(Math.floor(r.monthKey / 12), (r.monthKey % 12) + 1);
-const usdBn = (v: number) => `US$${Math.abs(v) >= 100 ? Math.abs(v).toFixed(0) : Math.abs(v).toFixed(1)}bn`;
-const myrBn = (v: number) => `RM${Math.abs(v) >= 100 ? Math.abs(v).toFixed(0) : Math.abs(v).toFixed(1)}bn`;
+// Billions in, trillions from 1,000bn up (bnTick), so a figure never reads "US$1500bn".
+const usdBn = (v: number) => bnTick(Math.abs(v), 'US$');
+const myrBn = (v: number) => bnTick(Math.abs(v), 'RM');
 const signed = (v: number, text: string) => `${v >= 0 ? '+' : '−'}${text}`;
 
 export function gdpHistory(s: GameState): GdpMonth[] {

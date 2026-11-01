@@ -7,7 +7,7 @@ import {
 import { PARTNER_IDS, PARTNERS } from '../../data/world';
 import type { Command } from '../../engine/game';
 import { monthKeyLabel } from '../../engine/time';
-import { dealGain, dealRounds, dealTalkDays, offerValue, policyGains, requiredDepth, tradeRunRate } from '../../engine/trade-book';
+import { dealGain, dealRamp, dealRampDays, dealRounds, dealTalkDays, offerValue, policyGains, requiredDepth, tradeRunRate } from '../../engine/trade-book';
 import { useGame, useGameState } from '../../store/game-store';
 import type { PartnerId, TradeMonth } from '../../types/game';
 import { bnTick, money, pct } from '../../utils/format';
@@ -30,7 +30,7 @@ const GROUPS: { key: string; name: string; color: string; ids: ExportProductId[]
   { key: 'chemMetals', name: 'Chemicals & steel', color: '#d55181', ids: ['chemicals', 'metals'] },
   { key: 'other', name: 'Food & other goods', color: '#008300', ids: ['food', 'otherGoods'] },
 ];
-const bn = (v: number) => `RM${(v / 1e9).toFixed(v >= 100e9 ? 0 : 1)}bn`;
+const bn = (v: number) => bnTick(v / 1e9, 'RM');
 const sum = (r: Record<string, number>) => Object.values(r).reduce((a, v) => a + v, 0);
 const annual = (m: TradeMonth, v: number) => (v * 365) / Math.max(1, m.days);
 const NEGOTIABLE = EXPORT_PRODUCT_IDS.filter((id) => !EXPORT_PRODUCTS[id].commodity);
@@ -151,8 +151,8 @@ function Deals() {
         <label>We ask for<select className="input mt-1 block" value={ask} onChange={(e) => setAsk(Number(e.target.value) as 1 | 2)} data-testid="deal-ask"><option value={1}>Tariff chapter (+{pct(dealGain(g, 1), 0)})</option><option value={2}>Deep chapter (+{pct(dealGain(g, 2), 0)})</option></select></label>
         <button className="btn btn-primary" data-testid="deal-propose" onClick={() => command({ type: 'tradeDeal', action: 'propose', partner, product, ask })}>Open draft</button>
       </div>
-      <p className="mt-2 text-[13px] text-slate-200">{PARTNERS[partner].name} buys about {bn(slice)} a year of {EXPORT_PRODUCTS[product].short} from us. A {ask === 2 ? 'deep' : 'tariff'} deal could add up to <b>{bn(slice * dealGain(g, ask))} a year (+{pct(dealGain(g, ask), 0)})</b>. The price: we open one of our own markets to them. Press Open draft, then Sign.</p>
-      <details className="mt-1 text-[12px] text-slate-400"><summary className="cursor-pointer text-slate-300">Technical details</summary><p className="mt-1">Roughly {bn(slice)} a year of {EXPORT_PRODUCTS[product].short} goes to {PARTNERS[partner].name}; this chapter could add up to {bn(slice * dealGain(g, ask))} a year once it phases in (about six months after talks of {Math.round(dealTalkDays(g, ask) / 30)} months). Relations {rel.toFixed(0)}/100: {PARTNERS[partner].name} will want a concession worth about {need.toFixed(1)}{need > 2 ? ' (more than any offer: improve relations first)' : ''}. Commodities sell at world prices and are not negotiable; for those, use buyer contracts.</p></details>
+      <p className="mt-2 text-[13px] text-slate-200">{PARTNERS[partner].name} buys about {bn(slice)} a year of {EXPORT_PRODUCTS[product].short} from us. A {ask === 2 ? 'deep' : 'tariff'} deal could add up to <b>{bn(slice * dealGain(g, ask))} a year (+{pct(dealGain(g, ask), 0)})</b>. The price: we open one of our own markets to them. Press Open draft, then Sign. Talks take {dealTalkDays(g, ask)} days, then the gain phases in over {dealRampDays(g)} days, so exports start to move after about {dealTalkDays(g, ask)} days and reach the full amount after about {dealTalkDays(g, ask) + dealRampDays(g)}.</p>
+      <details className="mt-1 text-[12px] text-slate-400"><summary className="cursor-pointer text-slate-300">Technical details</summary><p className="mt-1">Roughly {bn(slice)} a year of {EXPORT_PRODUCTS[product].short} goes to {PARTNERS[partner].name}; this chapter could add up to {bn(slice * dealGain(g, ask))} a year once it phases in ({dealRampDays(g)} days after talks of {dealTalkDays(g, ask)} days). Relations {rel.toFixed(0)}/100: {PARTNERS[partner].name} will want a concession worth about {need.toFixed(1)}{need > 2 ? ' (more than any offer: improve relations first)' : ''}. Commodities sell at world prices and are not negotiable; for those, use buyer contracts.</p></details>
     </Section>
     <Section title="Open deals">
       {open.length === 0 && <p className="text-[12px] text-slate-400">No deals open yet.</p>}
@@ -161,7 +161,7 @@ function Deals() {
         const value = offerValue(d.partner, o.concession, o.give, g), required = requiredDepth(g, d.partner, d.ask);
         return <div key={d.id} className="rounded-lg bg-slate-800/50 p-2.5 text-[12px]" data-testid={`trade-deal-${d.id}`}>
           <div className="flex items-center justify-between gap-2"><b>{PARTNERS[d.partner].name} · {EXPORT_PRODUCTS[d.product].label} · {d.ask === 2 ? 'deep' : 'tariff'} chapter</b>
-            <span className="rounded-full bg-cyan-500/20 px-2 py-0.5 text-[11px] font-bold uppercase text-cyan-200">{d.status === 'talks' ? `talks · ${Math.max(0, (d.concludeDay ?? today) - today)}d` : d.status === 'inForce' ? 'in force' : 'draft'}</span></div>
+            <span className="rounded-full bg-cyan-500/20 px-2 py-0.5 text-[11px] font-bold uppercase text-cyan-200">{d.status === 'talks' ? `talks · ${Math.max(0, (d.concludeDay ?? today) - today)}d` : d.status === 'inForce' ? `in force · ${pct(dealRamp(g, d), 0)} phased in` : 'draft'}</span></div>
           <p className="mt-1 text-slate-300">{d.note}</p>
           {d.status === 'draft' && <>
             <p className="mt-1 text-slate-200">In return we open <b>{CONCESSIONS[o.concession].label.toLowerCase()}</b> ({o.give === 2 ? 'tariffs and rules' : o.give === 1 ? 'tariff cuts' : 'nothing'}). Talks then take about {Math.round(dealTalkDays(g, d.ask) / 30)} month(s).</p>
@@ -175,6 +175,8 @@ function Deals() {
             <button className="btn" disabled={d.rounds >= dealRounds(g)} onClick={() => command({ type: 'tradeDeal', action: 'offer', id: d.id, ...o })} data-testid={`deal-offer-${d.id}`}>Make offer ({dealRounds(g) - d.rounds} left)</button>
             <span>Offer worth {value.toFixed(1)} of {required.toFixed(1)} needed</span></div></details>
           </>}
+          {d.status === 'talks' && <p className="mt-1 text-slate-200">Talks end in {Math.max(0, (d.concludeDay ?? today) - today)} days. Exports start to rise then and reach the full amount {dealRampDays(g)} days later.</p>}
+          {d.status === 'inForce' && (() => { const full = EXPORT_PRODUCTS[d.product].value2025 * PARTNER_TRADE_2025[d.partner].exports / GOODS_EXPORTS_2025 * dealGain(g, d.ask); return <p className="mt-1 text-slate-200">Adds up to {bn(full)} a year at full effect; {bn(full * dealRamp(g, d))} a year so far ({pct(dealRamp(g, d), 0)} phased in). The monthly export chart moves by about {bn(full / 12)} a month at most, a few percent of total exports.</p>; })()}
           {d.status !== 'draft' && <p className="mt-1 text-slate-400">We open: {CONCESSIONS[d.concession].label} (depth {d.give}).</p>}
           <button className="btn mt-2" onClick={() => setReview({ cmd: { type: 'tradeDeal', action: 'withdraw', id: d.id }, title: 'Withdraw from this deal', body: d.status === 'inForce' ? 'Withdrawing a deal in force ends the market access at once and costs 15 points of relations.' : d.status === 'talks' ? 'Leaving talks costs 5 points of relations.' : 'Drop this draft.' })} data-testid={`deal-withdraw-${d.id}`}>Withdraw</button>
         </div>;

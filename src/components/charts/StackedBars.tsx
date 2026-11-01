@@ -24,7 +24,7 @@ export function StackedBars({ data, xKey, series, yFormat, height = 190, unit, d
         <BarChart data={data} margin={{ top: 6, right: 6, left: 0, bottom: 0 }} barCategoryGap="18%">
           <CartesianGrid stroke="#334155" strokeOpacity={0.35} vertical={false} />
           <XAxis dataKey={xKey} tick={{ fill: '#8b9ab5', fontSize: 10 }} axisLine={false} tickLine={false} minTickGap={12} />
-          <YAxis tickFormatter={yFormat} tick={{ fill: '#8b9ab5', fontSize: 10 }} axisLine={false} tickLine={false} width={64} />
+          <YAxis tickFormatter={(v) => yFormat(Number(v))} tick={{ fill: '#8b9ab5', fontSize: 10 }} axisLine={false} tickLine={false} width={64} />
           <Tooltip
             cursor={{ fill: '#94a3b8', fillOpacity: 0.08 }}
             contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 10, fontSize: 12 }}
