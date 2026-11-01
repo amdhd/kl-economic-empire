@@ -14,10 +14,12 @@ import { assertSafeMinor, pushBounded, toMinor } from './util';
 export function privateValue(s: GameState, payer: Deal['payer']): number {
   return (s.deals?.items ?? []).filter((d) => d.payer === payer).reduce((a, d) => a + d.valueMinor, 0);
 }
+/** D-123: start-up deals are sized for a RM100bn fund: a 20% stake costs about RM1.4-2.9bn, not RM14-30m. */
+const STARTUP_SCALE = 100;
 export function enterpriseOffers(s: GameState): void {
   if (!s.deals.enabled) return;
   // D-116: the start-up, its archetype and its size come from the campaign seed; the stake, fee and caps are unchanged.
-  const round = kindRound(s, 'startup'), f = startupFlavour(s, round), k = flavourScale(s, `startup:${round}`, 0.3);
+  const round = kindRound(s, 'startup'), f = startupFlavour(s, round), k = flavourScale(s, `startup:${round}`, 0.3) * STARTUP_SCALE;
   const d = addDeal(s, 'startup:awan', 'startup', `${f.name}: ${f.kind}`, 'fund', 80e6 * k * 0.2525, f.sector);
   d.counterparty = `${f.founders} (fictional)`;
   d.assetCostMinor = toMinor(80e6 * k);
