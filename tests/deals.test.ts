@@ -389,6 +389,21 @@ describe('integrated deal safeguards', () => {
   });
 });
 
+describe('deal alerts open the tab that shows the deal', () => {
+  it('failed deals go to Outcomes, deadlines to their list, never an empty view', async () => {
+    const { alertDealTab } = await import('../src/engine/alerts');
+    const s = createGame(1775), d = s.deals.items[0];
+    expect(alertDealTab(s, `deal:${d.id}:expiry`)).toBe('opportunities');
+    d.status = 'failed';
+    expect(alertDealTab(s, `deal:${d.id}:failure`)).toBe('outcomes');
+    expect(alertDealTab(s, `deal:${d.id}:arrears`)).toBe('outcomes'); // terminated but the claim is still recorded
+    d.status = 'active';
+    expect(alertDealTab(s, `deal:${d.id}:arrears`)).toBe('exposure');
+    expect(alertDealTab(s, `deal:${d.id}:runway`)).toBe('active');
+    expect(alertDealTab(s, 'deal:999999:failure')).toBe('outcomes');
+  });
+});
+
 describe('later campaign opportunities', () => {
   it('offers distinct fictional cohorts after the opening offers lapse without consuming main RNG', () => {
     const s = createGame(1774),

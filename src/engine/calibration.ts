@@ -3,6 +3,7 @@
 // behavioural rules evaluated at baseline, and exports are the residual (asserted positive in tests).
 import { BASE_BUDGET, BASE_BUDGET_V1, BASE_TAX, BASELINE, LEGACY_BASELINE, LEGACY_BUDGET, LEGACY_TREND, NATIONAL_DEMAND, NATIONAL_GDP, NATIONAL_TREND, BUDGET_PURCHASES, INVESTMENT_GOODS, IO, SECTOR_IDS, SECTORS } from '../data/economic-baseline';
 import type { BudgetCategory, SectorId, GameState } from '../types/game';
+import { BOOM, boomOn } from '../data/boom';
 import { DEVELOPMENT_ANNUAL0, DEVELOPMENT_PURCHASES, RESOURCE_VA0 } from '../data/world';
 
 export type Vec = Record<SectorId, number>;
@@ -177,4 +178,7 @@ export const NATIONAL_SCALE_V3 = nationalScale(BASE_BUDGET, NATIONAL_GDP - RESOU
 export const CAL: Calibration = calibrate(BASELINE, BASE_BUDGET, NATIONAL_SCALE_V3, DEVELOPMENT_ANNUAL0, NATIONAL_TREND.capitalGrowth, NATIONAL_DEMAND.importedConsumption);
 export const calibrationFor = (s: Pick<GameState, 'baseline'>): Calibration =>
   s.baseline.profile === 'legacy-kl' ? LEGACY_CAL : s.baseline.model === 1 ? CAL_V1 : s.baseline.model === 2 ? CAL_V2 : CAL;
+/** Boom mode (D-079): a small open economy sells what it can make, so foreign demand scales with sector capacity. 1 in realistic campaigns. */
+export const exportReach = (s: Pick<GameState, 'baseline' | 'mode' | 'sectors'>, j: SectorId): number =>
+  boomOn(s) ? Math.pow(Math.max(1, s.sectors[j].capacity / calibrationFor(s).cap0[j]), BOOM.exportCapacityElasticity) : 1;
 export const SECTOR_INDEX: Record<SectorId, number> = Object.fromEntries(SECTOR_IDS.map((s, i) => [s, i])) as Record<SectorId, number>;

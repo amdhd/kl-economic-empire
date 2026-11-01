@@ -2,7 +2,7 @@ import { contractedSteel } from './supply-contracts';
 import { BOOM, boomOn } from '../data/boom';
 import { sectorTax } from './policy-controls';
 import { confidenceChannels, householdBehaviour, householdSpending } from './household-behavior';
-import { calibrationFor } from './calibration';
+import { calibrationFor, exportReach } from './calibration';
 import { baselineFor, demandFor, nationalV2, trendFor } from '../data/economic-baseline';
 import { COMMODITY_IMPORT, UTILITY_FUEL_PASSTHROUGH, FUEL_CPI_WEIGHT, HOUSEHOLD_EQUITY0, PUBLIC_CAPITAL_ELASTICITY, WEALTH_MPC } from '../data/world';
 import { publicCapitalFactor } from './fiscal-rules';
@@ -217,7 +217,7 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
       s.trade.mtdImports += displaced[j];
     }
     // Boom mode (D-079): a small open economy sells what it can make, so foreign demand scales with capacity.
-    const reach = boomOn(s) ? Math.pow(Math.max(1, sec.capacity / CAL.cap0[j]), BOOM.exportCapacityElasticity) : 1;
+    const reach = exportReach(s, j);
     const xReal = CAL.X0[j] * exportIndex(s, j) * reach * (j === 'prop' ? mods.propDemand : 1) + fdiX[j] + (tradeX?.[j] ?? 0);
     exports[j] = xReal;
     if (j === 'cons') {

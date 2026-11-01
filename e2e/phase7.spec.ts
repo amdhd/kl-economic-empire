@@ -18,6 +18,8 @@ test('fiscal rules, commodities, partners and state enterprises can be reviewed 
 
   await page.getByTestId('nav-commodities').click();
   await expect(page.getByTestId('commodity-prices')).toContainText('Crude oil');
+  await page.getByTestId('nav-oil').click();
+  await page.getByRole('button', { name: 'Petrol subsidy' }).click();
   await page.getByTestId('fuel-ceiling').fill('2.3');
   await page.getByTestId('review-commodity').click();
   await expect(page.getByRole('dialog')).toContainText('RM2.30');
@@ -32,6 +34,8 @@ test('fiscal rules, commodities, partners and state enterprises can be reviewed 
 
   await page.getByTestId('nav-soe').click();
   await expect(page.getByTestId('khazanah-table')).toContainText('Axiata');
+  await page.getByTestId('nav-oil').click();
+  await expect(page.getByTestId('petronas-outlook')).toBeVisible();
   await page.getByTestId('petronas-dividend').fill('45');
   await page.getByTestId('review-petronas').click();
   await page.getByTestId('confirm-btn').click();

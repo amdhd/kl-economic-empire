@@ -6,6 +6,7 @@ import { COMPANY_BY_ID } from '../data/companies';
 import { PROJECT_BY_ID } from '../data/projects';
 import { RAIL_LINES, type RailLine } from '../data/rail';
 import { trainsOnLine } from './train-service';
+import { createSiteModelLayer, type ModelKind } from './site-models';
 import { FDI_KINDS, investorName } from '../engine/fdi';
 import { useGame } from '../store/game-store';
 import type { FdiKind, GameState } from '../types/game';
@@ -39,9 +40,9 @@ const PROJECT_SITE: Record<string, LngLat> = {
 const FDI_SITE: Record<FdiKind, LngLat> = {
   datacentre: [101.6559, 2.9213], semiconductor: [101.7700, 2.9600], ev: [101.5870, 3.0900], renewables: [101.6800, 2.9550], hq: [101.7190, 3.1420],
 };
-const FDI_HEIGHT: Record<FdiKind, number> = { datacentre: 40, semiconductor: 35, ev: 30, renewables: 8, hq: 160 };
 
-interface Site { key: string; at: LngLat; name: string; progress: number; done: boolean; height: number; size: number }
+const PROJECT_MODEL: Record<string, ModelKind> = { lrt: 'station', brt: 'station', housing: 'housing', clinics: 'clinic' };
+interface Site { key: string; at: LngLat; name: string; kind: ModelKind; progress: number; done: boolean }
 
 function sites(s: GameState): Site[] {
   const out: Site[] = [];
@@ -49,21 +50,16 @@ function sites(s: GameState): Site[] {
     if (p.status === 'cancelled' || !PROJECT_SITE[p.templateId]) continue;
     const n = out.filter(x => x.key.startsWith(`p:${p.templateId}`)).length;
     const [lng, lat] = PROJECT_SITE[p.templateId];
-    out.push({ key: `p:${p.templateId}:${p.id}`, at: [lng + n * 0.0025, lat], name: PROJECT_BY_ID[p.templateId]?.name ?? p.name, progress: Math.min(1, p.work / p.cost), done: p.status === 'complete', height: p.templateId === 'housing' ? 90 : 45, size: 70 });
+    out.push({ key: `p:${p.templateId}:${p.id}`, at: [lng + n * 0.0025, lat], name: PROJECT_BY_ID[p.templateId]?.name ?? p.name, kind: PROJECT_MODEL[p.templateId] ?? 'generic', progress: Math.min(1, p.work / p.cost), done: p.status === 'complete' });
   }
   for (const p of s.fdi?.pledges ?? []) {
     if (p.status !== 'building' && p.status !== 'operating') continue;
     const n = out.filter(x => x.key.startsWith(`f:${p.kind}`)).length;
     const [lng, lat] = FDI_SITE[p.kind];
     const angle = n * 2.4, r = 0.004 * Math.sqrt(n);
-    out.push({ key: `f:${p.kind}:${p.id}`, at: [lng + r * Math.cos(angle), lat + r * Math.sin(angle)], name: `${investorName(p.investor)} · ${FDI_KINDS[p.kind].label}`, progress: p.spent / p.amount, done: p.status === 'operating', height: FDI_HEIGHT[p.kind], size: p.kind === 'renewables' ? 220 : 110 });
+    out.push({ key: `f:${p.kind}:${p.id}`, at: [lng + r * Math.cos(angle), lat + r * Math.sin(angle)], name: `${investorName(p.investor)} · ${FDI_KINDS[p.kind].label}`, kind: p.kind, progress: p.spent / p.amount, done: p.status === 'operating' });
   }
   return out;
-}
-
-function square([lng, lat]: LngLat, sizeM: number): LngLat[] {
-  const dx = sizeM / 2 / M_PER_DEG_LNG, dy = sizeM / 2 / M_PER_DEG_LAT;
-  return [[lng - dx, lat - dy], [lng + dx, lat - dy], [lng + dx, lat + dy], [lng - dx, lat + dy], [lng - dx, lat - dy]];
 }
 
 /** Adds the rail, train and site layers. Returns a cleanup function. */
@@ -73,8 +69,8 @@ export function attachLivingMap(map: MlMap): () => void {
   map.addSource('kl-trains', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
   map.addLayer({ id: 'kl-trains-glow', type: 'circle', source: 'kl-trains', paint: { 'circle-color': ['get', 'colour'], 'circle-radius': ['interpolate', ['linear'], ['zoom'], 11, 6, 16, 18], 'circle-blur': 0.8, 'circle-opacity': 0.6 } });
   map.addLayer({ id: 'kl-trains', type: 'circle', source: 'kl-trains', paint: { 'circle-color': '#ffffff', 'circle-radius': ['interpolate', ['linear'], ['zoom'], 11, 2.5, 16, 7], 'circle-stroke-color': ['get', 'colour'], 'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 11, 1.5, 16, 3.5] } });
-  map.addSource('kl-sites', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-  map.addLayer({ id: 'kl-sites', type: 'fill-extrusion', source: 'kl-sites', paint: { 'fill-extrusion-color': ['get', 'color'], 'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-base': 0, 'fill-extrusion-opacity': 0.9 } });
+  const models = createSiteModelLayer(map);
+  map.addLayer(models.layer);
 
   // ---- trains: real-time motion, scaled by game speed; stopped while paused
   const offset = new Map<string, number>(); // metres travelled per line
@@ -103,14 +99,11 @@ export function attachLivingMap(map: MlMap): () => void {
   };
   raf = requestAnimationFrame(tick);
 
-  // ---- construction sites: extrusions rise with progress; markers show a crane, then an operating badge
+  // ---- construction sites: 3D models (site-models.ts) rise with progress; markers show a crane, then an operating badge
   const markers = new Map<string, { marker: Marker; el: HTMLElement }>();
   const paintSites = () => {
     const list = sites(useGame.getState().game);
-    (map.getSource('kl-sites') as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features: list.map(x => ({
-      type: 'Feature', properties: { height: Math.max(3, x.height * (x.done ? 1 : 0.15 + 0.85 * x.progress)), color: x.done ? '#5eead4' : '#f59e0b' },
-      geometry: { type: 'Polygon', coordinates: [square(x.at, x.size)] },
-    })) });
+    models.set(list);
     const keep = new Set(list.map(x => x.key));
     for (const [k, m] of markers) if (!keep.has(k)) { m.marker.remove(); markers.delete(k); }
     for (const x of list) {

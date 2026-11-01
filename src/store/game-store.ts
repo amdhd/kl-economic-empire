@@ -15,7 +15,7 @@ import { deserialize, serialize } from '../persistence/save';
 import { readSlot, writeSlot, type SlotId } from '../persistence/storage';
 import type { GameSpeed, GameState, ScenarioId, TickerId } from '../types/game';
 
-export type PanelId = 'ministry' | 'deals' | 'decisions' | 'fdi' | 'standing' | 'explain' | 'settings' | 'finance' | 'population' | 'controls' | 'trade' | 'central' | 'sources' | 'fiscal' | 'commodities' | 'partners' | 'soe' | 'overview' | 'policies' | 'projects' | 'debt' | 'markets' | 'fund' | 'economy' | 'reports' | 'objectives' | 'infra' | 'gdphistory';
+export type PanelId = 'ministry' | 'deals' | 'decisions' | 'fdi' | 'standing' | 'explain' | 'settings' | 'finance' | 'population' | 'controls' | 'trade' | 'central' | 'sources' | 'fiscal' | 'commodities' | 'oil' | 'partners' | 'soe' | 'overview' | 'policies' | 'projects' | 'debt' | 'markets' | 'fund' | 'economy' | 'reports' | 'objectives' | 'infra' | 'gdphistory';
 export type Selection = { kind: 'company'; id: TickerId } | { kind: 'district'; id: string } | null;
 export interface Toast {
   id: number;
@@ -50,6 +50,8 @@ interface Store {
   confirmOpen: number; // number of open deliberation dialogs
   pauseOnDialogs: boolean;
   lastSaved: string | null;
+  /** Tab the Deal Room opens on (set by alerts so "Investigate" lands on the deal, not an empty list). */
+  dealsTab: string;
   setPanel: (p: PanelId | null) => void;
   select: (s: Selection) => void;
   setSpeed: (s: GameSpeed) => void;
@@ -135,6 +137,7 @@ export const useGame = create<Store>((set, get) => ({
   confirmOpen: 0,
   pauseOnDialogs: usePreferences.getState().pauseOnDialogs,
   lastSaved: null,
+  dealsTab: 'opportunities',
   setPanel: (panel) => set({ panel }),
   select: (selection) => set({ selection }),
   setSpeed: (speed) => {

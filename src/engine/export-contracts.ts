@@ -9,6 +9,7 @@ import type { Deal } from '../types/deals';
 import type { GameState, PartnerId } from '../types/game';
 import { addDeal, dealLog, releaseDeal, reserveDeal, spendDeal, DEAL_ROUNDS } from './deals';
 import { post } from './government';
+import { BOOM, boomOn } from '../data/boom';
 import { toMinor } from './util';
 
 export const EXPORT_ADDITIONALITY = 0.5;
@@ -68,14 +69,14 @@ export function exportOffers(s: GameState): void {
   }
 }
 /** The buyer pays more only for shorter or more indexed contracts (it bears the risk of a fixed price). */
-export const buyerMaxPrice = (months: number, protection: number) => 1.15 - 0.0005 * months * (1 - protection); // looser buyer (D-086): was 1.04 − 0.002·months
+export const buyerMaxPrice = (months: number, protection: number, s?: Pick<GameState, 'mode'>) => s && boomOn(s) ? BOOM.exportMaxPrice : 1.15 - 0.0005 * months * (1 - protection); // looser buyer (D-086): was 1.04 − 0.002·months
 
 export function offerExport(s: GameState, d: Deal, terms: Partial<Deal['terms']>): string | null {
   if (d.status !== 'negotiating' || d.rounds >= DEAL_ROUNDS || s.scheduler.lastDay >= d.deadline) return 'Negotiation is closed.';
   const t = { ...d.terms, ...terms };
   if (!(Number.isInteger(t.months) && t.months >= 12 && t.months <= 60 && t.priceFactor >= 0.9 && t.priceFactor <= 1.3 && t.protection >= 0 && t.protection <= 1))
     return 'Use 12–60 months, a 0.90–1.30 price multiplier and 0–100% indexation.';
-  const max = buyerMaxPrice(t.months, t.protection);
+  const max = buyerMaxPrice(t.months, t.protection, s);
   d.terms = { ...t, priceFactor: Math.min(t.priceFactor, Math.floor(max * 1000) / 1000) };
   d.version++;
   d.rounds++;
@@ -84,7 +85,7 @@ export function offerExport(s: GameState, d: Deal, terms: Partial<Deal['terms']>
 }
 export function signExport(s: GameState, d: Deal): string | null {
   if (s.deals.items.some((x) => x.id !== d.id && x.template === d.template && ['agreed', 'active'].includes(x.status))) return 'A contract with this buyer is already running.';
-  if (d.terms.priceFactor > buyerMaxPrice(d.terms.months, d.terms.protection) + 1e-9) return 'The buyer will not pay this price for these terms. Revise the offer.';
+  if (d.terms.priceFactor > buyerMaxPrice(d.terms.months, d.terms.protection, s) + 1e-9) return 'The buyer will not pay this price for these terms. Revise the offer.';
   const err = reserveDeal(s, d, d.priceMinor);
   if (err) return err;
   d.lockedPrice = exportSpot(s, d.product!) * d.terms.priceFactor;
@@ -119,7 +120,7 @@ export function dailyExportContract(s: GameState, d: Deal, day: number): void {
   d.status = 'active';
   d.progress = (day - d.nextDay) / Math.max(1, (d.operationEndDay ?? day + 1) - d.nextDay);
   const spot = exportSpot(s, d.product!), unit = exportUnitPrice(s, d);
-  if (unit > spot / 0.7) {
+  if (unit > spot / 0.7 && !boomOn(s)) { // Boom mode (D-090): buyers never walk away from a premium
     releaseDeal(s, d);
     d.status = 'failed';
     d.guaranteeMinor = 0;
@@ -130,7 +131,7 @@ export function dailyExportContract(s: GameState, d: Deal, day: number): void {
   d.delivered = (d.delivered ?? 0) + daily * share;
   if (spec(d)?.hedge && s.soe.petronas.enabled) s.soe.petronas.cash += daily * share * (unit / spot - 1);
   if (share < 1) {
-    const penalty = toMinor(daily * (1 - share) * SHORTFALL_PENALTY);
+    const penalty = boomOn(s) ? 0 : toMinor(daily * (1 - share) * SHORTFALL_PENALTY);
     const fromBond = spendDeal(s, d, penalty);
     const due = penalty - fromBond + d.arrearsMinor;
     const paid = due > 0 ? toMinor(post(s.government, 'policyGrant', due / 100)) : 0;

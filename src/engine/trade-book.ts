@@ -11,8 +11,10 @@ import {
 } from '../data/trade';
 import { PARTNER_IDS, PARTNERS } from '../data/world';
 import type { GameState, PartnerId, SectorId, TradeBookState, TradeDeal, TradeMonth } from '../types/game';
+import { exportReach } from './calibration';
 import { exportContractFlows } from './export-contracts';
 import { post } from './government';
+import { BOOM, boomOn } from '../data/boom';
 import { clamp, news, pushBounded } from './util';
 import { partnerAccessTerm } from './world';
 
@@ -62,7 +64,12 @@ export function initialTradeBook(s: GameState, enabled: boolean): TradeBookState
 
 /** Number of product deals in force with a partner (goodwill in its relations). */
 export const dealsInForce = (s: GameState, k: PartnerId) => (s.tradeBook?.enabled ? s.tradeBook.deals.filter((d) => d.partner === k && d.status === 'inForce').length : 0);
-const ramp = (s: GameState, d: TradeDeal) => d.startDay === null ? 0 : clamp((s.scheduler.lastDay - d.startDay + 1) / DEAL_RAMP_DAYS, 0, 1);
+/** Boom mode loosens trade deals (D-088); realistic campaigns read the DEAL_* constants unchanged. */
+export const dealGain = (s: Pick<GameState, 'mode'>, ask: number) => boomOn(s) ? BOOM.tradeDealGain[ask] : DEAL_ACCESS_GAIN[ask];
+export const dealTalkDays = (s: Pick<GameState, 'mode'>, ask: number) => boomOn(s) ? BOOM.tradeTalkDays[ask] : DEAL_TALK_DAYS[ask];
+export const dealRounds = (s: Pick<GameState, 'mode'>) => boomOn(s) ? BOOM.tradeRounds : 3;
+const rampDays = (s: GameState) => boomOn(s) ? BOOM.tradeRampDays : DEAL_RAMP_DAYS;
+const ramp = (s: GameState, d: TradeDeal) => d.startDay === null ? 0 : clamp((s.scheduler.lastDay - d.startDay + 1) / rampDays(s), 0, 1);
 
 /** Export value of each product today before policy gains (MYR/day), from the simulation's drivers. */
 export function baseExports(s: GameState): Record<ExportProductId, number> {
@@ -79,6 +86,8 @@ export function baseExports(s: GameState): Record<ExportProductId, number> {
     if (PRICE_DRIVERS.has(p.driver)) value *= fxf;
     else value *= Math.pow(s.sectors[p.sector].price / tb.base.prices[p.sector], 1 - COMPETITIVENESS) * Math.pow(fxUs, COMPETITIVENESS);
     if (p.group === 'goods' && !p.commodity) value *= access;
+    // Boom mode: the core model sells more as capacity grows; the ledger must follow or its balance drifts from the core's.
+    if (!p.commodity) value *= exportReach(s, p.sector);
     out[id] = value;
   }
   return out;
@@ -97,7 +106,7 @@ export function policyGains(s: GameState): { promotion: Record<ExportProductId, 
   }
   for (const d of tb.deals) {
     if (d.status !== 'inForce') continue;
-    const gain = partnerExportShare(d.partner) * DEAL_ACCESS_GAIN[d.ask] * ramp(s, d);
+    const gain = partnerExportShare(d.partner) * dealGain(s, d.ask) * ramp(s, d);
     deals[d.product] += gain;
     byPartner[d.partner][d.product] += gain;
   }
@@ -229,9 +238,9 @@ export function setProgramme(s: GameState, id: ProgrammeId, budgetAnnual: number
 /** The concession a partner prefers, and how deep an offer must go for it to accept our ask. */
 const PREFERRED: Record<PartnerId, ConcessionId> = { SG: 'services', US: 'services', CN: 'industrial', EU: 'procurement', JP: 'industrial', ASEAN: 'consumer', IN: 'consumer', ROW: 'consumer' };
 export function requiredDepth(s: GameState, k: PartnerId, ask: 1 | 2): number {
-  return ask * (1.3 - s.world.partners[k].relations / 100);
+  return ask * (1.3 - s.world.partners[k].relations / 100) * (boomOn(s) ? BOOM.tradeNeedScale : 1);
 }
-export const offerValue = (k: PartnerId, concession: ConcessionId, give: number) => give * (concession === PREFERRED[k] ? 1 : 0.6);
+export const offerValue = (k: PartnerId, concession: ConcessionId, give: number, s?: Pick<GameState, 'mode'>) => give * (concession === PREFERRED[k] ? 1 : s && boomOn(s) ? BOOM.tradeOtherConcession : 0.6);
 
 export type TradeDealAction =
   | { action: 'propose'; partner: PartnerId; product: ExportProductId; ask: 1 | 2 }
@@ -265,11 +274,11 @@ export function tradeDealCommand(s: GameState, cmd: TradeDealAction): string | n
   if (cmd.action === 'offer') {
     if (d.status !== 'draft') return 'Only a draft can be revised.';
     if (!CONCESSION_IDS.includes(cmd.concession) || ![0, 1, 2].includes(cmd.give)) return 'Choose a market to open and a depth of 0–2.';
-    if (d.rounds >= 3) return 'Three rounds have been used. Sign on their terms or withdraw.';
+    if (d.rounds >= dealRounds(s)) return 'All rounds have been used. Sign on their terms or withdraw.';
     d.rounds += 1;
     d.concession = cmd.concession;
     d.give = cmd.give;
-    const enough = offerValue(d.partner, cmd.concession, cmd.give) + 1e-9 >= requiredDepth(s, d.partner, d.ask);
+    const enough = offerValue(d.partner, cmd.concession, cmd.give, s) + 1e-9 >= requiredDepth(s, d.partner, d.ask);
     if (enough) d.wanted = { concession: cmd.concession, give: Math.max(1, cmd.give) as 1 | 2 };
     d.note = enough ? `${name} accepts this offer in principle. Sign to start formal talks.` : `${name} says this is not enough for its exporters. It still wants: ${CONCESSIONS[d.wanted.concession].label.toLowerCase()} (depth ${d.wanted.give}).`;
     return null;
@@ -282,11 +291,11 @@ export function tradeDealCommand(s: GameState, cmd: TradeDealAction): string | n
       d.concession = cmd.concession;
       d.give = cmd.give;
     }
-    const ok = d.concession === d.wanted.concession && d.give >= d.wanted.give || offerValue(d.partner, d.concession, d.give) + 1e-9 >= requiredDepth(s, d.partner, d.ask);
+    const ok = d.concession === d.wanted.concession && d.give >= d.wanted.give || offerValue(d.partner, d.concession, d.give, s) + 1e-9 >= requiredDepth(s, d.partner, d.ask);
     if (!ok) return `${name} has not accepted these terms. Revise the offer to meet its request.`;
     d.status = 'talks';
-    d.concludeDay = today + DEAL_TALK_DAYS[d.ask];
-    d.note = `Formal talks under way; they conclude in about ${Math.round(DEAL_TALK_DAYS[d.ask] / 30)} months if there is no tariff dispute and relations stay above 40.`;
+    d.concludeDay = today + dealTalkDays(s, d.ask);
+    d.note = `Formal talks under way; they conclude in about ${Math.round(dealTalkDays(s, d.ask) / 30)} months if there is no tariff dispute and relations stay above 40.`;
     return null;
   }
   if (!['draft', 'talks', 'inForce'].includes(d.status)) return 'This deal is already closed.';
@@ -310,7 +319,7 @@ function concludeTalks(s: GameState, d: TradeDeal, day: number): void {
   d.status = 'inForce';
   d.startDay = day + 1;
   d.note = `In force. ${p.short} exporters gain access over about six months${d.give ? '; the concession phases in over the same period' : ''}.`;
-  news(s, { kind: 'policy', tone: 'good', title: `${p.short} trade deal with ${name} in force`, body: `Exports of ${p.label.toLowerCase()} to ${name} can rise by up to ${(DEAL_ACCESS_GAIN[d.ask] * 100).toFixed(0)}% of that market. Simulated.` });
+  news(s, { kind: 'policy', tone: 'good', title: `${p.short} trade deal with ${name} in force`, body: `Exports of ${p.label.toLowerCase()} to ${name} can rise by up to ${(dealGain(s, d.ask) * 100).toFixed(0)}% of that market. Simulated.` });
 }
 
 export function validateTradeBook(tb: TradeBookState): void {

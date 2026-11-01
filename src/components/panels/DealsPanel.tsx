@@ -4,7 +4,7 @@ import { DEAL_ROUNDS } from '../../engine/deals';
 import { supplyUnitPrice } from '../../engine/supply-contracts';
 import { buyerMaxPrice, deliveryShare, exportSpot, exportUnitPrice } from '../../engine/export-contracts';
 import { concessionQuote } from '../../engine/concessions';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useGame, useGameState } from '../../store/game-store';
 import type { Deal } from '../../types/deals';
 import { money } from '../../utils/format';
@@ -26,7 +26,8 @@ const DEAL_TAGS: Record<string, { tag: string; plain: string }> = {
 
 export function DealsPanel() {
   const g = useGameState();
-  const [tab, setTab] = useState('opportunities');
+  const [tab, setTab] = useState(() => useGame.getState().dealsTab);
+  useEffect(() => { useGame.setState({ dealsTab: 'opportunities' }); }, []); // the alert's tab is used once
   const [drafts, setDrafts] = useState<Record<number, Partial<Deal['terms']>>>({});
   const [reviewAction, setReviewAction] = useState<
     'sign' | 'cancel' | 'followOn' | 'dilute' | 'exit' | 'liquidate' | 'dividend'
@@ -173,7 +174,7 @@ export function DealsPanel() {
             {d.kind === 'export' && d.product && (
               <p data-testid={`export-terms-${d.id}`}>
                 {money(d.volume ?? 0)} a year · {d.status === 'opportunity' || d.status === 'negotiating'
-                  ? `price ${(exportSpot(g, d.product) * d.terms.priceFactor).toFixed(3)} (spot ${exportSpot(g, d.product).toFixed(3)}); the buyer pays at most ${buyerMaxPrice(d.terms.months, d.terms.protection).toFixed(3)}× spot for these terms`
+                  ? `price ${(exportSpot(g, d.product) * d.terms.priceFactor).toFixed(3)} (spot ${exportSpot(g, d.product).toFixed(3)}); the buyer pays at most ${buyerMaxPrice(d.terms.months, d.terms.protection, g).toFixed(3)}× spot for these terms`
                   : `contract price ${exportUnitPrice(g, d).toFixed(3)} vs spot ${exportSpot(g, d.product).toFixed(3)} · delivering ${Math.round(deliveryShare(g, d) * 100)}% · penalties paid ${money((d.penaltyMinor ?? 0) / 100)}`}.
                 {' '}Bond {money(d.priceMinor / 100)} returns at the end; leaving early forfeits half of it.
               </p>
@@ -214,7 +215,7 @@ export function DealsPanel() {
                           : d.kind === 'export'
                             ? ([
                                 ['months', 'Contract length (months)', 12, 60, 1, 'How long the buyer keeps buying. Longer fixed contracts make the buyer ask for a discount.', ''],
-                                ['priceFactor', 'Price vs today', 0.9, 1.3, 0.01, '1.00 is today\'s market price. Higher earns more; the buyer pays up to about 1.10–1.15× for most contracts.', ''],
+                                ['priceFactor', 'Price vs today', 0.9, 1.3, 0.01, g.mode?.boom ? '1.00 is today\'s market price. Boom buyers pay up to 1.30× (30% over market) on any contract.' : '1.00 is today\'s market price. Higher earns more; the buyer pays up to about 1.10–1.15× for most contracts.', ''],
                                 ['protection', 'Price moves with market', 0, 1, 0.1, '0 means a fixed price. 1 means the price follows the market, up or down.', '%'],
                               ] as const)
                           : d.kind === 'supply'

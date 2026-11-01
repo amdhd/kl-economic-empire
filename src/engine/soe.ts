@@ -80,6 +80,39 @@ export const palmPriceMYR = (s: GameState) => s.world.prices.palm * fxFactor(s);
 export const petronasCapex = (p: PetronasState, s?: GameState) =>
   (p.cash < PETRONAS.cashFloor ? 0.7 : 1) * p.capexAnnual * (s ? Math.pow(s.world.gasIndex, demandFor(s).upstreamOilElasticity) : 1);
 
+/** Next-12-months PETRONAS estimate at today's prices for a given dividend and capex policy. Pure: it replays the daily
+ * upstream formulas on a copy of cash, production and trailing capex, and never touches the game state. Monthly petroleum
+ * tax is approximated on the daily profit, so treat it as an estimate that matches the month-end books to within a few percent. */
+export interface PetronasOutlook {
+  revenue: number; profitAfterTax: number; capex: number; dividend: number;
+  /** Profit after tax + depreciation − capex − dividend (the change in cash, before interest). */
+  cashChange: number; endCash: number; endProduction: number;
+  /** Days until cash first falls below the floor (when PETRONAS cuts capex 30%), or null if it does not within the year. */
+  daysToFloor: number | null;
+}
+export function petronasOutlook(s: GameState, dividendAnnual: number, capexAnnual: number): PetronasOutlook {
+  const p = s.soe.petronas;
+  const price = upstreamPriceIndex(s), cpiF = s.indicators.cpi / 100;
+  const demandF = Math.pow(s.world.gasIndex, demandFor(s).upstreamOilElasticity);
+  let subsidiary = 0;
+  for (const [id, n] of Object.entries(p.shares) as [TickerId, number][]) subsidiary += n * s.companies[id].lastDps * 12;
+  let cash = p.cash, prod = p.production, avg = p.capexAvg, daysToFloor: number | null = null;
+  let revenue = 0, profit = 0, capexTotal = 0;
+  for (let d = 0; d < 365; d++) {
+    const upRevenue = UPSTREAM_VALUE0 * PER_YEAR * prod * price;
+    const taxable = upRevenue * UPSTREAM_VA_SHARE - UPSTREAM_FIXED_SHARE * UPSTREAM_VA0 * PER_YEAR * cpiF;
+    const capex = (cash < PETRONAS.cashFloor ? 0.7 : 1) * capexAnnual * demandF;
+    avg += (capex - avg) / 365;
+    prod *= 1 + PETRONAS.declineRate * PER_YEAR * (avg / PETRONAS.capex0 - 1);
+    const dayProfit = (taxable - Math.max(0, taxable) * PITA_RATE) + (PETRONAS.downstreamProfit0 + subsidiary) * PER_YEAR;
+    revenue += upRevenue; profit += dayProfit; capexTotal += capex * PER_YEAR;
+    cash += dayProfit + PETRONAS.depreciation * PER_YEAR - capex * PER_YEAR - dividendAnnual * PER_YEAR;
+    if (cash < 0) cash = 0;
+    if (daysToFloor === null && cash < PETRONAS.cashFloor) daysToFloor = d + 1;
+  }
+  return { revenue, profitAfterTax: profit, capex: capexTotal, dividend: dividendAnnual, cashChange: profit + PETRONAS.depreciation - capexTotal - dividendAnnual, endCash: cash, endProduction: prod, daysToFloor };
+}
+
 /** Palm-sector income reaching households, relative to opening (MYR/day): smallholder profit and estate wages. */
 export function palmHouseholdDelta(s: GameState): number {
   if (!nationalV2(s)) return 0;

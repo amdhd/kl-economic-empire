@@ -57,7 +57,9 @@ export function aggregateMods(s: GameState, today: number): AggregatedMods {
   for (const ev of s.events.active) {
     const t = EVENT_BY_ID[ev.templateId];
     if (!t || t.company || !eventIsActive(ev, today)) continue;
-    const k = clamp((today - ev.startDay + 1) / 7, 0, 1) * ev.magnitude;
+    // Boom mode (D-094): a surge arrives fast (7 days) but fades over eventFadeDays, so its end is never a one-day cliff.
+    const fade = boomOn(s) ? clamp((ev.endDay - today) / Math.min(BOOM.eventFadeDays, (ev.endDay - ev.startDay) / 2), 0, 1) : 1;
+    const k = clamp((today - ev.startDay + 1) / 7, 0, 1) * fade * ev.magnitude;
     const mods: EventMods = t.mods;
     const mul = (x: number | undefined) => (x === undefined ? 1 : Math.pow(x, k));
     m.oil *= mul(mods.oil);
@@ -127,7 +129,10 @@ export function updateExternal(s: GameState, mods: AggregatedMods, klInflation: 
   // Boom mode (D-079): productivity-led appreciation as the economy outgrows its opening size (Balassa–Samuelson style).
   const boom = boomOn(s);
   const catchUp = boom ? -BOOM.fxProductivityElasticity * Math.log(Math.max(1, s.indicators.realGdpAnnual / s.baseline.realGdpAnnual)) : 0;
+  const prevFx = e.myrPerUsd;
   e.myrPerUsd = clamp(BASELINE.myrPerUsd * Math.exp(catchUp + s.centralBank.pressure + monetaryEffects(s).fx + controls.fxLevel + cy.fx * (1 - controls.fxDamping) - 1.5 * diff - 0.05 * (e.oil - 1) - 0.08 * (e.riskAppetite - 0.5)) * mods.fx, boom ? BOOM.fxFloor : 3.2, 6.5);
+  // Boom mode (D-093): the ringgit may strengthen freely but weakens at most about 0.9% a month, so US$ GDP never loses more than about 1% in a month.
+  if (boom) e.myrPerUsd = Math.min(e.myrPerUsd, prevFx * (1 + BOOM.fxMaxDepreciationDaily));
 
   const d = (name: GlobalDriver, base: number) => base * (mods.drivers[name] ?? 1);
   const g = e.globalDemand, us = e.usDemand, tc = e.techCycle;

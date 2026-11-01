@@ -9,6 +9,7 @@ import { SCENARIOS } from '../data/scenarios';
 import { CAMPAIGN_LENGTHS, type CampaignMonths } from '../data/boom';
 import { EconomyWindow } from '../components/panels/EconomyWindow';
 import { ControlsPanel } from '../components/panels/ControlsPanel';
+import { OilPanel } from '../components/panels/OilPanel';
 import { CommoditiesPanel } from '../components/panels/CommoditiesPanel';
 import { FiscalPanel } from '../components/panels/FiscalPanel';
 import { PartnersPanel } from '../components/panels/PartnersPanel';
@@ -53,6 +54,7 @@ const PANELS: Record<PanelId, () => ReactNode> = {
   controls: () => <ControlsPanel />,
   fiscal: () => <FiscalPanel />,
   commodities: () => <CommoditiesPanel />,
+  oil: () => <OilPanel />,
   partners: () => <PartnersPanel />,
   soe: () => <SoePanel />,
   gdphistory: () => <GdpHistoryPanel />,

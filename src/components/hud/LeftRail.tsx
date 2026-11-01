@@ -23,6 +23,7 @@ const GROUPS: { title: string; items: { id: PanelId; label: string; color: strin
     { id: 'trade', label: 'Trade & FX', color: '#e2c778' },
     { id: 'central', label: 'Central bank', color: '#f0c36d' },
     { id: 'partners', label: 'Trading partners', color: '#8fd3c7' },
+    { id: 'oil', label: 'Oil & PETRONAS', color: '#f2b45e' },
     { id: 'commodities', label: 'Commodities', color: '#e8a86a' },
     { id: 'deals', label: 'Deal Room', color: '#b6a2ee' },
     { id: 'fdi', label: 'Investment & FDI', color: '#7fd6b0' },

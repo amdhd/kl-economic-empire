@@ -33,11 +33,30 @@ export const BOOM = {
   /** Productivity-led ringgit appreciation: log MYR/USD falls by this × log(real GDP ÷ opening). Floor MYR1.00. */
   fxProductivityElasticity: 0.35,
   fxFloor: 1,
+  /** Cap on how fast the ringgit can weaken a day (D-093). 0.0003 a day is about 0.9% a month; strengthening is uncapped. */
+  fxMaxDepreciationDaily: 0.0003,
   /** FDI: arrival hazard multiplier and pledge size growth (× (base + perYear × years)). */
   fdiHazard: 4,
   /** Extra climate points for every kind of pledge (an investment rush), and the build time of any pledge in months. */
   fdiAttractiveness: 10,
   fdiBuildMonths: 1,
+  /** Trade deals (D-088): export gain by chapter depth (realistic 10% / 20%), talks and phase-in days, how much of the partner's
+   * demand we must meet (realistic 1×), the worth of a non-preferred concession (realistic 0.6) and negotiation rounds (realistic 3). */
+  tradeDealGain: [0, 0.25, 0.5],
+  tradeTalkDays: [0, 30, 45],
+  tradeRampDays: 60,
+  tradeNeedScale: 0.5,
+  tradeOtherConcession: 0.9,
+  tradeRounds: 6,
+  /** Max profit (D-090, D-092): only upside macro events (see below); export buyers pay up to +30% over market for any contract; suppliers sell down
+   * to 15% under market; shortfall penalties, buyer walk-aways, price-shock supplier failures and termination claims are off. */
+  /** Events (D-094): only upside macro events start in Boom mode (every 'good' one plus the ringgit rally); oil hikes, slowdowns, slumps and
+   * other adverse or oil-price-cut events never do. Every event fades out over this many days instead of ending in a one-day cliff. */
+  upsideEventsOnly: true,
+  upsideEvents: ['myr_strong'] as string[],
+  eventFadeDays: 45,
+  exportMaxPrice: 1.3,
+  supplyMinPrice: 0.85,
   fdiSizeBase: 3,
   fdiSizePerYear: 2,
 };

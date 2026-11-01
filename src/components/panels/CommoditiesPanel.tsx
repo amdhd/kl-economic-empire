@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { baselineFor } from '../../data/economic-baseline';
-import { COMMODITIES, COMMODITY_GROUPS, FUEL_CEILING0, PALM_DUTY0 } from '../../data/world';
-import { fuelMarketPrice, fuelSubsidyDaily, wheatSubsidyDaily } from '../../engine/world';
+import { COMMODITIES, COMMODITY_GROUPS, PALM_DUTY0 } from '../../data/world';
+import { fuelSubsidyDaily, wheatSubsidyDaily } from '../../engine/world';
 import { formatKL } from '../../engine/time';
 import type { CommodityPolicy } from '../../types/game';
 import { useGame, useGameState } from '../../store/game-store';
@@ -26,8 +26,7 @@ export function CommoditiesPanel() {
     </PanelShell>;
   }
   const fxf = g.external.myrPerUsd / baselineFor(g).myrPerUsd;
-  const market = fuelMarketPrice(g);
-  const changed = (Object.keys(pol) as (keyof CommodityPolicy)[]).filter((k) => Math.abs(pol[k] - proposed[k]) > 1e-9);
+  const changed = (Object.keys(pol) as (keyof CommodityPolicy)[]).filter((k) => k !== 'fuelCeiling' && k !== 'fuelEligible' && Math.abs(pol[k] - proposed[k]) > 1e-9); // fuel is set in the Oil window
   const chart = w.history.slice(-365).map((h) => ({ t: formatKL(h.t * 1440).date, ...Object.fromEntries(Object.keys(COMMODITIES).map((c) => [c, (h[c as keyof typeof COMMODITIES] ?? 1) * 100])) }));
   const set = (k: keyof CommodityPolicy, v: number) => setPol({ ...pol, [k]: v });
   return <PanelShell title="Commodities & subsidies" subtitle="World prices are exogenous; you control domestic ceilings, subsidies and duties" width={760}>
@@ -56,13 +55,6 @@ export function CommoditiesPanel() {
     </Section>
     <Section title="Domestic policy · effective tomorrow">
       <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-[12px]">
-        <label className="block">RON95 ceiling · RM{pol.fuelCeiling.toFixed(2)}/L <span className="text-slate-400">(unsubsidised ≈ RM{market.toFixed(2)})</span>
-          <input type="range" min={1.5} max={3.5} step={0.05} value={pol.fuelCeiling} onChange={(e) => set('fuelCeiling', Number(e.target.value))} aria-label="Fuel ceiling" data-testid="fuel-ceiling" />
-        </label>
-        <label className="block">Eligible share · {pct(pol.fuelEligible, 0)} of volume
-          <input type="range" min={0} max={1} step={0.05} value={pol.fuelEligible} onChange={(e) => set('fuelEligible', Number(e.target.value))} aria-label="Fuel eligibility" data-testid="fuel-eligible" />
-          <span className="text-slate-400">100% = blanket (leaks to non-residents and smuggling); 85% ≈ citizens only; lower = income-targeted</span>
-        </label>
         <label className="block">Food import subsidy (wheat & rice) · covers {pct(pol.wheatSubsidy, 0)} of price rises
           <input type="range" min={0} max={1} step={0.05} value={pol.wheatSubsidy} onChange={(e) => set('wheatSubsidy', Number(e.target.value))} aria-label="Wheat subsidy" data-testid="wheat-subsidy" />
         </label>
@@ -74,7 +66,7 @@ export function CommoditiesPanel() {
           <input type="range" min={0} max={0.2} step={0.005} value={pol.palmExportDuty} onChange={(e) => set('palmExportDuty', Number(e.target.value))} aria-label="Palm export duty" data-testid="palm-duty" />
         </label>
       </div>
-      <p className="mt-2 text-[12px] text-slate-400">Raising the fuel ceiling above RM{FUEL_CEILING0.toFixed(2)} or narrowing eligibility saves money but raises prices and is unpopular. Extra household fuel spending comes out of other consumption.</p>
+      <p className="mt-2 text-[12px] text-slate-400">The petrol subsidy (pump ceiling and who gets it) moved to the <button className="underline" onClick={() => useGame.getState().setPanel('oil')}>Oil window</button>.</p>
       <button className="btn btn-primary mt-2" disabled={!changed.length} onClick={() => setConfirm(true)} data-testid="review-commodity">Review changes</button>
       {pending.map((p) => <div key={p.id} className="mt-2 flex items-center justify-between gap-2 text-[12px] text-amber-200"><span>{p.label} · from {formatKL(p.effectiveMin).date}</span><button className="btn" onClick={() => command({ type: 'cancelPolicy', id: p.id })}>Withdraw</button></div>)}
     </Section>
