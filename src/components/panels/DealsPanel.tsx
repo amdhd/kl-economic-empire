@@ -1,5 +1,6 @@
 import { dealExposure, quoteDealCommitment } from '../../engine/deal-report';
 import { dealOutlook } from '../../engine/deal-outlook';
+import { DEAL_CATEGORIES, countDealCategories, dealCategory, type DealCategoryId } from '../../engine/deal-categories';
 import { DEAL_ROUNDS } from '../../engine/deals';
 import { supplyUnitPrice } from '../../engine/supply-contracts';
 import { buyerMaxPrice, deliveryShare, exportSpot, exportUnitPrice } from '../../engine/export-contracts';
@@ -28,6 +29,7 @@ export function DealsPanel() {
   const g = useGameState();
   const [tab, setTab] = useState(() => useGame.getState().dealsTab);
   useEffect(() => { useGame.setState({ dealsTab: 'opportunities' }); }, []); // the alert's tab is used once
+  const [category, setCategory] = useState<DealCategoryId | 'all'>('all');
   const [drafts, setDrafts] = useState<Record<number, Partial<Deal['terms']>>>({});
   const [reviewAction, setReviewAction] = useState<
     'sign' | 'cancel' | 'followOn' | 'dilute' | 'exit' | 'liquidate' | 'dividend'
@@ -39,15 +41,18 @@ export function DealsPanel() {
     setReviewAction(action);
     setReview(d);
   };
-  const items = g.deals.items.filter((d) =>
-    tab === 'outcomes'
+  const inTab = (t: string, d: Deal) =>
+    t === 'outcomes'
       ? ['completed', 'failed', 'rejected', 'expired'].includes(d.status)
-      : tab === 'active'
+      : t === 'active'
         ? ['agreed', 'active'].includes(d.status)
-        : tab === 'negotiations'
+        : t === 'negotiations'
           ? d.status === 'negotiating'
-          : tab === 'exposure' || d.status === 'opportunity',
-  );
+          : t === 'exposure' || d.status === 'opportunity';
+  const tabItems = g.deals.items.filter((d) => inTab(tab, d));
+  const counts = countDealCategories(tabItems);
+  const newOffers = g.deals.items.filter((d) => d.status === 'opportunity').length;
+  const items = category === 'all' ? tabItems : tabItems.filter((d) => dealCategory(d) === category);
   return (
     <PanelShell
       title="Deal Room"
@@ -80,6 +85,16 @@ export function DealsPanel() {
             data-testid={`deals-tab-${t}`}
           >
             {t[0].toUpperCase() + t.slice(1)}
+            {t === 'opportunities' && newOffers > 0 && <span className="ml-1.5 rounded-full bg-rose-500 px-1.5 text-[11px] font-extrabold text-white" data-testid="deals-tab-badge-opportunities">{newOffers}</span>}
+          </button>
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-1" role="group" aria-label="Deal categories" data-testid="deal-categories">
+        {([{ id: 'all' as const, label: 'All', n: tabItems.length }, ...DEAL_CATEGORIES.filter((c) => c.id !== 'other' || counts.other > 0).map((c) => ({ ...c, n: counts[c.id] }))]).map((c) => (
+          <button key={c.id} aria-pressed={category === c.id} data-testid={`deal-cat-${c.id}`} onClick={() => setCategory(c.id)}
+            className={`rounded-md px-3 py-1.5 text-[13px] font-bold ${category === c.id ? 'bg-cyan-400 text-slate-950 ring-2 ring-white/80' : c.n ? 'bg-slate-700 text-white ring-1 ring-slate-400/50 hover:bg-slate-600' : 'bg-slate-800 text-slate-400 ring-1 ring-slate-600/50 hover:bg-slate-700'}`}>
+            {c.label}
+            <span className={`ml-1.5 rounded-full px-1.5 text-[11px] font-extrabold ${category === c.id ? 'bg-slate-950 text-cyan-200' : c.n ? 'bg-cyan-400 text-slate-950' : 'bg-slate-700 text-slate-300'}`} data-testid={`deal-cat-count-${c.id}`}>{c.n}</span>
           </button>
         ))}
       </div>
@@ -106,7 +121,7 @@ export function DealsPanel() {
       )}
       {!items.length && (
         <p className="text-[13px] text-slate-400">
-          No agreements in this view. New FDI opportunities appear through the existing investment pipeline.
+          No agreements in this view{category === 'all' ? '' : ' for this category'}. New FDI opportunities appear through the existing investment pipeline.
         </p>
       )}
       {items.map((d) => {
