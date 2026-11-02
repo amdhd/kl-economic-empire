@@ -151,7 +151,10 @@ export function dailyConcessions(
     const privateDue = Math.min(d.privateCashMinor ?? 0, requested - publicDue);
     const publicPaid = spendDeal(s, d, publicDue);
     d.privateCashMinor! -= privateDue;
-    const paid = (publicPaid + privateDue) / 100;
+    // Fixed-price contract: the escrow and private capital are sized at base cost, so when construction prices
+    // have risen the last stretch would stall short of 100%. Once both pots are empty the contractor absorbs the overrun.
+    const overrun = d.escrowMinor <= 0 && (d.privateCashMinor ?? 0) <= 0 ? requested - publicPaid - privateDue : 0;
+    const paid = (publicPaid + privateDue + overrun) / 100;
     p.spent += paid;
     p.work += paid / s.sectors.prop.price;
     purchases.prop += paid * 0.7;
