@@ -228,7 +228,7 @@ export function dailyDeals(
     }
     dailyConcessions(s, d, day, purchases);
     dailySupply(s, d, day, paidFraction);
-    dailyExportContract(s, d, day);
+    dailyExportContract(s, d, day, purchases);
     dailyEnterprise(s, d, day, purchases);
     if (d.kind === 'diligence' && d.status === 'agreed' && day >= d.nextDay) {
       const paid = spendDeal(s, d, d.priceMinor);

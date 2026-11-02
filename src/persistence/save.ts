@@ -8,7 +8,7 @@ import { SPEEDS } from '../engine/clock';
 import { COMMODITY_IDS } from '../data/world';
 import { COMPANIES } from '../data/companies';
 import { LEGACY_BASELINE, SECTOR_IDS } from '../data/economic-baseline';
-import { initialCentralBank, neutralMonetaryPolicy } from '../engine/trade-fx';
+import { initialCentralBank, neutralMonetaryPolicy, neutralReservePolicy } from '../engine/trade-fx';
 import { initialFiscal, validateFiscal } from '../engine/fiscal-rules';
 import { initialSoe, validateSoe } from '../engine/soe';
 import { initialWorld, validateCommodityPolicy, validateWorld } from '../engine/world';
@@ -87,6 +87,13 @@ const MIGRATIONS: Record<number, Migration> = {
   17: state => {
     const s = state as unknown as GameState;
     s.housing ??= initialHousing(s);
+    return state;
+  },
+  // v19 → v20: the reserve-accumulation programme and gold (D-131). It opens off with no gold, so nothing in an existing campaign changes.
+  19: state => {
+    const s = state as unknown as GameState;
+    const cb = s.centralBank as unknown as Record<string, unknown>;
+    for (const [k, v] of Object.entries(neutralReservePolicy())) cb[k] ??= v;
     return state;
   },
   // v18 → v19: the Boom construction & industry productivity lever (D-126). It opens switched off.
@@ -313,7 +320,8 @@ export function deserialize(json: string): GameState {
     || !Number.isSafeInteger(s.trade.trackingStartDay) || !nonnegative(s.trade.mtdExports) || !nonnegative(s.trade.mtdImports) || !Array.isArray(s.trade.history)
     || !nonnegative(s.centralBank.dailyUsdUsed) || s.centralBank.dailyUsdUsed > 1e9
     || !Number.isSafeInteger(s.centralBank.lastInterventionDay) || Math.abs(s.centralBank.pressure) > 0.08
-    || !nonnegative(s.centralBank.openingEquityMYR) || !Array.isArray(s.centralBank.tx)) throw new Error('Corrupt save: invalid trade or central bank');
+    || !nonnegative(s.centralBank.openingEquityMYR) || !nonnegative(s.centralBank.goldTonnes) || !nonnegative(s.centralBank.goldCostUsd) || !nonnegative(s.centralBank.moneyCreated)
+    || !nonnegative(s.centralBank.reserveLiquidity) || !s.centralBank.reserveProgramme || !Array.isArray(s.centralBank.tx)) throw new Error('Corrupt save: invalid trade or central bank');
   for (const n of [s.centralBank.usdReserves, s.centralBank.myrCash]) {
     assertSafeMinor(n);
     if (n < 0) throw new Error('Corrupt save: negative central-bank inventory');

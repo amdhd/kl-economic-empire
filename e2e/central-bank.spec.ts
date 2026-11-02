@@ -33,3 +33,19 @@ test('central bank panel: take control of the rate, tighten banks, buy bonds, is
   expect(s.centralBank.bills).toBe(10e9 * 100);
   expect(s.centralBank.remitShare).toBeCloseTo(0.5, 9);
 });
+
+test('central bank panel: start and stop a reserve-accumulation programme', async ({ page }) => {
+  await startCampaign(page);
+  await openPanel(page, 'central');
+  await expect(page.getByTestId('cb-total-reserves')).toBeVisible();
+  await page.getByTestId('cb-res-monthly').fill('3');
+  await page.getByTestId('cb-res-gold').fill('0.2');
+  await page.getByTestId('cb-res-start').click();
+  await page.getByTestId('confirm-btn').click();
+  let s = await state(page);
+  expect(s.centralBank.reserveProgramme.monthlyUsd).toBe(3e9);
+  expect(s.centralBank.reserveProgramme.goldShare).toBeCloseTo(0.2, 9);
+  await page.getByTestId('cb-res-stop').click();
+  s = await state(page);
+  expect(s.centralBank.reserveProgramme.monthlyUsd).toBe(0);
+});

@@ -120,12 +120,16 @@ export function weeklyFdi(s: GameState, today: number): void {
     p.status = 'withdrawn';
     news(s, { kind: 'fund', tone: 'bad', title: `Pledge lapsed: ${investorName(p.investor)}`, body: 'No decision within 30 days; the investor chose another location (simulated).' });
   }
+  // Boom mode (D-129): a month with no new pledge forces one of a hash-chosen kind (no RNG), so a long campaign never runs dry.
+  const boom = boomOn(s);
+  const lastOffer = s.fdi.pledges.reduce((a, p) => Math.max(a, p.offeredDay), s.deals?.startDay ?? 0);
+  const forced = boom && today - lastOffer >= BOOM.fdiMaxGapDays ? flavourPick(s, `fdi:force:${today}`, FDI_KIND_IDS) : null;
   for (const kind of FDI_KIND_IDS) {
     const k = FDI_KINDS[kind];
     const draw = rand(s.fdi.rng), pick = rand(s.fdi.rng), size = rand(s.fdi.rng), askDraw = rand(s.fdi.rng); // fixed draw count per kind
-    const boom = boomOn(s);
-    const hazard = Math.min(0.9, k.weeklyHazard * Math.pow(attractiveness(s, kind) / 50, 2) * (boom ? BOOM.fdiHazard : 1));
-    if (draw >= hazard) continue;
+    const climate = attractiveness(s, kind) / 50;
+    const hazard = Math.min(0.9, k.weeklyHazard * Math.pow(boom ? Math.max(BOOM.fdiMinClimate, climate) : climate, 2) * (boom ? BOOM.fdiHazard : 1));
+    if (draw >= hazard && kind !== forced) continue;
     const pool = campaignInvestors(s, kind), investor = pool[Math.min(pool.length - 1, Math.floor(pick * pool.length))];
     // Boom mode: mega-projects that grow with the campaign (D-079).
     const mega = boom ? BOOM.fdiSizeBase + BOOM.fdiSizePerYear * (s.external.daysElapsed / 365) : 1;
