@@ -16,11 +16,10 @@ import { StatsStrip } from '../hud/StatsStrip';
 import { TimeChart } from '../charts/TimeChart';
 import { housingStatus } from '../../engine/housing';
 
-type Tab = 'summary' | 'budget' | 'taxation' | 'loans' | 'production';
+type Tab = 'summary' | 'budget' | 'loans' | 'production';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'summary', label: 'Summary' },
-  { id: 'budget', label: 'Budget' },
-  { id: 'taxation', label: 'Taxation' },
+  { id: 'budget', label: 'Budget & Tax' },
   { id: 'loans', label: 'Loans' },
   { id: 'production', label: 'Production' },
 ];
@@ -101,8 +100,7 @@ export function EconomyWindow() {
         </div>
         <div className="econ-body">
           {tab === 'summary' && <Summary g={g} balance={balance} label={label} />}
-          {tab === 'budget' && <BudgetTax g={g} balance={balance} label={label} initial="budget" />}
-          {tab === 'taxation' && <BudgetTax g={g} balance={balance} label={label} initial="tax" />}
+          {tab === 'budget' && <BudgetTax g={g} balance={balance} label={label} />}
           {tab === 'loans' && <Loans g={g} balance={balance} label={label} />}
           {tab === 'production' && <Production g={g} balance={balance} label={label} />}
         </div>
@@ -359,8 +357,8 @@ function useTaxParts(g: GameState, label: string, focused: boolean, onFocus: () 
 }
 
 /** One page for spending and revenue so they can be compared: spending list | slider and notes | revenue list. */
-function BudgetTax({ g, balance, label, initial }: { g: GameState; balance: number; label: string; initial: 'budget' | 'tax' }) {
-  const [focus, setFocus] = useState<'budget' | 'tax'>(initial);
+function BudgetTax({ g, balance, label }: { g: GameState; balance: number; label: string }) {
+  const [focus, setFocus] = useState<'budget' | 'tax'>('budget');
   const b = useBudgetParts(g, balance, label, focus === 'budget', () => setFocus('budget'));
   const t = useTaxParts(g, label, focus === 'tax', () => setFocus('tax'));
   return <div className="econ-columns">{b.list}{focus === 'budget' ? b.middle : t.middle}{t.list}</div>;
