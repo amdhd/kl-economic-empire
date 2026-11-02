@@ -134,6 +134,21 @@ describe('private concessions', () => {
     expect(s.government.publicAssets).toBeLessThan(assets + 1e10); // no full private-asset booking
     expect(s.government.projects.filter((p) => p.templateId === 'fibre')).toHaveLength(1);
   });
+  it('finishes a concession even when construction prices rise above the sized funding (contractor absorbs the overrun)', () => {
+    const s = createGame(1722),
+      d = s.deals.items.find((d) => d.kind === 'concession')!;
+    act(s, d.id, 'review');
+    expect(act(s, d.id, 'sign').ok).toBe(true);
+    const p = s.government.projects.find((p) => p.id === d.projectId)!;
+    s.sectors.prop.price = 1.35; // sticky: the whole build is bought at escalated prices
+    for (let i = 0; i < 24 * (p.durationDays + 60) && p.status === 'building'; i++) {
+      s.sectors.prop.price = 1.35;
+      runHeadless(s, 1);
+    }
+    expect(p.status).toBe('complete');
+    expect(p.work).toBeGreaterThanOrEqual(p.cost - 1);
+    expect(p.spent).toBeGreaterThan(p.cost * 1.2);
+  });
   it('higher user charges reduce quoted public service payments and termination retains unpaid claims', () => {
     const s = createGame(1721),
       d = s.deals.items.find((d) => d.kind === 'concession')!;
