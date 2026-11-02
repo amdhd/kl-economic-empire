@@ -4,6 +4,7 @@ import { prunePledges } from '../src/engine/fdi';
 import { bankIdentityGap } from '../src/engine/banks';
 import { standingBoard } from '../src/engine/standing';
 import { deserialize, findNonFinite, serialize } from '../src/persistence/save';
+import { TREASURY_LIMIT_MYR } from '../src/data/boom';
 import type { FdiPledge } from '../src/types/game';
 import { clone, infraAutopilot, withoutEvents } from './helpers';
 
@@ -55,7 +56,7 @@ describe('campaign length and Boom mode (D-079)', () => {
     expect(s.fdi.standing.length).toBe(121);
     const me = standingBoard(s).find((x) => x.isMalaysia)!;
     expect(me.rank).toBeLessThanOrEqual(3);
-    expect(s.government.treasury).toBeLessThan(Number.MAX_SAFE_INTEGER / 2);
+    expect(s.government.treasury).toBeLessThan(TREASURY_LIMIT_MYR * 100); // D-101 ceiling; steadier pledge supply (D-130) lifts the ten-year treasury to about RM46tn
     expect(s.deals.items.length).toBeLessThanOrEqual(200);
     expect(s.fdi.pledges.filter((p) => p.status === 'operating').length).toBeGreaterThan(50);
   }), 300_000);

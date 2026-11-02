@@ -2,6 +2,7 @@
 // reserve income. User-directed override of the earlier "OPR is exogenous" rule; the automatic rule remains the default.
 import type { GameState } from '../types/game';
 import { post } from './government';
+import { goldValueUsdMinor, GOLD_STORAGE_COST, monthlyReservePurchase } from './reserves';
 import { klDay } from './time';
 import { assertSafeMinor, clamp, news, pushBounded, toMinor } from './util';
 
@@ -24,7 +25,9 @@ const penalty = (s: GameState) => Math.max(0, CREDIBILITY_START - s.centralBank.
 /** Effects of weak credibility and bond buying on inflation, the 10y yield and the ringgit (log points). */
 export function monetaryEffects(s: GameState) {
   const pen = penalty(s), q = qeShare(s);
-  return { inflation: 0.00025 * pen + 0.1 * q, yield: 0.0001 * pen - 0.06 * q, fx: 0.0003 * pen + 0.35 * q };
+  // Money created to buy reserves and not mopped up with bills (D-132) acts like a smaller dose of bond buying.
+  const r = (s.centralBank.reserveLiquidity ?? 0) / Math.max(1, s.indicators.nominalGdpAnnual);
+  return { inflation: 0.00025 * pen + 0.1 * q + 0.08 * r, yield: 0.0001 * pen - 0.06 * q, fx: 0.0003 * pen + 0.35 * q + 0.1 * r };
 }
 
 /** Player settings: mode, target OPR (moves only at MPC meetings), reserve requirement and the profit remittance. */
@@ -102,10 +105,10 @@ export function applyMpcDecision(s: GameState, ruleTarget: number): void {
 /** Month close: reserve income, bill interest and the optional remittance to the treasury. */
 export function monthCloseCentralBank(s: GameState): void {
   const cb = s.centralBank, b = s.bank, e = s.external;
-  const usdIncome = (cb.usdReserves / 100) * (e.ust10 * RESERVE_YIELD_SHARE) / 12;
+  const usdIncome = (cb.usdReserves / 100) * (e.ust10 * RESERVE_YIELD_SHARE) / 12 - (goldValueUsdMinor(s) / 100) * GOLD_STORAGE_COST / 12; // gold earns nothing and costs storage
   const bondIncome = cb.qeHoldings * s.government.avgDebtRate / 12;
   const billInterest = Math.min(toMinor((cb.bills / 100) * e.opr / 12), Number.MAX_SAFE_INTEGER);
-  const gross = toMinor(usdIncome * e.myrPerUsd + bondIncome);
+  const gross = toMinor(Math.max(0, usdIncome * e.myrPerUsd + bondIncome));
   cb.myrCash += gross;
   const paid = Math.min(billInterest, cb.myrCash);
   cb.myrCash -= paid;
@@ -116,4 +119,5 @@ export function monthCloseCentralBank(s: GameState): void {
   const remit = Math.min(cb.myrCash, Math.floor(Math.max(0, net) * cb.remitShare));
   if (remit > 0) { cb.myrCash -= remit; post(s.government, 'soeDividend', remit / 100); }
   assertSafeMinor(cb.myrCash);
+  monthlyReservePurchase(s); // D-132: after income, so the month's purchase does not earn this month's yield
 }

@@ -44,6 +44,13 @@ export const BOOM = {
   /** Extra climate points for every kind of pledge (an investment rush), and the build time of any pledge in months. */
   fdiAttractiveness: 10,
   fdiBuildMonths: 1,
+  /** Offer supply (D-130): a hostile climate (taxes, wages, fiscal levers) cannot push the arrival hazard below that of a climate index of
+   * 50 × this (squared in the hazard), and a month without any new pledge forces one. Export buyers are re-checked every 30 days and a
+   * template may hold this many contracts at once. */
+  fdiMinClimate: 0.7,
+  fdiMaxGapDays: 30,
+  exportOfferDays: 30,
+  exportSlots: 6,
   /** Trade deals (D-088): export gain by chapter depth (realistic 10% / 20%), talks and phase-in days, how much of the partner's
    * demand we must meet (realistic 1×), the worth of a non-preferred concession (realistic 0.6) and negotiation rounds (realistic 3). */
   tradeDealGain: [0, 0.25, 0.5],
@@ -69,6 +76,14 @@ export const BOOM = {
   capacityLagMonths: 2,
   leverRampDays: 30,
   programmeSpeed: 1 / 30,
+  /** Mineral ventures (D-131): bond and build-out as shares of the yearly contract value, build-out days (output ramps over the same
+   * days), and the state's royalty on delivered value. */
+  mineralBondShare: 0.08,
+  mineralCapexShare: 0.3,
+  mineralBuildDays: 120,
+  mineralRoyalty: 0.08,
+  /** Reserve-accumulation programme (D-132): the largest monthly purchase (realistic mode: US$5bn). */
+  reserveMaxMonthlyUsd: 40e9,
   fdiSizeBase: 3,
   fdiSizePerYear: 2,
 };

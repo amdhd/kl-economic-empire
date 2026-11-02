@@ -3,7 +3,8 @@
 import type { Deal } from '../types/deals';
 import type { GameState } from '../types/game';
 import { concessionQuote } from './concessions';
-import { exportSpot, EXPORT_ADDITIONALITY } from './export-contracts';
+import { dealSpot, EXPORT_ADDITIONALITY } from './export-contracts';
+import { BOOM } from '../data/boom';
 import { money } from '../utils/format';
 
 export interface DealOutlook {
@@ -45,7 +46,7 @@ export function dealOutlook(s: GameState, d: Deal): DealOutlook {
       else risks.push('A rescue can fail and equity can lose value straight away.');
     }
   } else if (d.kind === 'export' && d.product) {
-    const spot = exportSpot(s, d.product);
+    const spot = dealSpot(s, d);
     const volume = d.volume ?? 0;
     if (d.template === 'export:lng') {
       const gain = volume * (d.terms.priceFactor - 1);
@@ -54,6 +55,11 @@ export function dealOutlook(s: GameState, d: Deal): DealOutlook {
     } else {
       gets.push(`About ${money(volume * EXPORT_ADDITIONALITY)} a year of extra exports (half the contract is new business), which lifts GDP and jobs.`);
       profit = { text: `No direct cash profit. The return is extra exports of about ${money(volume * EXPORT_ADDITIONALITY)} a year, which lifts GDP, jobs and tax. Price: ${(d.terms.priceFactor * 100).toFixed(0)}% of today's spot (${spot.toFixed(2)}).`, tone: 'neutral' };
+    }
+    if (d.assetCostMinor) {
+      pays.push(`A build-out of ${money(d.assetCostMinor / 100)} is spent over the first ${BOOM.mineralBuildDays} days and is not returned.`);
+      gets.push(`Output ramps up over ${BOOM.mineralBuildDays} days, then the venture adds the capacity it needs. The state keeps a ${(BOOM.mineralRoyalty * 100).toFixed(0)}% royalty on sales.`);
+      risks.push('The mineral price swings: a locked price protects you if it falls and costs you if it rises. Revenue follows the spot price.');
     }
     pays.push('The bond comes back at the end if you deliver; leaving early forfeits half.');
     risks.push('If the sector runs above capacity you miss deliveries and pay a 25% penalty on the shortfall.');

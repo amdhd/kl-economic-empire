@@ -460,6 +460,42 @@ sheet. National opening net worth is negative because unmodeled public assets ar
 change = `(currentNetWorth + debt + arrears)/CPIrelative − debt − arrears − openingNetWorth`; retaining nominal liabilities
 prevents inflation alone from granting wealth score. Legacy KL keeps the prior CPI-adjusted net-wealth formula.
 
+
+### Reserve-accumulation programme (D-132)
+
+Player policy in the Central bank tab: `monthlyUsd` (realistic ≤ US$5bn, Boom ≤ US$40bn), `targetUsd` (≤ US$800bn, total of
+dollars + gold at market), `goldShare` (0–60%), `sterilise` (0–100%). At each month close, after reserve income, if
+`monthlyUsd > 0` and total reserves are below the target, BNM buys `u = min(monthlyUsd, target − total)`:
+
+- dollar leg `u(1−g)` costs `×FX×1.002` ringgit, gold leg `ug` costs `×FX×1.005`; `M` = total ringgit paid;
+- bills `S = min(M × sterilise, billsRoom)` (cap: half of banks' reserves); new base money `C = M − S` goes to `moneyCreated`;
+- `bank.deposits += M`, `bank.reserves += C`, `centralBank.bills += S`; the bank identity is unchanged;
+- `usdReserves += u(1−g)`, `goldTonnes += ug ÷ goldPrice`, `goldCostUsd += ug`;
+- FX pressure `+0.003 × u/1bn × (1 − 0.5 × sterilise)`; `reserveLiquidity += C` (fades ×0.85 a month) and enters
+  `monetaryEffects` as inflation `+0.08 r` and log FX `+0.1 r`, with `r = reserveLiquidity ÷ nominal GDP`.
+
+Reserve income: dollars earn half the 10-year US yield; gold earns nothing and costs 0.2% a year of its value; bill
+interest at the OPR is paid as before from this income. Gold price index (fictional, pure): `1.04^(days/365) × (1 + .12 sin(2πd/480+φ1)) × (1 + .06 sin(2πd/150+φ2)) × (1 − 2(UST10 − 4%))`,
+clamped 0.5–3, USD 2,600 an ounce at 1. Central-bank equity, used in public net worth, is
+`(CBUSD + gold at market) × FX + CBMYR − bills − moneyCreated − openingEquity`; the wealth score uses gold at cost and
+FX at the opening rate, so a programme changes it only by spreads, storage and bill interest. Programme state is `centralBank.reserveProgramme`;
+the target is checked before each purchase and the programme switches itself off at the target. Reserves still never fund the treasury or fund.
+
+### Boom offer supply (D-130)
+
+Boom only. Weekly pledge hazard `weeklyHazard × max(0.7, attractiveness/50)² × 4`, plus one forced pledge (hash-chosen kind) when 30 days pass
+without any. Export buyers are re-checked every 30 days; a template has up to 6 slots, slot `k > 0` is offered once slot `k−1` is
+agreed or active, at `1 + 0.4k` times the base volume. Closed deals are pruned past 120 so the 150-deal room never blocks cohorts.
+
+### Mining and processing ventures (D-131)
+
+Boom only; an export contract (D-077) per mineral with `bond = 8%` and `build-out = 30%` of the yearly value in escrow. For `mineralBuildDays` = 120
+days from the first day, `buildOut ÷ 120` a day is paid from escrow (treasury expense, `policyGrant`) as sector purchases: industry 45%, construction 35%
+(20% imported). Output share `= ramp × min(1, max(0.5, 1 − 2(util − 1)))` with `ramp` rising linearly 0→1. On completion, sector capacity (util) `+= volume × 0.5 ÷ 365 ÷ 0.85`.
+Each delivered day: extra exports `= units × 0.5 × spot` (D-105 flows), contract-vs-spot gap to sector value added and profit, and royalty `8% × units × contractPrice`
+posted as `policyLevy` and deducted from the sector's taxable profit. Spot indices: copper = world copper; lithium = copper^1.6 × cycle(540 d, ±30%);
+tin = copper^0.5 × aluminium^0.6 × cycle(400 d, ±15%); rare earths = copper^0.4 × cycle(700 d, ±25%); all × FX relative to the base FX. Realistic mode never offers these.
+
 ### Validation
 
 `tests/trade-fx-baseline.test.ts` covers official units and grouped opex, fiscal residual calibration, national corporate

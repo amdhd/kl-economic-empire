@@ -9,11 +9,18 @@ export const FX_DAILY_USD_LIMIT = 1e9;
 export function neutralMonetaryPolicy(): Pick<CentralBankState, 'mode' | 'targetOpr' | 'srr' | 'qeHoldings' | 'bills' | 'credibility' | 'remitShare' | 'lastIncome' | 'mpc'> {
   return { mode: 'auto', targetOpr: 0.03, srr: 0.02, qeHoldings: 0, bills: 0, credibility: 80, remitShare: 0, lastIncome: 0, mpc: [] };
 }
+/** Reserve-programme defaults (D-132): no gold, no programme, so every pre-existing result is unchanged. */
+export function neutralReservePolicy(): Pick<CentralBankState, 'goldTonnes' | 'goldCostUsd' | 'moneyCreated' | 'reserveLiquidity' | 'reserveProgramme'> {
+  return {
+    goldTonnes: 0, goldCostUsd: 0, moneyCreated: 0, reserveLiquidity: 0,
+    reserveProgramme: { monthlyUsd: 0, targetUsd: 0, goldShare: 0, sterilise: 1, lastBoughtUsd: 0, lastGoldUsd: 0, lastBills: 0, lastCreated: 0, totalBoughtUsd: 0 },
+  };
+}
 export function initialCentralBank(profile: 'malaysia' | 'legacy-kl', rate: number): CentralBankState {
   const usdReserves = profile === 'malaysia' ? toMinor(116.4e9) : 0;
   const myrCash = profile === 'malaysia' ? toMinor(5e9) : 0; // fictional segregated sterilisation float
   return { usdReserves, myrCash, openingEquityMYR: usdReserves / 100 * rate + myrCash / 100,
-    pressure: 0, dailyUsdUsed: 0, lastInterventionDay: -1, tx: [], ...neutralMonetaryPolicy() };
+    pressure: 0, dailyUsdUsed: 0, lastInterventionDay: -1, tx: [], ...neutralMonetaryPolicy(), ...neutralReservePolicy() };
 }
 
 export function quoteIntervention(s: GameState, side: 'buyUSD' | 'sellUSD', usdMinor: number, atMin: number) {

@@ -3,7 +3,8 @@ import { dealOutlook } from '../../engine/deal-outlook';
 import { DEAL_CATEGORIES, countDealCategories, dealCategory, type DealCategoryId } from '../../engine/deal-categories';
 import { DEAL_ROUNDS } from '../../engine/deals';
 import { supplyUnitPrice } from '../../engine/supply-contracts';
-import { buyerMaxPrice, deliveryShare, exportSpot, exportUnitPrice } from '../../engine/export-contracts';
+import { BOOM } from '../../data/boom';
+import { buyerMaxPrice, dealSpot, deliveryShare, exportUnitPrice } from '../../engine/export-contracts';
 import { concessionQuote } from '../../engine/concessions';
 import { useEffect, useState } from 'react';
 import { useGame, useGameState } from '../../store/game-store';
@@ -191,9 +192,9 @@ export function DealsPanel() {
             {d.kind === 'export' && d.product && (
               <p data-testid={`export-terms-${d.id}`}>
                 {money(d.volume ?? 0)} a year · {d.status === 'opportunity' || d.status === 'negotiating'
-                  ? `price ${(exportSpot(g, d.product) * d.terms.priceFactor).toFixed(3)} (spot ${exportSpot(g, d.product).toFixed(3)}); the buyer pays at most ${buyerMaxPrice(d.terms.months, d.terms.protection, g).toFixed(3)}× spot for these terms`
-                  : `contract price ${exportUnitPrice(g, d).toFixed(3)} vs spot ${exportSpot(g, d.product).toFixed(3)} · delivering ${Math.round(deliveryShare(g, d) * 100)}% · penalties paid ${money((d.penaltyMinor ?? 0) / 100)}`}.
-                {' '}Bond {money(d.priceMinor / 100)} returns at the end; leaving early forfeits half of it.
+                  ? `price ${(dealSpot(g, d) * d.terms.priceFactor).toFixed(3)} (spot ${dealSpot(g, d).toFixed(3)}); the buyer pays at most ${buyerMaxPrice(d.terms.months, d.terms.protection, g).toFixed(3)}× spot for these terms`
+                  : `contract price ${exportUnitPrice(g, d).toFixed(3)} vs spot ${dealSpot(g, d).toFixed(3)} · delivering ${Math.round(deliveryShare(g, d) * 100)}% · penalties paid ${money((d.penaltyMinor ?? 0) / 100)}`}.
+                {' '}Bond {money((d.priceMinor - (d.assetCostMinor ?? 0)) / 100)} returns at the end; leaving early forfeits half of it.{d.assetCostMinor ? ` Build-out ${money(d.assetCostMinor / 100)} is spent in the first ${BOOM.mineralBuildDays} days and is not returned.` : ''}
               </p>
             )}
             {d.enterprise && (

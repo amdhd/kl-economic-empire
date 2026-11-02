@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { BILLS_MAX_SHARE, CREDIBILITY_START, OPR_MAX, OPR_MIN, QE_MAX_SHARE, SRR_MAX, SRR_MIN } from '../../engine/central-bank';
+import { goldIndex, goldValueUsdMinor, maxMonthlyUsd, totalReservesUsd } from '../../engine/reserves';
 import { formatKL, klParts, klToEpochMin } from '../../engine/time';
 import { useGame, useGameState } from '../../store/game-store';
 import { fullMoneyMinor, money, pct } from '../../utils/format';
@@ -82,6 +83,8 @@ export function CentralBankPanel() {
           onClick={() => ask({ title: 'Reserve income to the treasury', body: `${Math.round(remit * 100)}% of each month’s net reserve income is paid to the treasury on top of BNM’s normal dividend. The rest stays in BNM’s float to buy dollars.`, run: () => command({ type: 'cbPolicy', remitShare: remit }) })}>Apply</button>
       </Section>
 
+      <ReserveProgramme />
+
       <Section title="Past rate meetings">
         {cb.mpc.length === 0 ? <p className="text-[12px] text-slate-400">No meetings yet. The first is {nextMeeting(g.clock.hour)}.</p> : (
           <table className="w-full text-right text-[12px]"><thead><tr className="text-slate-400"><th className="text-left">Date</th><th>Before</th><th>After</th><th>Rule wanted</th></tr></thead>
@@ -90,6 +93,62 @@ export function CentralBankPanel() {
       </Section>
       {confirm && <ConfirmDialog title={confirm.title} confirmLabel="Confirm" onCancel={() => setConfirm(null)} onConfirm={() => { confirm.run(); setConfirm(null); }}><p>{confirm.body}</p></ConfirmDialog>}
     </PanelShell>
+  );
+}
+
+/** Reserve-accumulation programme: buy dollars and gold every month close towards a target (D-132). */
+function ReserveProgramme() {
+  const g = useGameState();
+  const command = useGame.getState().command;
+  const cb = g.centralBank, p = cb.reserveProgramme;
+  const max = maxMonthlyUsd(g);
+  const total = totalReservesUsd(g);
+  const [monthly, setMonthly] = useState(p.monthlyUsd / 1e9 || 2);
+  const [target, setTarget] = useState(p.targetUsd / 1e9 || Math.ceil((total / 1e9 + 50) / 10) * 10);
+  const [gold, setGold] = useState(p.goldShare);
+  const [steril, setSteril] = useState(p.sterilise);
+  const [confirm, setConfirm] = useState<Action>(null);
+  if (g.baseline.profile !== 'malaysia') return null;
+  const on = p.monthlyUsd > 0;
+  const fx = g.external.myrPerUsd;
+  const monthMyr = monthly * 1e9 * fx;
+  const apply = (m: number) => command({ type: 'cbReserves', monthlyUsd: m * 1e9, targetUsd: target * 1e9, goldShare: gold, sterilise: steril });
+  return (
+    <Section title="3 · Reserve programme: build dollars and gold">
+      <p className="text-[12.5px] text-slate-300">
+        Like a big exporter, BNM can buy foreign assets every month until the reserves hit a target. It pays in <b>newly raised ringgit</b>. The part you <b>sterilise</b> is mopped up by selling BNM bills to banks, which costs interest at the OPR; the rest is new money that adds to prices and weakens the ringgit. Gold earns nothing, costs storage, and its price swings. Reserves still cannot pay the budget.
+      </p>
+      <div className="mt-2 grid grid-cols-4 gap-3">
+        <Stat label="Dollars" value={money(cb.usdReserves / 100, 'USD')} />
+        <div data-testid="cb-gold"><Stat label="Gold" value={money(goldValueUsdMinor(g) / 100, 'USD')} sub={`${cb.goldTonnes.toFixed(1)} tonnes · price index ${goldIndex(g).toFixed(2)}`} /></div>
+        <div data-testid="cb-total-reserves"><Stat label="Total reserves" value={money(total, 'USD')} /></div>
+        <Stat label="Programme" value={on ? `${money(p.monthlyUsd, 'USD')} / month` : 'Off'} sub={on ? `target ${money(p.targetUsd, 'USD')}` : undefined} />
+      </div>
+      <div className="mt-2 grid grid-cols-2 gap-3 text-[12.5px]">
+        <label>Buy per month: <b>US${monthly.toFixed(1)}bn</b> <span className="text-slate-400">(max {max / 1e9}bn)</span>
+          <input type="range" min={0.5} max={max / 1e9} step={0.5} value={monthly} onChange={(e) => setMonthly(Number(e.target.value))} aria-label="Reserve purchase per month" data-testid="cb-res-monthly" />
+        </label>
+        <label>Target total reserves: <b>US${target.toFixed(0)}bn</b>
+          <input type="range" min={10} max={800} step={10} value={target} onChange={(e) => setTarget(Number(e.target.value))} aria-label="Reserve target" data-testid="cb-res-target" />
+        </label>
+        <label>Share into gold: <b>{Math.round(gold * 100)}%</b>
+          <input type="range" min={0} max={0.6} step={0.05} value={gold} onChange={(e) => setGold(Number(e.target.value))} aria-label="Gold share" data-testid="cb-res-gold" />
+        </label>
+        <label>Sterilised with bills: <b>{Math.round(steril * 100)}%</b>
+          <input type="range" min={0} max={1} step={0.05} value={steril} onChange={(e) => setSteril(Number(e.target.value))} aria-label="Sterilisation share" data-testid="cb-res-steril" />
+        </label>
+      </div>
+      <p className="mt-2 text-[12px] text-slate-400" data-testid="cb-res-cost">
+        Each month BNM pays about {money(monthMyr)} and sells about {money(monthMyr * steril)} of bills (interest at the OPR {pct(g.external.opr, 2)} against about {pct(g.external.ust10 * 0.5, 1)} earned on dollars). About {money(monthMyr * (1 - steril))} is new money. Expect the ringgit to weaken by roughly {(monthly * 0.3 * (1 - 0.5 * steril)).toFixed(1)}% at the peak. Buying costs a 0.2% spread on dollars and 0.5% on gold; gold storage costs 0.2% a year.
+      </p>
+      {on && <p className="mt-1 text-[12px] text-slate-400">Last month: bought {money(p.lastBoughtUsd / 100, 'USD')} (gold {money(p.lastGoldUsd / 100, 'USD')}), sold {money(p.lastBills / 100)} of bills, created {money(p.lastCreated / 100)} of new money. Bought since the start: {money(p.totalBoughtUsd / 100, 'USD')}.</p>}
+      <div className="mt-2 flex gap-2">
+        <button className="btn btn-primary" data-testid="cb-res-start"
+          onClick={() => setConfirm({ title: on ? 'Update reserve programme' : 'Start reserve programme', body: `BNM will buy US$${monthly.toFixed(1)}bn of reserves every month close (${Math.round(gold * 100)}% gold) until total reserves reach US$${target.toFixed(0)}bn, mopping up ${Math.round(steril * 100)}% of the ringgit with bills. The ringgit may weaken and prices may rise.`, run: () => apply(monthly) })}>{on ? 'Update' : 'Start programme'}</button>
+        <button className="btn" disabled={!on} data-testid="cb-res-stop" onClick={() => command({ type: 'cbReserves', monthlyUsd: 0 })}>Stop</button>
+      </div>
+      {confirm && <ConfirmDialog title={confirm.title} confirmLabel="Confirm" onCancel={() => setConfirm(null)} onConfirm={() => { confirm.run(); setConfirm(null); }}><p>{confirm.body}</p></ConfirmDialog>}
+    </Section>
   );
 }
 

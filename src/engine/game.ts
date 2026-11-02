@@ -26,6 +26,7 @@ import { exitEscape, initialFiscal, invokeEscape, setFiscalRule } from './fiscal
 import { initialSoe, khazanahTrade, setKhazanahPayout, setPetronasPolicy, soeEquity, soeSpecialDividend } from './soe';
 import { initialWorld, seedWorldHistory, startNegotiation, validateCommodityPolicy } from './world';
 import { initialPolicy, setLever } from './policy';
+import { setReservePolicy } from './reserves';
 import { decidePledge, initialFdi, openingPledge } from './fdi';
 import { outputGap } from './scheduler';
 import { PROJECT_BY_ID } from '../data/projects';
@@ -51,7 +52,7 @@ import { seedRng } from './rng';
 import { klDay, klParts, klToEpochMin, monthKey } from './time';
 import { clamp, news, pushBounded, toMinor } from './util';
 
-export const SCHEMA_VERSION = 19;
+export const SCHEMA_VERSION = 20;
 export const START = { year: 2027, month: 1, day: 1, hour: 8 };
 export const CAMPAIGN_MONTHS = 24;
 
@@ -236,6 +237,7 @@ export type Command =
   | { type: 'khazanahTrade'; ticker: TickerId; side: 'buy' | 'sell'; fraction: number }
   | { type: 'interveneFx'; side: 'buyUSD' | 'sellUSD'; usdMinor: number }
   | { type: 'cbPolicy'; mode?: 'auto' | 'manual'; targetOpr?: number; srr?: number; remitShare?: number }
+  | { type: 'cbReserves'; monthlyUsd?: number; targetUsd?: number; goldShare?: number; sterilise?: number }
   | { type: 'cbBonds'; amountMYR: number }
   | { type: 'cbBills'; amountMYR: number }
   | { type: 'queueTax'; patch: Partial<TaxPolicy> }
@@ -298,6 +300,10 @@ function dispatch(s: GameState, cmd: Command, atMin: number): CommandResult {
       if (err) return { ok: false, message: err };
       if (cmd.action !== 'offer') logPolicy(s, atMin, atMin, `Trade deal ${cmd.action}${cmd.action === 'propose' ? `: ${cmd.product} with ${PARTNER_NAMES[cmd.partner]}` : ` #${cmd.id}`}`);
       return { ok: true, message: cmd.action === 'propose' ? 'Draft opened. The partner has named its price.' : cmd.action === 'offer' ? 'Partner response received.' : cmd.action === 'sign' ? 'Formal talks opened.' : 'Deal withdrawn.' };
+    }
+    case 'cbReserves': {
+      const err = setReservePolicy(s, cmd, atMin);
+      return err ? { ok: false, message: err } : { ok: true, message: 'Reserve programme updated. Purchases happen at each month close.' };
     }
     case 'cbPolicy': case 'cbBonds': case 'cbBills': {
       const err = cmd.type === 'cbPolicy' ? setMonetaryPolicy(s, cmd, atMin) : cmd.type === 'cbBonds' ? tradeBonds(s, cmd.amountMYR, atMin) : tradeBills(s, cmd.amountMYR, atMin);
