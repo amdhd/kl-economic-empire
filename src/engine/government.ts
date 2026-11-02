@@ -9,6 +9,7 @@ import { DEBT_LIMIT_MYR, TREASURY_LIMIT_MYR } from '../data/boom';
 import { injectFund } from './sovereign-fund';
 import { FOREIGN_WORKERS0, WORKER_LEVY0 } from './policy';
 import { modelledResourceRevenue0 } from './soe';
+import { OPENING_PIT_ANNUAL } from './income-tax';
 import { cashAidDaily, pensionSavingShare, subsidyCut } from './fiscal-levers';
 import { fuelSubsidyDaily, wheatSubsidyDaily, scheduleRetaliation } from './world';
 // Government treasury, debt, budgets, projects and tax settlement.
@@ -143,7 +144,7 @@ function otherPublicReceiptsBase(s: GameState): number {
   if (s.baseline.profile === 'legacy-kl') return base.federalGrantMonthly;
   const c = calibrationFor(s);
   const modeledTaxes = SECTOR_IDS.reduce((a, j) => a + Math.max(0, c.profit0[j]), 0) * BASE_TAX.corporate
-    + BASE_TAX.property * PROPERTY_LEVY_BASE * c.Y0.prop + c.levyBase + c.hh.tax;
+    + BASE_TAX.property * PROPERTY_LEVY_BASE * c.Y0.prop + c.levyBase + (s.baseline.pit ? OPENING_PIT_ANNUAL / 365 : c.hh.tax);
   // Model 2 also models petroleum tax, palm tax and duty, and SOE dividends explicitly.
   const resources = nationalV2(s) ? modelledResourceRevenue0() : 0;
   const fees = s.baseline.nonTax ? NON_TAX_ANNUAL_2027 : 0;

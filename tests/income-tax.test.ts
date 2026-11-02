@@ -46,3 +46,18 @@ describe('progressive personal income tax (D-073)', () => {
     expect(incomeTaxDaily(hike, 1e9)).toBeGreaterThan(incomeTaxDaily(base, 1e9) * 1.25);
   }));
 });
+
+describe('opening personal income tax is RM50bn (D-127)', () => {
+  it('collects about RM50bn a year from the first months, with households no poorer than before', async () => {
+    const { createGame, runHeadless } = await import('../src/engine/game');
+    const { withoutEvents } = await import('./helpers');
+    withoutEvents(() => {
+      const s = createGame(5);
+      runHeadless(s, 24 * 95);
+      const annual = s.reports.slice(0, 3).reduce((a, r) => a + r.gov.taxIncome, 0) * 4;
+      expect(annual).toBeGreaterThan(47e9);
+      expect(annual).toBeLessThan(53e9);
+      expect(s.indicators.nominalGdpAnnual / 1e12).toBeGreaterThan(2.03); // opening economy unchanged (was 2.046tn here)
+    });
+  });
+});

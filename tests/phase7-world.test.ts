@@ -15,6 +15,7 @@ import { fuelSubsidyDaily, initialWorld, WORLD_SEED_DAYS } from '../src/engine/w
 import { deserialize, serialize } from '../src/persistence/save';
 import type { GameState } from '../src/types/game';
 import { clone, runUntil, withoutEvents } from './helpers';
+import { OPENING_PIT_ANNUAL } from '../src/engine/income-tax';
 
 // eslint-friendly shape for tampering with serialized saves in tests
 type SaveJson = { state: { world: GameState['world'] & { partners: Record<string, { ourTariff: number }> }; soe: GameState['soe']; fiscal: GameState['fiscal'] } };
@@ -26,7 +27,7 @@ describe('national accounts with resources, development spending and SOEs', () =
     const s = createGame(901);
     expect(s.indicators.nominalGdpAnnual).toBeCloseTo(NATIONAL_GDP, 0);
     expect(CAL.gdpDaily * 365 + RESOURCE_VA0).toBeCloseTo(NATIONAL_GDP, 0);
-    const taxes = SECTOR_IDS.reduce((a, j) => a + Math.max(0, CAL.profit0[j]) * 0.18, 0) + 0.04 * 0.5 * CAL.Y0.prop + CAL.levyBase + CAL.hh.tax;
+    const taxes = SECTOR_IDS.reduce((a, j) => a + Math.max(0, CAL.profit0[j]) * 0.18, 0) + 0.04 * 0.5 * CAL.Y0.prop + CAL.levyBase + OPENING_PIT_ANNUAL / 365;
     expect(taxes * 365 + modelledResourceRevenue0() + otherPublicReceiptsMonthly(s) * 12 + NON_TAX_ANNUAL_2027 + WORKER_LEVY0 * FOREIGN_WORKERS0 * 1e6).toBeCloseTo(380_816_996_000, 0);
     expect(s.fiscal.developmentAnnual).toBe(DEVELOPMENT_ANNUAL0);
     // operating 376.84bn + net development 81.5bn − revenue 380.82bn = RM77.5bn, the official 2027 overall balance

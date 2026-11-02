@@ -77,7 +77,7 @@ export function LeverPanel({ groups, title, subtitle, intro, width = 760 }: { gr
       {intro}
       {GROUPS.filter(group => groups.includes(group.id)).map(group => (
         <Section key={group.id} title={group.title}>
-          {LEVER_IDS.filter(id => LEVERS[id].group === group.id).map(id => {
+          {LEVER_IDS.filter(id => LEVERS[id].group === group.id && (id !== 'buildProductivity' || g.mode?.boom)).map(id => {
             const spec = LEVERS[id], v = shown(id), on = spec.kind === 'toggle' ? v === 1 : Math.abs(v - spec.initial) > 1e-9;
             const ph = leverPhase(g, id);
             return (
