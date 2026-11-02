@@ -27,7 +27,7 @@ function freshSupplyOffers(s: GameState, first: number): void {
 
 export function pruneClosedDeals(s: GameState, limit = 120): void {
   while (s.deals.items.length > limit) {
-    // Boom mode (D-129): finished and failed deals leave too, or a long campaign fills the room and offers stop.
+    // Boom mode (D-130): finished and failed deals leave too, or a long campaign fills the room and offers stop.
     const closed = boomOn(s) ? ['rejected', 'expired', 'completed', 'failed'] : ['rejected', 'expired'];
     const i = s.deals.items.findIndex((d) => closed.includes(d.status) && d.escrowMinor === 0 && d.arrearsMinor === 0);
     if (i < 0) break;
@@ -37,7 +37,7 @@ export function pruneClosedDeals(s: GameState, limit = 120): void {
 
 export function periodicDealOffers(s: GameState, day: number): void {
   pruneClosedDeals(s);
-  // Boom mode (D-129): export buyers (and the mineral buyers) are re-checked every 30 days, not only with the quarterly cohorts.
+  // Boom mode (D-130): export buyers (and the mineral buyers) are re-checked every 30 days, not only with the quarterly cohorts.
   if (s.deals.enabled && boomOn(s) && (day - s.deals.startDay) % BOOM.exportOfferDays === 0 && s.deals.items.length < 150) exportOffers(s);
   if (
     !s.deals.enabled ||

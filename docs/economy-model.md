@@ -461,7 +461,7 @@ change = `(currentNetWorth + debt + arrears)/CPIrelative − debt − arrears �
 prevents inflation alone from granting wealth score. Legacy KL keeps the prior CPI-adjusted net-wealth formula.
 
 
-### Reserve-accumulation programme (D-131)
+### Reserve-accumulation programme (D-132)
 
 Player policy in the Central bank tab: `monthlyUsd` (realistic ≤ US$5bn, Boom ≤ US$40bn), `targetUsd` (≤ US$800bn, total of
 dollars + gold at market), `goldShare` (0–60%), `sterilise` (0–100%). At each month close, after reserve income, if
@@ -481,13 +481,13 @@ clamped 0.5–3, USD 2,600 an ounce at 1. Central-bank equity, used in public ne
 FX at the opening rate, so a programme changes it only by spreads, storage and bill interest. Programme state is `centralBank.reserveProgramme`;
 the target is checked before each purchase and the programme switches itself off at the target. Reserves still never fund the treasury or fund.
 
-### Boom offer supply (D-129)
+### Boom offer supply (D-130)
 
 Boom only. Weekly pledge hazard `weeklyHazard × max(0.7, attractiveness/50)² × 4`, plus one forced pledge (hash-chosen kind) when 30 days pass
 without any. Export buyers are re-checked every 30 days; a template has up to 6 slots, slot `k > 0` is offered once slot `k−1` is
 agreed or active, at `1 + 0.4k` times the base volume. Closed deals are pruned past 120 so the 150-deal room never blocks cohorts.
 
-### Mining and processing ventures (D-130)
+### Mining and processing ventures (D-131)
 
 Boom only; an export contract (D-077) per mineral with `bond = 8%` and `build-out = 30%` of the yearly value in escrow. For `mineralBuildDays` = 120
 days from the first day, `buildOut ÷ 120` a day is paid from escrow (treasury expense, `policyGrant`) as sector purchases: industry 45%, construction 35%

@@ -87,7 +87,7 @@ export function scoreDrivers(s: GameState) {
 export function reserveEquityChange(s: GameState, atOpeningFx = false): number {
   const cb = s.centralBank;
   const fx = atOpeningFx ? baselineFor(s).myrPerUsd : s.external.myrPerUsd;
-  // Gold counts at market in public net worth and at cost in the score (D-131); base money BNM created is its liability.
+  // Gold counts at market in public net worth and at cost in the score (D-132); base money BNM created is its liability.
   const gold = atOpeningFx ? (cb.goldCostUsd ?? 0) : goldValueUsdMinor(s);
   return (cb.usdReserves + gold) / 100 * fx + (cb.myrCash - cb.bills - (cb.moneyCreated ?? 0)) / 100 - cb.openingEquityMYR;
 }

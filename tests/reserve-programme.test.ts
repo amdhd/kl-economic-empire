@@ -9,7 +9,7 @@ import { withoutEvents } from './helpers';
 const month = 24 * 31;
 const boom = () => createGame(5, 'balanced', 'malaysia', { months: 36, boom: true });
 
-describe('Reserve-accumulation programme (D-131)', () => {
+describe('Reserve-accumulation programme (D-132)', () => {
   it('is off by default: reserves, gold and money created do not change', () => withoutEvents(() => {
     const s = boom(), usd = s.centralBank.usdReserves;
     runHeadless(s, month * 3);

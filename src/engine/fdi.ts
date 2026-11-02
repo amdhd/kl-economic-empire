@@ -120,7 +120,7 @@ export function weeklyFdi(s: GameState, today: number): void {
     p.status = 'withdrawn';
     news(s, { kind: 'fund', tone: 'bad', title: `Pledge lapsed: ${investorName(p.investor)}`, body: 'No decision within 30 days; the investor chose another location (simulated).' });
   }
-  // Boom mode (D-129): a month with no new pledge forces one of a hash-chosen kind (no RNG), so a long campaign never runs dry.
+  // Boom mode (D-130): a month with no new pledge forces one of a hash-chosen kind (no RNG), so a long campaign never runs dry.
   const boom = boomOn(s);
   const lastOffer = s.fdi.pledges.reduce((a, p) => Math.max(a, p.offeredDay), s.deals?.startDay ?? 0);
   const forced = boom && today - lastOffer >= BOOM.fdiMaxGapDays ? flavourPick(s, `fdi:force:${today}`, FDI_KIND_IDS) : null;

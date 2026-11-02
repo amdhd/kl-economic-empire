@@ -56,7 +56,7 @@ describe('campaign length and Boom mode (D-079)', () => {
     expect(s.fdi.standing.length).toBe(121);
     const me = standingBoard(s).find((x) => x.isMalaysia)!;
     expect(me.rank).toBeLessThanOrEqual(3);
-    expect(s.government.treasury).toBeLessThan(TREASURY_LIMIT_MYR * 100); // D-101 ceiling; steadier pledge supply (D-129) lifts the ten-year treasury to about RM46tn
+    expect(s.government.treasury).toBeLessThan(TREASURY_LIMIT_MYR * 100); // D-101 ceiling; steadier pledge supply (D-130) lifts the ten-year treasury to about RM46tn
     expect(s.deals.items.length).toBeLessThanOrEqual(200);
     expect(s.fdi.pledges.filter((p) => p.status === 'operating').length).toBeGreaterThan(50);
   }), 300_000);

@@ -25,7 +25,7 @@ const penalty = (s: GameState) => Math.max(0, CREDIBILITY_START - s.centralBank.
 /** Effects of weak credibility and bond buying on inflation, the 10y yield and the ringgit (log points). */
 export function monetaryEffects(s: GameState) {
   const pen = penalty(s), q = qeShare(s);
-  // Money created to buy reserves and not mopped up with bills (D-131) acts like a smaller dose of bond buying.
+  // Money created to buy reserves and not mopped up with bills (D-132) acts like a smaller dose of bond buying.
   const r = (s.centralBank.reserveLiquidity ?? 0) / Math.max(1, s.indicators.nominalGdpAnnual);
   return { inflation: 0.00025 * pen + 0.1 * q + 0.08 * r, yield: 0.0001 * pen - 0.06 * q, fx: 0.0003 * pen + 0.35 * q + 0.1 * r };
 }
@@ -119,5 +119,5 @@ export function monthCloseCentralBank(s: GameState): void {
   const remit = Math.min(cb.myrCash, Math.floor(Math.max(0, net) * cb.remitShare));
   if (remit > 0) { cb.myrCash -= remit; post(s.government, 'soeDividend', remit / 100); }
   assertSafeMinor(cb.myrCash);
-  monthlyReservePurchase(s); // D-131: after income, so the month's purchase does not earn this month's yield
+  monthlyReservePurchase(s); // D-132: after income, so the month's purchase does not earn this month's yield
 }

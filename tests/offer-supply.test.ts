@@ -39,7 +39,7 @@ function play(hostileClimate: boolean) {
   return { g, pledgesByMonth, exportOpenByMonth };
 }
 
-describe('Boom offers keep arriving (D-129)', () => {
+describe('Boom offers keep arriving (D-130)', () => {
   it('FDI pledges and export offers appear in months 6, 12 and 24', () => withoutEvents(() => {
     const { pledgesByMonth, exportOpenByMonth } = play(false);
     for (const m of [6, 12, 24]) {

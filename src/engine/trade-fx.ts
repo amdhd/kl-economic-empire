@@ -9,7 +9,7 @@ export const FX_DAILY_USD_LIMIT = 1e9;
 export function neutralMonetaryPolicy(): Pick<CentralBankState, 'mode' | 'targetOpr' | 'srr' | 'qeHoldings' | 'bills' | 'credibility' | 'remitShare' | 'lastIncome' | 'mpc'> {
   return { mode: 'auto', targetOpr: 0.03, srr: 0.02, qeHoldings: 0, bills: 0, credibility: 80, remitShare: 0, lastIncome: 0, mpc: [] };
 }
-/** Reserve-programme defaults (D-131): no gold, no programme, so every pre-existing result is unchanged. */
+/** Reserve-programme defaults (D-132): no gold, no programme, so every pre-existing result is unchanged. */
 export function neutralReservePolicy(): Pick<CentralBankState, 'goldTonnes' | 'goldCostUsd' | 'moneyCreated' | 'reserveLiquidity' | 'reserveProgramme'> {
   return {
     goldTonnes: 0, goldCostUsd: 0, moneyCreated: 0, reserveLiquidity: 0,

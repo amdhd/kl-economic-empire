@@ -651,7 +651,7 @@ export interface CentralBankState {
   remitShare: number; // share of monthly reserve income paid to the treasury
   lastIncome: number; // sen, net reserve income of the last closed month
   mpc: { day: number; from: number; to: number; rule: number }[];
-  /** Reserve-accumulation programme and gold holdings (D-131). Gold is outside `usdReserves`. */
+  /** Reserve-accumulation programme and gold holdings (D-132). Gold is outside `usdReserves`. */
   goldTonnes: number;
   goldCostUsd: number; // US cents paid for the gold (the wealth score values it at cost)
   moneyCreated: number; // sen of base money BNM created to buy reserves and has not mopped up (a BNM liability)

@@ -89,7 +89,7 @@ const MIGRATIONS: Record<number, Migration> = {
     s.housing ??= initialHousing(s);
     return state;
   },
-  // v19 → v20: the reserve-accumulation programme and gold (D-131). It opens off with no gold, so nothing in an existing campaign changes.
+  // v19 → v20: the reserve-accumulation programme and gold (D-132). It opens off with no gold, so nothing in an existing campaign changes.
   19: state => {
     const s = state as unknown as GameState;
     const cb = s.centralBank as unknown as Record<string, unknown>;

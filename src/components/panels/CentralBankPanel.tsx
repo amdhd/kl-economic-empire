@@ -96,7 +96,7 @@ export function CentralBankPanel() {
   );
 }
 
-/** Reserve-accumulation programme: buy dollars and gold every month close towards a target (D-131). */
+/** Reserve-accumulation programme: buy dollars and gold every month close towards a target (D-132). */
 function ReserveProgramme() {
   const g = useGameState();
   const command = useGame.getState().command;

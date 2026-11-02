@@ -1,4 +1,4 @@
-// Reserve-accumulation programme (D-131). A player policy for BNM to build foreign-exchange reserves in
+// Reserve-accumulation programme (D-132). A player policy for BNM to build foreign-exchange reserves in
 // US dollars and gold, the way a large exporter does. Every month close, until the target is reached, BNM buys a set value of foreign
 // assets for ringgit. The ringgit is raised by selling sterilisation bills to banks (as much as the player asks, within the bills cap);
 // the rest is newly created base money, which is recorded as a BNM liability (`moneyCreated`) so public net worth stays honest.

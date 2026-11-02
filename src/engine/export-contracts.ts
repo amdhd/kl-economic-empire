@@ -20,7 +20,7 @@ const SHORTFALL_PENALTY = 0.25; // share of the undelivered value
 
 export interface ExportContractSpec {
   product: ExportProductId; partner: PartnerId; name: string; counterparty: string; volume: number; hedge?: boolean; note: string;
-  /** Boom-only mining and processing venture (D-130): which mineral it sells; the rest of the fields set its cost and timing. */
+  /** Boom-only mining and processing venture (D-131): which mineral it sells; the rest of the fields set its cost and timing. */
   mineral?: MineralId;
 }
 export const EXPORT_CONTRACTS: Record<string, ExportContractSpec> = {
@@ -34,7 +34,7 @@ export const EXPORT_CONTRACTS: Record<string, ExportContractSpec> = {
     note: 'RM1.5bn a year of halal processed food across ASEAN stores. Half is new business for local food makers.' },
   'export:palm': { product: 'palm', partner: 'IN', name: 'Palm oil G2G supply: Indian refiner', counterparty: 'Ganga Edible Oils (fictional)', volume: 4e9,
     note: 'RM4bn a year of palm oil. Half is new demand; plantations cannot grow output quickly, so a hot sector misses deliveries.' },
-  // D-130: mining and processing ventures, Boom mode only. Volumes are yearly values at the opening price index.
+  // D-131: mining and processing ventures, Boom mode only. Volumes are yearly values at the opening price index.
   'export:copper': { product: 'mining', partner: 'CN', mineral: 'copper', name: 'Copper mine & smelter: Chinese metals trader', counterparty: 'Huadong Metals (fictional)', volume: 15e9,
     note: 'RM15bn a year of copper cathode and concentrate from a mine and smelter you help build. Costs a build-out and ramps over four months; exposed to the copper price.' },
   'export:lithium': { product: 'mining', partner: 'JP', mineral: 'lithium', name: 'Lithium refinery: battery-materials maker', counterparty: 'Sakura Battery Materials (fictional)', volume: 10e9,
@@ -83,7 +83,7 @@ export function deliveryShare(s: GameState, d: Deal): number {
 }
 const live = (s: GameState, d: Deal) => d.kind === 'export' && ['agreed', 'active'].includes(d.status) && s.scheduler.lastDay >= d.nextDay && s.scheduler.lastDay < (d.operationEndDay ?? Infinity);
 
-/** Template ids a base template may hold at once: Boom mode lets a product have several buyers (D-129), each beyond the first only
+/** Template ids a base template may hold at once: Boom mode lets a product have several buyers (D-130), each beyond the first only
  * once the one before it is signed. */
 const slotTemplates = (s: GameState, base: string): string[] => {
   const c = EXPORT_CONTRACTS[base];
@@ -96,7 +96,7 @@ export function exportOffers(s: GameState): void {
   if (!s.deals.enabled || !s.tradeBook?.enabled) return;
   for (const base of EXPORT_CONTRACT_IDS) {
     const c = EXPORT_CONTRACTS[base];
-    if (c.mineral && !boomOn(s)) continue; // mining ventures exist in Boom campaigns only (D-130)
+    if (c.mineral && !boomOn(s)) continue; // mining ventures exist in Boom campaigns only (D-131)
     const slots = slotTemplates(s, base);
     for (const [slot, template] of slots.entries()) {
       if (s.deals.items.some((d) => d.template === template && ['opportunity', 'negotiating', 'agreed', 'active'].includes(d.status))) continue;
@@ -105,7 +105,7 @@ export function exportOffers(s: GameState): void {
       // term limits stay with the template. A returning buyer in a later quarter is a different firm from the same pool.
       const round = s.deals.items.filter((x) => x.template === template).length, b = exportBuyer(s, template, round);
       const volume = Math.round((c.volume * (1 + 0.4 * slot) * flavourScale(s, `export:${template}:${round}`, 0.25)) / 1e8) * 1e8;
-      // Mining ventures cost a bond plus a build-out (D-130); other contracts only the 2% bond.
+      // Mining ventures cost a bond plus a build-out (D-131); other contracts only the 2% bond.
       const cost = c.mineral ? volume * (BOOM.mineralBondShare + BOOM.mineralCapexShare) : volume * BOND_SHARE;
       const d = addDeal(s, template, 'export', b ? c.name.replace(/:.*$/, `: ${b.descriptor}`) : c.name, 'treasury', cost, EXPORT_PRODUCTS[c.product].sector);
       d.counterparty = `${b?.counterparty ?? c.counterparty.replace(/ \(fictional\)$/, '')} (fictional)`;
@@ -209,7 +209,7 @@ export function dailyExportContract(s: GameState, d: Deal, day: number, purchase
   d.note = `${(d.delivered / 1e9).toFixed(2)}bn delivered, ${(share * 100).toFixed(0)}% of today's volume. Contract price ${unit.toFixed(3)} vs spot ${spot.toFixed(3)}.`;
 }
 
-/** A mining venture's build-out, capacity and royalty (D-130). The build-out is paid from escrow over the first `mineralBuildDays` days as
+/** A mining venture's build-out, capacity and royalty (D-131). The build-out is paid from escrow over the first `mineralBuildDays` days as
  * demand for construction and industry (a share is imported equipment); when it is finished the venture adds the capacity its exports need
  * to the supplying sector; every delivered day the state takes a royalty out of the sector's profit. */
 function mineralVenture(s: GameState, d: Deal, day: number, unit: number, spot: number, purchases?: Record<SectorId, number>): void {

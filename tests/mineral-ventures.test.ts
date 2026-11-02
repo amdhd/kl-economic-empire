@@ -11,7 +11,7 @@ const openMineral = (s: ReturnType<typeof boom>, template = 'export:copper') => 
   return s.deals.items.find((d) => d.template === template && d.status === 'opportunity')!;
 };
 
-describe('Mining and processing ventures (D-130)', () => {
+describe('Mining and processing ventures (D-131)', () => {
   it('mineral offers exist in Boom mode only', () => withoutEvents(() => {
     const b = boom(); const r = createGame(11, 'balanced', 'malaysia');
     runHeadless(b, 24 * 40); runHeadless(r, 24 * 40);

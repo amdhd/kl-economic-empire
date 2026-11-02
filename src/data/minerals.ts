@@ -1,4 +1,4 @@
-// Boom-mode mineral export ventures (D-130). Prices are FICTIONAL simulated indices (1 = the opening), not market data: copper
+// Boom-mode mineral export ventures (D-131). Prices are FICTIONAL simulated indices (1 = the opening), not market data: copper
 // follows the engine's copper price; lithium, tin and rare earths are derived from it and the other metals plus a slow
 // seeded cycle, so no new random numbers or saved prices are needed. Reference prices are rounded orders of magnitude (ASSUMPTION).
 export type MineralId = 'copper' | 'lithium' | 'tin' | 'rareEarths';
