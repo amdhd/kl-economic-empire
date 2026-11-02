@@ -23,7 +23,6 @@ test('the money readout opens a tabbed Economy window whose budget, tax and loan
   await page.getByTestId('econ-budget-slider').fill('1.2');
   await page.getByTestId('econ-budget-apply').click();
 
-  await page.getByTestId('econ-tab-taxation').click();
   await expect(page.getByTestId('revenue-total')).toContainText('TOTAL REVENUE · PER YEAR');
   await page.getByTestId('econ-tax-consumption').click();
   await page.getByTestId('econ-tax-slider').fill('0.05');

@@ -23,8 +23,8 @@ export async function openPanel(page: Page, id: string) {
   if (primary !== id) await tab.click();
 }
 
-/** Opens the Economy window (the money readout) on a tab: budget, taxation, loans and so on. */
+/** Opens the Economy window (the money readout) on a tab: budget (also reached as 'taxation', the same page), loans and so on. */
 export async function openEconomyWindow(page: Page, tab: string) {
   if (!(await page.getByTestId('economy-window').isVisible())) await page.getByTestId('bottom-treasury').click();
-  await page.getByTestId(`econ-tab-${tab}`).click();
+  await page.getByTestId(`econ-tab-${tab === 'taxation' ? 'budget' : tab}`).click();
 }
