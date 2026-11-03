@@ -125,6 +125,8 @@ export function cancelConcession(s: GameState, d: Deal): void {
     'Contract terminated. Unspent public escrow returned; active-contract termination is capped at 10% of base capital cost. Unpaid claims remain liabilities.',
   );
 }
+/** The most construction-price overrun, as a share of base cost, that a contractor absorbs before the build stalls. */
+export const CONTRACTOR_OVERRUN_CAP = 0.5;
 export function dailyConcessions(
   s: GameState,
   d: Deal,
@@ -151,9 +153,13 @@ export function dailyConcessions(
     const privateDue = Math.min(d.privateCashMinor ?? 0, requested - publicDue);
     const publicPaid = spendDeal(s, d, publicDue);
     d.privateCashMinor! -= privateDue;
-    // Fixed-price contract: the escrow and private capital are sized at base cost, so when construction prices
-    // have risen the last stretch would stall short of 100%. Once both pots are empty the contractor absorbs the overrun.
-    const overrun = d.escrowMinor <= 0 && (d.privateCashMinor ?? 0) <= 0 ? requested - publicPaid - privateDue : 0;
+    // Fixed-price contract: the escrow and private capital are sized at base cost, so when construction prices have risen the last stretch
+    // would stall short of 100%. Once both pots are empty the contractor funds the overrun as further private capital (the same
+    // off-ledger source as the private pot), recorded on the deal and capped at half the base cost (D-133).
+    const spentOut = d.escrowMinor <= 0 && (d.privateCashMinor ?? 0) <= 0;
+    const overrunRoom = Math.max(0, Math.round((d.assetCostMinor ?? 0) * CONTRACTOR_OVERRUN_CAP) - (d.overrunMinor ?? 0));
+    const overrun = spentOut ? Math.min(overrunRoom, Math.max(0, requested - publicPaid - privateDue)) : 0;
+    d.overrunMinor = (d.overrunMinor ?? 0) + overrun;
     const paid = (publicPaid + privateDue + overrun) / 100;
     p.spent += paid;
     p.work += paid / s.sectors.prop.price;
@@ -176,7 +182,7 @@ export function dailyConcessions(
       dealLog(
         s,
         d,
-        'Private asset delivered. Existing project benefits applied once; service and guarantee obligations now run.',
+        `Private asset delivered. Existing project benefits applied once; service and guarantee obligations now run.${d.overrunMinor ? ` The contractor absorbed ${(d.overrunMinor / 1e8).toFixed(1)}m of construction-price overrun.` : ''}`,
       );
     } else if (day > p.startDay + p.durationDays + 90) cancelConcession(s, d);
     return;

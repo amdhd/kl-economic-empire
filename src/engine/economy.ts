@@ -9,6 +9,7 @@ import { publicCapitalFactor } from './fiscal-rules';
 import { ageingMismatch, LEVY_PASS_THROUGH, sectorTaxDaily } from './fiscal-levers';
 import { aiMismatch, aiProductivity, buildProductivity, carbonCost, EMISSION_INTENSITY, greenFuelSaving, hiringBoost, labourCostMultiplier, tourismLift, visaRentPressure, wageMultiplier, zoneFeeDaily, abatement } from './policy';
 import { fdiExports } from './fdi';
+import { mineralRoyaltyDaily } from './export-contracts';
 import { infraCapacityMult } from './infrastructure';
 import { palmHouseholdDelta } from './soe';
 import { foodUserPrice, fuelPriceIndex, householdFuelBillDelta } from './world';
@@ -248,7 +249,7 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
   let tariffReceipts = 0;
   let steelDutyReceipts = 0;
   let bilateralReceipts = 0;
-  let carbonTax = 0, zoneFees = 0, reformLevies = 0, emissions = 0, emissions0 = 0;
+  let carbonTax = 0, zoneFees = 0, reformLevies = 0, royalties = 0, emissions = 0, emissions0 = 0;
   let wheatImports = 0;
   let riceImports = 0;
   let inputImports = 0;
@@ -295,7 +296,9 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
     // Digital, property-gains and transaction levies (D-114): firms pay them, half is passed into prices below.
     const reformLevy = sectorTaxDaily(s, j);
     reformLevies += reformLevy;
-    const profit = va - labourCost - dep - interest - propLevy - carbon - zoneFee - reformLevy;
+    const royalty = mineralRoyaltyDaily(s, j); // mining-venture royalty (D-133): a sector cost, received by the treasury below
+    royalties += royalty;
+    const profit = va - labourCost - dep - interest - propLevy - carbon - zoneFee - reformLevy - royalty;
     sec.mtd.output += out;
     sec.mtd.nominalOutput += gross;
     sec.mtd.va += va;
@@ -316,6 +319,7 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
     s.policy.mtd.reformTax += post(s.government, 'policyLevy', reformLevies);
     s.policy.emissionsIndex = emissions * (1 - abatement(s)) / Math.max(1e-9, emissions0);
   }
+  if (royalties > 0) post(s.government, 'policyLevy', royalties);
   const steelDutyPaid = post(s.government, 'commodityDuty', steelDutyReceipts);
   if (nationalV2(s)) {
     s.world.mtd.bilateralDuty += bilateralReceipts;

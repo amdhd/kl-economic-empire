@@ -53,6 +53,8 @@ export interface Deal {
   effectService?: number;
   unpaidDays?: number;
   assetCostMinor?: number;
+  /** Concession: construction cost above the funded base cost that the contractor has absorbed so far (D-133). */
+  overrunMinor?: number;
   serviceDailyMinor?: number;
   operationEndDay?: number;
   fdiDay?: number;
@@ -67,6 +69,8 @@ export interface Deal {
 }
 export interface DealsState {
   lastOfferDay?: number;
+  /** Export offers made so far per template, so a pruned deal does not bring the same buyer back (D-133). */
+  exportRounds?: Record<string, number>;
   enabled: boolean;
   startDay: number;
   rng: RngState;
