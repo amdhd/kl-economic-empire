@@ -467,20 +467,27 @@ export function monthClose(s: GameState, inflationYoY: number, unemployment: num
   // Only investment goods the supplying sectors could make become capital (D-099): when machinery or construction is
   // rationed, the unmet part of investment spending adds no capacity.
   const delivered = investmentDelivery(s);
+  // Boom productivity (D-140): part of it arrives only with new machines, in proportion to the sector's investment rate.
+  const plannedRate = BASELINE.depreciation + TREND.capitalGrowth + BOOM.capitalPush * Math.min(1, (s.reports.length + 1) / BOOM.pushRampMonths);
+  let boomGain = 0, capitalAll = 0;
   for (const j of SECTOR_IDS) {
     const sec = s.sectors[j];
     const need = Math.max(0, desired[j] - internal[j]);
     sec.investmentMonthly = Math.max(0, Math.min(desired[j], internal[j]) + need * ratio);
     // capital & capacity
     const pInv = SECTOR_IDS.reduce((a, k) => a + (INVESTMENT_GOODS[k] ?? 0) * s.sectors[k].price, 0);
+    const investRate = (sec.investmentMonthly * delivered * 12) / Math.max(1, sec.capital);
+    const gain = boom ? BOOM.productivity * (1 - BOOM.embodiedShare + BOOM.embodiedShare * clamp(investRate / plannedRate, 0, BOOM.embodiedCap)) : 0;
+    boomGain += gain * sec.capital;
+    capitalAll += sec.capital;
     sec.capital += sec.investmentMonthly * delivered - (sec.capital * BASELINE.depreciation) / 12;
     const matured = sec.pipeline.shift() ?? 0;
     sec.pipeline.push(0);
     sec.pipeline[capacitySlot(s)] += (sec.investmentMonthly * delivered) / pInv / CAL.capitalPerCap[j];
     sec.capacity += matured - (sec.capacity * BASELINE.depreciation) / 12;
     // Boom mode: the productivity boom also lifts output per machine, not only per worker.
-    if (boom) sec.capacity *= 1 + BOOM.productivity / 12;
-    sec.productivity *= 1 + (TREND.productivity + (boom ? BOOM.productivity : 0)) / 12;
+    if (boom) sec.capacity *= 1 + gain / 12;
+    sec.productivity *= 1 + (TREND.productivity + gain) / 12;
   }
   // Bank balance sheet: new loans create deposits; repayments destroy them.
   bank.loansF += newFirm - firmRepay;
@@ -494,7 +501,7 @@ export function monthClose(s: GameState, inflationYoY: number, unemployment: num
 
   // Wages: expectations + trend productivity + Phillips-curve tightness
   // Boom mode: most of the extra productivity reaches pay, so real incomes and demand keep up with output.
-  const wg = clamp((hh.expectedInflation + TREND.productivity + (boom ? BOOM.wagePassThrough * BOOM.productivity : 0) + 0.6 * (TREND.naturalUnemployment - unemployment)) / 12, -0.003, boom ? BOOM.maxWageGrowthMonthly : 0.012);
+  const wg = clamp((hh.expectedInflation + TREND.productivity + (boom ? BOOM.wagePassThrough * boomGain / Math.max(1, capitalAll) : 0) + 0.6 * (TREND.naturalUnemployment - unemployment)) / 12, -0.003, boom ? BOOM.maxWageGrowthMonthly : 0.012);
   hh.wageIndex *= 1 + wg;
   hh.expectedInflation = clamp(0.82 * hh.expectedInflation + 0.1 * inflationYoY + 0.08 * BASELINE.inflationTarget, -0.02, 0.15);
   // Workforce (incl. commuters/migrants) grows on trend and partially follows labour demand.
