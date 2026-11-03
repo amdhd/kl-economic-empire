@@ -1000,7 +1000,8 @@ by up to twelve and fed it to wage expectations, the MPC rule, household confide
 
 ## Term length and Boom sandbox (D-079)
 `mode.months ∈ {24, 36, 60, 120}`. With `mode.boom` (all values in `BOOM`, `src/data/boom.ts`):
-- **Investment:** desired capital growth adds `0.12 × min(1, month/12)`, capped at 60% a year (realistic cap 9%). Plans close
+- **Investment:** desired capital growth adds `0.12 × min(1, month/12) × min(1.3, ((1 − τ_j) ÷ (1 − 18%))²)`, where `τ_j` is the
+  sector's effective corporate tax (D-139; `tests/boom-tax-push.test.ts`), capped at 60% a year (realistic cap 9%). Plans close
   60% of the gap a month. Credit supply is `min(capital/0.05 − loans, 12% × loans) × willingness`.
 - **Productivity:** `productivity` and sector `capacity` both grow by an extra 28%/12 a month.
 - **Wages:** monthly growth adds `1.15 × 28%/12`, capped at 4% a month.

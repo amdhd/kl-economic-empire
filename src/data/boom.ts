@@ -10,6 +10,9 @@ export const BOOM = {
   /** Extra desired net capital growth a year, and the cap on total desired growth (realistic mode: +0 and 9%). */
   capitalPush: 0.12,
   maxCapitalGrowth: 0.6,
+  /** The push scales with after-tax returns: × ((1 − sector tax) ÷ (1 − opening rate))^this, capped at pushTaxCap (D-139). */
+  pushTaxElasticity: 2,
+  pushTaxCap: 1.3,
   /** A finished FDI plant adds the capacity its exports need, at this target utilisation (D-112). */
   fdiCapacityUtil: 0.85,
   /** Share of a labour shortfall the workforce closes each week through migration (D-112). */

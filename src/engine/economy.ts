@@ -438,7 +438,9 @@ export function monthClose(s: GameState, inflationYoY: number, unemployment: num
         // Tobin's q (model 3, D-058): firms invest more when listed equity is valued above its opening level.
         + DEMAND.tobinQ * Math.log(hh.equityIndex)
         // Boom mode (D-079): an investment drive on top of the usual signals, with a much higher ceiling.
-        + (boom ? BOOM.capitalPush * Math.min(1, (s.reports.length + 1) / BOOM.pushRampMonths) : 0),
+        // The drive follows after-tax returns (D-139), so a high corporate tax slows it instead of being free revenue.
+        + (boom ? BOOM.capitalPush * Math.min(1, (s.reports.length + 1) / BOOM.pushRampMonths)
+          * Math.min(BOOM.pushTaxCap, Math.pow((1 - sectorTax(s, j)) / (1 - BASE_TAX.corporate), BOOM.pushTaxElasticity)) : 0),
       -0.02,
       boom ? BOOM.maxCapitalGrowth : 0.09,
     );
