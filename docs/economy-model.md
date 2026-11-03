@@ -51,6 +51,8 @@ Employment moves 12 % toward `demand / labour productivity`, bounded by 98.5 % o
 - **MPC:** gradually approaches a target within 0.835–0.875; unemployment acts through confidence rather than a second direct penalty. See D-051 below for equations.
 - **Approval:** 35 %/month toward satisfaction = 25 % employment + 25 % real income + 15 % affordability + 15 % services
   + 10 % trust + 10 % stability. Trust falls with tax rises, cuts to services/transfers, arrears, downgrades.
+  Real income scores `62 + 600·(real disposable per head ÷ (opening × (1 + trend productivity)^years) − 1)`; model 3
+  measures against that trend path (D-138), earlier models against the opening level. `tests/income-approval.test.ts`.
 
 ## Companies & market (`companies.ts`, `stock-market.ts`)
 Revenue/day `= rev0/365 × shock × (kl·KLsector + my·MYdemand + global·driver × FX)`; costs split labour/energy/other
@@ -180,6 +182,16 @@ Debt interest accrues daily at the debt stock's average coupon. New issuance use
 the fiscal premium, changing the average coupon by issue size. Debt principal is a liability, not revenue.
 At monthly close, at least 30 consecutive arrears days plus no market access triggers insolvency, lowers trust
 and caps the score at 30. A funded recovery before that condition does not automatically fail the campaign.
+**Payment priority (D-137).** Each day the treasury first bridge-borrows any shortfall (when it has market access),
+with a cash buffer of `cashBufferMonths × 0.25 × 30` days of *recurring* dues (old arrears excluded). If cash is still
+short it pays in order: (1) operating budgets, transfers, upkeep, emergency relief and price subsidies; (2) arrears;
+(3) project and infrastructure capex and the development programme. Each tier gets `min(1, cash left ÷ tier due)`.
+Unpaid tier-1 operating bills and transfers become arrears; unpaid capex stays as unbuilt work. The returned
+`paidFraction` (used by government supply contracts) is the tier-1 share. `tests/arrears-priority.test.ts`.
+Insolvency is not permanent (D-136): after `INSOLVENCY_EXIT_MONTHS` = 6 consecutive month closes with no arrears days
+and unpaid obligations below RM1m, and a credit rating of at least BB (`INSOLVENCY_EXIT_RATING` = 4), the government
+exits default, market access returns, the trust penalty and score cap lift, and policy churn rises by 10 (fading as usual).
+Without market access only a cash surplus clears arrears, so the exit needs real consolidation. `tests/insolvency-exit.test.ts`.
 
 `tests/phase5-external.test.ts` covers AI versus unrelated sectors, all-issuer tax exposure, filled USD positions
 under FX revaluation, FX/import inflation, rate-sensitive model values and prices, KL/US separation, shock
@@ -988,7 +1000,8 @@ by up to twelve and fed it to wage expectations, the MPC rule, household confide
 
 ## Term length and Boom sandbox (D-079)
 `mode.months ∈ {24, 36, 60, 120}`. With `mode.boom` (all values in `BOOM`, `src/data/boom.ts`):
-- **Investment:** desired capital growth adds `0.12 × min(1, month/12)`, capped at 60% a year (realistic cap 9%). Plans close
+- **Investment:** desired capital growth adds `0.12 × min(1, month/12) × min(1.3, ((1 − τ_j) ÷ (1 − 18%))²)`, where `τ_j` is the
+  sector's effective corporate tax (D-139; `tests/boom-tax-push.test.ts`), capped at 60% a year (realistic cap 9%). Plans close
   60% of the gap a month. Credit supply is `min(capital/0.05 − loans, 12% × loans) × willingness`.
 - **Productivity:** `productivity` and sector `capacity` both grow by an extra 28%/12 a month.
 - **Wages:** monthly growth adds `1.15 × 28%/12`, capped at 4% a month.

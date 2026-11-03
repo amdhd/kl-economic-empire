@@ -201,9 +201,17 @@ export function dailyGovernment(s: GameState, today: number): GovDay {
   const totalDue = opexDue + maintenance + transfersDue + capexDue + emergencyDue + arrearsDue + developmentDue + fuelDue + wheatDue;
 
   if (treasuryMYR(gov) < totalDue) {
-    issueDebt(s, totalDue - treasuryMYR(gov) + pol.borrowing.cashBufferMonths * 0.25 * totalDue * 30, 'Bridge financing to meet daily obligations');
+    // The buffer is sized on recurring dues: old arrears are paid once, so they are not multiplied into it (D-137).
+    issueDebt(s, totalDue - treasuryMYR(gov) + pol.borrowing.cashBufferMonths * 0.25 * (totalDue - arrearsDue) * 30, 'Bridge financing to meet daily obligations');
   }
-  const paidFraction = totalDue > 0 ? clamp(treasuryMYR(gov) / totalDue, 0, 1) : 1;
+  // Short of cash, the treasury pays in priority order (D-137): today's wages, transfers, upkeep, relief and subsidies,
+  // then old arrears, then capital works. Before, every line got the same share, so arrears diluted current pay.
+  const essentialDue = opexDue + maintenance + transfersDue + emergencyDue + fuelDue + wheatDue;
+  let cash = treasuryMYR(gov);
+  const share = (due: number) => { const f = due > 0 ? clamp(cash / due, 0, 1) : 1; cash = Math.max(0, cash - f * due); return f; };
+  const paidFraction = share(essentialDue);
+  const arrearsFraction = share(arrearsDue);
+  const capitalFraction = share(capexDue + developmentDue);
 
   const purchases = zeroVec();
   let opexPaid = 0;
@@ -216,7 +224,7 @@ export function dailyGovernment(s: GameState, today: number): GovDay {
   const maintPaid = maintenance * paidFraction;
   purchases.prop += maintPaid * 0.6;
   purchases.ind += maintPaid * 0.4;
-  const operatingPaid = post(gov, 'opex', opexPaid + maintPaid + arrearsDue * paidFraction);
+  const operatingPaid = post(gov, 'opex', opexPaid + maintPaid + arrearsDue * arrearsFraction);
   const transfersPaid = post(gov, 'opex', transfersDue * paidFraction);
   if (s.policy?.enabled) {
     s.policy.mtd.pensionSaved += pensionCut * paidFraction;
@@ -225,7 +233,7 @@ export function dailyGovernment(s: GameState, today: number): GovDay {
   }
   for (const { id, amt } of capexDueBy) {
     const p = gov.projects.find((x) => x.id === id)!;
-    const paid = post(gov, 'capex', amt * paidFraction);
+    const paid = post(gov, 'capex', amt * capitalFraction);
     p.spent += paid;
     p.work += paid / pCons;
     gov.publicAssets += paid * ASSET_CAPITALISATION;
@@ -235,7 +243,7 @@ export function dailyGovernment(s: GameState, today: number): GovDay {
     if (p.work >= p.cost - 1) completeProject(s, p.id, today);
   }
   for (const { id, amt } of infraDueBy) {
-    const paid = post(gov, 'capex', amt * paidFraction);
+    const paid = post(gov, 'capex', amt * capitalFraction);
     gov.publicAssets += paid * ASSET_CAPITALISATION;
     purchases.prop += paid * 0.5;
     purchases.ind += paid * 0.3;
@@ -250,7 +258,7 @@ export function dailyGovernment(s: GameState, today: number): GovDay {
     purchases.ind += paid * 0.2;
   }
   if (developmentDue > 0) {
-    const paid = post(gov, 'capex', developmentDue * paidFraction);
+    const paid = post(gov, 'capex', developmentDue * capitalFraction);
     gov.mtdDevelopmentPaid = (gov.mtdDevelopmentPaid ?? 0) + paid;
     gov.publicAssets += paid * ASSET_CAPITALISATION;
     for (const [sec, sh] of Object.entries(DEVELOPMENT_PURCHASES)) purchases[sec as SectorId] += paid * sh;
@@ -313,6 +321,10 @@ export function refundReceipt(s: GameState, kind: keyof GovMonthFlows, amountMYR
   gov.mtd[kind] -= minor / 100;
   return minor / 100;
 }
+
+/** Clean month closes and minimum rating (BB) that end insolvency (D-136). */
+export const INSOLVENCY_EXIT_MONTHS = 6;
+export const INSOLVENCY_EXIT_RATING = 4;
 
 /** Month close: settle corporate tax & property levy, pay interest & principal, refinance, rate risk.
  * `otherCorporateTax` is corporate tax already posted this month outside the sector instalments (palm plantations);
@@ -381,6 +393,16 @@ export function monthCloseGovernment(s: GameState, otherCorporateTax = 0): GovMo
   if (gov.daysInArrears >= 30 && !gov.marketAccess && !gov.insolvent) {
     gov.insolvent = true;
     news(s, { kind: 'policy', tone: 'bad', title: 'KL government insolvent', body: 'The city has been in arrears for 30+ days without market access. Campaign score is capped.' });
+  } else if (gov.insolvent) {
+    // D-136: a government that clears its arrears and keeps them clear for six closes, with a rating back at BB, exits default.
+    gov.solventMonths = gov.mtdArrearsDays === 0 && gov.unpaidObligations <= 1e6 ? (gov.solventMonths ?? 0) + 1 : 0;
+    if (gov.solventMonths >= INSOLVENCY_EXIT_MONTHS && gov.creditRating >= INSOLVENCY_EXIT_RATING) {
+      gov.insolvent = false;
+      gov.solventMonths = 0;
+      gov.marketAccess = true;
+      s.policyChurn += 10; // the memory of default still weighs on trust for a few months
+      news(s, { kind: 'policy', tone: 'good', title: 'Government emerges from default', body: `Six months without arrears and a ${ratingLabel(gov.creditRating)} rating restore market access. The score cap is lifted.` });
+    }
   }
   const flows = { ...gov.mtd };
   gov.mtd = emptyFlows();
