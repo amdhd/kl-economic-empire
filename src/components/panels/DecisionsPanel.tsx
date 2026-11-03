@@ -29,7 +29,7 @@ const POLICY_GROUPS: LeverGroup[] = ['ai', 'fdi', 'capital', 'hub', 'green'];
 export const FISCAL_GROUPS: LeverGroup[] = ['pension', 'subsidy', 'tax', 'labour'];
 const OTHER: { id: PanelId; label: string }[] = [
   { id: 'finance', label: 'Taxes & budget (Finances window)' }, { id: 'controls', label: 'Sector relief, ministry plans, FX band' },
-  { id: 'oil', label: 'Fuel subsidy & PETRONAS' }, { id: 'commodities', label: 'Food subsidy & commodity duties' }, { id: 'trade', label: 'Tariffs & export support' },
+  { id: 'reforms', label: 'Fuel subsidy & PETRONAS (Fiscal control)' }, { id: 'commodities', label: 'Food subsidy & commodity duties' }, { id: 'trade', label: 'Tariffs & export support' },
   { id: 'partners', label: 'Trade agreements' }, { id: 'debt', label: 'Borrowing' }, { id: 'fdi', label: 'Investment pledges' },
 ];
 const PHASE_LABEL = { opening: 'Opening setting', announced: 'Announced', phasing: 'Phasing in', full: 'Full effect' } as const;

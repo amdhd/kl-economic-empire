@@ -7,7 +7,7 @@ import type { ExternalState, GameState, GlobalDriver } from '../types/game';
 import { eventIsActive } from './events';
 import { randnClipped } from './rng';
 import { capitalControls } from './policy';
-import { applyMpcDecision, monetaryEffects } from './central-bank';
+import { applyMpcDecision, monetaryEffects, OPR_MAX, OPR_MIN } from './central-bank';
 import { clamp } from './util';
 import { BOOM, boomOn } from '../data/boom';
 
@@ -113,7 +113,13 @@ export function updateExternal(s: GameState, mods: AggregatedMods, klInflation: 
   if (dayOfMonth === 1 && month % 2 === 1) {
     e.myInflation = clamp(0.85 * (0.02 + 0.03 * (e.oil - 1) + 0.2 * (e.myrPerUsd / BASELINE.myrPerUsd - 1)) + 0.15 * klInflation + monetaryEffects(s).inflation, -0.02, 0.12);
     // KL is a large share of the national economy, so its output gap enters the (fictional) rule.
-    const oprTarget = BASELINE.opr + 1.3 * (e.myInflation - 0.02) + 0.5 * Math.log(e.myDemand / Math.exp(TREND.my * t)) + demandFor(s).oprGapWeight * klOutputGap;
+    // Boom mode (D-134): the output gap there is mostly planned capacity growth, not overheating, and it reached +30–40%, so the
+    // rule asked for a 25–30% policy rate while prices were falling. In Boom the gap counts only up to ±5% and only as far as
+    // inflation is up to its 2% target, and the target stays inside BNM's rate limits.
+    const boom = boomOn(s);
+    const gap = boom ? clamp(klOutputGap, -0.05, 0.05) * clamp(e.myInflation / 0.02, 0, 1) : klOutputGap;
+    const raw = BASELINE.opr + 1.3 * (e.myInflation - 0.02) + 0.5 * Math.log(e.myDemand / Math.exp(TREND.my * t)) + demandFor(s).oprGapWeight * gap;
+    const oprTarget = boom ? clamp(raw, OPR_MIN, OPR_MAX) : raw;
     applyMpcDecision(s, oprTarget);
     const fedTarget = 0.0375 + mods.usRate + 1.2 * (Math.log(e.usDemand / Math.exp(TREND.us * t))) + 0.4 * (e.oil - 1) * 0.03;
     if (Math.abs(fedTarget - e.fedRate) > 0.00125) e.fedRate = clamp(e.fedRate + Math.sign(fedTarget - e.fedRate) * 0.0025, 0.005, 0.08);
