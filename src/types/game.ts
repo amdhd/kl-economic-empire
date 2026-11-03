@@ -328,6 +328,8 @@ export interface GovernmentState {
   marketAccess: boolean;
   serviceQuality: number; // 0..1
   insolvent: boolean;
+  /** Consecutive month closes an insolvent government ended with no arrears (D-136); absent in older saves = 0. */
+  solventMonths?: number;
   /** Cumulative effects of completed projects. */
   resilience: number;
   tourismBoost: number;

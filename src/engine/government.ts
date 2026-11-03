@@ -314,6 +314,10 @@ export function refundReceipt(s: GameState, kind: keyof GovMonthFlows, amountMYR
   return minor / 100;
 }
 
+/** Clean month closes and minimum rating (BB) that end insolvency (D-136). */
+export const INSOLVENCY_EXIT_MONTHS = 6;
+export const INSOLVENCY_EXIT_RATING = 4;
+
 /** Month close: settle corporate tax & property levy, pay interest & principal, refinance, rate risk.
  * `otherCorporateTax` is corporate tax already posted this month outside the sector instalments (palm plantations);
  * it is not a payment towards the sector bill. */
@@ -381,6 +385,16 @@ export function monthCloseGovernment(s: GameState, otherCorporateTax = 0): GovMo
   if (gov.daysInArrears >= 30 && !gov.marketAccess && !gov.insolvent) {
     gov.insolvent = true;
     news(s, { kind: 'policy', tone: 'bad', title: 'KL government insolvent', body: 'The city has been in arrears for 30+ days without market access. Campaign score is capped.' });
+  } else if (gov.insolvent) {
+    // D-136: a government that clears its arrears and keeps them clear for six closes, with a rating back at BB, exits default.
+    gov.solventMonths = gov.mtdArrearsDays === 0 && gov.unpaidObligations <= 1e6 ? (gov.solventMonths ?? 0) + 1 : 0;
+    if (gov.solventMonths >= INSOLVENCY_EXIT_MONTHS && gov.creditRating >= INSOLVENCY_EXIT_RATING) {
+      gov.insolvent = false;
+      gov.solventMonths = 0;
+      gov.marketAccess = true;
+      s.policyChurn += 10; // the memory of default still weighs on trust for a few months
+      news(s, { kind: 'policy', tone: 'good', title: 'Government emerges from default', body: `Six months without arrears and a ${ratingLabel(gov.creditRating)} rating restore market access. The score cap is lifted.` });
+    }
   }
   const flows = { ...gov.mtd };
   gov.mtd = emptyFlows();

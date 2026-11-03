@@ -180,6 +180,10 @@ Debt interest accrues daily at the debt stock's average coupon. New issuance use
 the fiscal premium, changing the average coupon by issue size. Debt principal is a liability, not revenue.
 At monthly close, at least 30 consecutive arrears days plus no market access triggers insolvency, lowers trust
 and caps the score at 30. A funded recovery before that condition does not automatically fail the campaign.
+Insolvency is not permanent (D-136): after `INSOLVENCY_EXIT_MONTHS` = 6 consecutive month closes with no arrears days
+and unpaid obligations below RM1m, and a credit rating of at least BB (`INSOLVENCY_EXIT_RATING` = 4), the government
+exits default, market access returns, the trust penalty and score cap lift, and policy churn rises by 10 (fading as usual).
+Without market access only a cash surplus clears arrears, so the exit needs real consolidation. `tests/insolvency-exit.test.ts`.
 
 `tests/phase5-external.test.ts` covers AI versus unrelated sectors, all-issuer tax exposure, filled USD positions
 under FX revaluation, FX/import inflation, rate-sensitive model values and prices, KL/US separation, shock
