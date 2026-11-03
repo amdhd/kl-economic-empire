@@ -11,7 +11,7 @@ import { addDeal, dealLog, releaseDeal, reserveDeal, spendDeal, DEAL_ROUNDS } fr
 import { post } from './government';
 import { BOOM, boomOn } from '../data/boom';
 import { MINERALS, type MineralId } from '../data/minerals';
-import { assertSafeMinor, toMinor } from './util';
+import { toMinor } from './util';
 import { exportBuyer, flavourDraw, flavourScale } from './deal-flavour';
 
 export const EXPORT_ADDITIONALITY = 0.5;
@@ -103,7 +103,9 @@ export function exportOffers(s: GameState): void {
       if (slot > 0 && !s.deals.items.some((d) => d.template === slots[slot - 1] && ['agreed', 'active'].includes(d.status))) break;
       // D-116: the buyer, its backstory and the contracted volume come from the campaign seed; the product, partner and
       // term limits stay with the template. A returning buyer in a later quarter is a different firm from the same pool.
-      const round = s.deals.items.filter((x) => x.template === template).length, b = exportBuyer(s, template, round);
+      const rounds = (s.deals.exportRounds ??= {});
+      const round = rounds[template] ?? s.deals.items.filter((x) => x.template === template).length, b = exportBuyer(s, template, round);
+      rounds[template] = round + 1;
       const volume = Math.round((c.volume * (1 + 0.4 * slot) * flavourScale(s, `export:${template}:${round}`, 0.25)) / 1e8) * 1e8;
       // Mining ventures cost a bond plus a build-out (D-131); other contracts only the 2% bond.
       const cost = c.mineral ? volume * (BOOM.mineralBondShare + BOOM.mineralCapexShare) : volume * BOND_SHARE;
@@ -185,7 +187,7 @@ export function dailyExportContract(s: GameState, d: Deal, day: number, purchase
     return;
   }
   const daily = (d.volume ?? 0) / 365, share = deliveryShare(s, d);
-  if (spec(d)?.mineral) mineralVenture(s, d, day, unit, spot, purchases);
+  if (spec(d)?.mineral) mineralVenture(s, d, day, purchases);
   d.delivered = (d.delivered ?? 0) + daily * share;
   if (spec(d)?.hedge && s.soe.petronas.enabled) s.soe.petronas.cash += daily * share * (unit / spot - 1);
   else if (!spec(d)?.hedge) {
@@ -211,8 +213,8 @@ export function dailyExportContract(s: GameState, d: Deal, day: number, purchase
 
 /** A mining venture's build-out, capacity and royalty (D-131). The build-out is paid from escrow over the first `mineralBuildDays` days as
  * demand for construction and industry (a share is imported equipment); when it is finished the venture adds the capacity its exports need
- * to the supplying sector; every delivered day the state takes a royalty out of the sector's profit. */
-function mineralVenture(s: GameState, d: Deal, day: number, unit: number, spot: number, purchases?: Record<SectorId, number>): void {
+ * to the supplying sector. The royalty is charged in the sector's daily profit (`mineralRoyaltyDaily`, D-133). */
+function mineralVenture(s: GameState, d: Deal, day: number, purchases?: Record<SectorId, number>): void {
   const total = d.assetCostMinor ?? 0, days = BOOM.mineralBuildDays;
   if (d.nextDay >= 0 && day - d.nextDay < days && total > 0) {
     const paid = spendDeal(s, d, Math.min(d.escrowMinor, Math.floor(total / days)));
@@ -228,18 +230,22 @@ function mineralVenture(s: GameState, d: Deal, day: number, unit: number, spot: 
     sec.capacity += ((d.volume ?? 0) * EXPORT_ADDITIONALITY) / 365 / BOOM.fdiCapacityUtil;
     dealLog(s, d, 'Build-out finished: the mine and plant run at full capacity.');
   }
-  const value = contractUnits(s, d, spot) * unit, royalty = toMinor(value * BOOM.mineralRoyalty);
-  if (royalty > 0) {
-    assertSafeMinor(royalty);
-    const got = post(s.government, 'policyLevy', royalty / 100);
-    sec.mtd.profit -= got;
-    sec.mtd.taxableProfit -= got;
-  }
 }
 
 /** Units delivered today, measured at the spot price when the contract was signed (so volume × spot is today's market value). */
 function contractUnits(s: GameState, d: Deal, spot: number): number {
   return (d.volume ?? 0) / 365 * deliveryShare(s, d) / ((d.lockedPrice ?? spot) / d.terms.priceFactor);
+}
+
+/** Daily royalty (MYR) the state takes from the mining ventures of sector j: a share of the day's sales (D-133). It is a cost in the sector's
+ * profit, like the other levies, so the treasury's receipt is matched by lower profit, dividends and corporate tax. */
+export function mineralRoyaltyDaily(s: GameState, j: SectorId): number {
+  let total = 0;
+  for (const d of s.deals?.items ?? []) {
+    if (!live(s, d) || !spec(d)?.mineral || EXPORT_PRODUCTS[d.product!].sector !== j) continue;
+    total += contractUnits(s, d, dealSpot(s, d)) * exportUnitPrice(s, d) * BOOM.mineralRoyalty;
+  }
+  return total;
 }
 
 /** Today's contract flows for the trade ledger (MYR/day) (D-105): `volume` is the extra real exports valued at spot, which

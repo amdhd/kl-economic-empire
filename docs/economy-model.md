@@ -493,7 +493,7 @@ Boom only; an export contract (D-077) per mineral with `bond = 8%` and `build-ou
 days from the first day, `buildOut ÷ 120` a day is paid from escrow (treasury expense, `policyGrant`) as sector purchases: industry 45%, construction 35%
 (20% imported). Output share `= ramp × min(1, max(0.5, 1 − 2(util − 1)))` with `ramp` rising linearly 0→1. On completion, sector capacity (util) `+= volume × 0.5 ÷ 365 ÷ 0.85`.
 Each delivered day: extra exports `= units × 0.5 × spot` (D-105 flows), contract-vs-spot gap to sector value added and profit, and royalty `8% × units × contractPrice`
-posted as `policyLevy` and deducted from the sector's taxable profit. Spot indices: copper = world copper; lithium = copper^1.6 × cycle(540 d, ±30%);
+charged as a cost inside the sector's daily profit (`mineralRoyaltyDaily`, D-133) and posted to `policyLevy`, so corporate tax and dividends fall with it. Spot indices: copper = world copper; lithium = copper^1.6 × cycle(540 d, ±30%);
 tin = copper^0.5 × aluminium^0.6 × cycle(400 d, ±15%); rare earths = copper^0.4 × cycle(700 d, ±25%); all × FX relative to the base FX. Realistic mode never offers these.
 
 ### Validation
