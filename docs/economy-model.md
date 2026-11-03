@@ -51,6 +51,8 @@ Employment moves 12 % toward `demand / labour productivity`, bounded by 98.5 % o
 - **MPC:** gradually approaches a target within 0.835–0.875; unemployment acts through confidence rather than a second direct penalty. See D-051 below for equations.
 - **Approval:** 35 %/month toward satisfaction = 25 % employment + 25 % real income + 15 % affordability + 15 % services
   + 10 % trust + 10 % stability. Trust falls with tax rises, cuts to services/transfers, arrears, downgrades.
+  Real income scores `62 + 600·(real disposable per head ÷ (opening × (1 + trend productivity)^years) − 1)`; model 3
+  measures against that trend path (D-138), earlier models against the opening level. `tests/income-approval.test.ts`.
 
 ## Companies & market (`companies.ts`, `stock-market.ts`)
 Revenue/day `= rev0/365 × shock × (kl·KLsector + my·MYdemand + global·driver × FX)`; costs split labour/energy/other

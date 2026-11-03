@@ -115,7 +115,11 @@ export function updateSatisfaction(s: GameState, realDispPerCap: number, rentBur
   const u = unemploymentRate(s);
   const base = s.baseline;
   const employment = clamp(100 - (u - 0.02) * 1200, 0, 100);
-  const income = clamp(62 + 600 * (realDispPerCap / base.realDisposablePerCapita - 1), 0, 100);
+  // Model 3 (D-138): households judge real income against the trend path, as the wealth score does (D-057), so ordinary
+  // growth does not pin this component at 100 and tax rises or transfer cuts still cost approval years into a term.
+  const TREND = trendFor(s);
+  const incomePath = TREND.trendWealthCredit ? Math.pow(1 + TREND.productivity, s.reports.length / 12) : 1;
+  const income = clamp(62 + 600 * (realDispPerCap / (base.realDisposablePerCapita * incomePath) - 1), 0, 100);
   const affordability = clamp(66 - 500 * (rentBurden - base.rentBurden) - housingApprovalPenalty(s), 0, 100);
   const services = clamp(s.government.serviceQuality * 100 * (1 - Math.min(0.5, s.government.daysInArrears / 60)), 0, 100);
   s.policyChurn *= 0.75;
