@@ -1,3 +1,4 @@
+import { BOOM, boomOn } from '../data/boom';
 import { guaranteeReserve } from './deal-report';
 import { privateValue } from './private-enterprises';
 import { escrowValue } from './deals';
@@ -118,8 +119,12 @@ export function updateSatisfaction(s: GameState, realDispPerCap: number, rentBur
   // Model 3 (D-138): households judge real income against the trend path, as the wealth score does (D-057), so ordinary
   // growth does not pin this component at 100 and tax rises or transfer cuts still cost approval years into a term.
   const TREND = trendFor(s);
-  const incomePath = TREND.trendWealthCredit ? Math.pow(1 + TREND.productivity, s.reports.length / 12) : 1;
-  const income = clamp(62 + 600 * (realDispPerCap / (base.realDisposablePerCapita * incomePath) - 1), 0, 100);
+  // Boom households expect the planned productivity boom too, on a gentler log scale since incomes multiply (D-140).
+  const boom = boomOn(s);
+  const expected = TREND.productivity + (boom ? BOOM.productivity : 0);
+  const incomePath = TREND.trendWealthCredit ? Math.pow(1 + expected, s.reports.length / 12) : 1;
+  const incomeRatio = realDispPerCap / (base.realDisposablePerCapita * incomePath);
+  const income = clamp(boom ? 62 + BOOM.incomeApprovalSlope * Math.log(Math.max(1e-9, incomeRatio)) : 62 + 600 * (incomeRatio - 1), 0, 100);
   const affordability = clamp(66 - 500 * (rentBurden - base.rentBurden) - housingApprovalPenalty(s), 0, 100);
   const services = clamp(s.government.serviceQuality * 100 * (1 - Math.min(0.5, s.government.daysInArrears / 60)), 0, 100);
   s.policyChurn *= 0.75;

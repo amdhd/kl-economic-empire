@@ -1003,8 +1003,12 @@ by up to twelve and fed it to wage expectations, the MPC rule, household confide
 - **Investment:** desired capital growth adds `0.12 × min(1, month/12) × min(1.3, ((1 − τ_j) ÷ (1 − 18%))²)`, where `τ_j` is the
   sector's effective corporate tax (D-139; `tests/boom-tax-push.test.ts`), capped at 60% a year (realistic cap 9%). Plans close
   60% of the gap a month. Credit supply is `min(capital/0.05 − loans, 12% × loans) × willingness`.
-- **Productivity:** `productivity` and sector `capacity` both grow by an extra 28%/12 a month.
-- **Wages:** monthly growth adds `1.15 × 28%/12`, capped at 4% a month.
+- **Productivity:** `productivity` and sector `capacity` both grow by an extra `28% × (0.5 + 0.5 × min(1.5, investment rate ÷ planned rate))`
+  a year, per sector (D-140). Investment rate = this month's delivered investment × 12 ÷ capital; planned rate = depreciation +
+  trend capital growth + the ramped capital push. Wages pass through 1.15× the capital-weighted realised gain. Anything that cuts
+  investment (taxes, rates, reserve requirement, weak demand, rationed investment goods) therefore also slows productivity.
+- **Income approval:** `62 + 120 × ln(real income per head ÷ (opening × (1 + 2.3% + 28%)^years))` (D-140).
+- **Wages:** monthly growth adds `1.15 ×` the realised Boom productivity gain ÷ 12, capped at 4% a month.
 - **Labour force:** adds 6% a year of trend growth and closes 50% of the gap to labour demand monthly. Population scales
   with the labour force. Weekly hiring speed is 0.12.
 - **Exports:** `X_j × max(1, capacity_j/cap0_j)` (foreign demand follows capacity).

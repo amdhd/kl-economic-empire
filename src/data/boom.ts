@@ -24,6 +24,12 @@ export const BOOM = {
   /** Extra productivity growth a year (automation, AI, skills). It raises what each worker and each machine can produce,
    * so capital capacity grows by the same rate on top of new investment. */
   productivity: 0.28,
+  /** Share of that extra productivity embodied in new machines (D-140): it scales with each sector's investment rate
+   * against the planned Boom rate, so taxes, rates, credit and demand that cut investment also cut productivity growth. */
+  embodiedShare: 0.5,
+  embodiedCap: 1.5,
+  /** Income approval in Boom: 62 + this × ln(real income per head ÷ the planned boom path) (D-140; realistic: 600 × linear gap). */
+  incomeApprovalSlope: 120,
   /** Share of productivity gains passed into wages each month, and the monthly wage-growth cap (realistic: 1.2%). */
   wagePassThrough: 1.15,
   maxWageGrowthMonthly: 0.04,
