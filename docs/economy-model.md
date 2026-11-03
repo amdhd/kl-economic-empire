@@ -180,6 +180,12 @@ Debt interest accrues daily at the debt stock's average coupon. New issuance use
 the fiscal premium, changing the average coupon by issue size. Debt principal is a liability, not revenue.
 At monthly close, at least 30 consecutive arrears days plus no market access triggers insolvency, lowers trust
 and caps the score at 30. A funded recovery before that condition does not automatically fail the campaign.
+**Payment priority (D-137).** Each day the treasury first bridge-borrows any shortfall (when it has market access),
+with a cash buffer of `cashBufferMonths × 0.25 × 30` days of *recurring* dues (old arrears excluded). If cash is still
+short it pays in order: (1) operating budgets, transfers, upkeep, emergency relief and price subsidies; (2) arrears;
+(3) project and infrastructure capex and the development programme. Each tier gets `min(1, cash left ÷ tier due)`.
+Unpaid tier-1 operating bills and transfers become arrears; unpaid capex stays as unbuilt work. The returned
+`paidFraction` (used by government supply contracts) is the tier-1 share. `tests/arrears-priority.test.ts`.
 Insolvency is not permanent (D-136): after `INSOLVENCY_EXIT_MONTHS` = 6 consecutive month closes with no arrears days
 and unpaid obligations below RM1m, and a credit rating of at least BB (`INSOLVENCY_EXIT_RATING` = 4), the government
 exits default, market access returns, the trust penalty and score cap lift, and policy churn rises by 10 (fading as usual).
