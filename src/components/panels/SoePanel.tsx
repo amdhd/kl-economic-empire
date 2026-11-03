@@ -30,7 +30,7 @@ export function SoePanel() {
   const bursaOpen = isOpen('MY', g.clock.hour * 60);
   return <PanelShell title="State enterprises" subtitle="Khazanah · opening scale approximates public figures; every result is simulated" width={760}>
     <Section title="PETRONAS">
-      <p className="text-[12px] text-slate-400">PETRONAS profit, dividend and capex now live in the <button className="underline" onClick={() => useGame.getState().setPanel('oil')} data-testid="soe-open-oil">Oil window</button>.</p>
+      <p className="text-[12px] text-slate-400">PETRONAS profit, dividend and capex now live in the <button className="underline" onClick={() => useGame.getState().setPanel('reforms')} data-testid="soe-open-oil">Fiscal control tab</button>.</p>
     </Section>
     <Section title="Khazanah Nasional · government investment holding" right={<span className="num text-[12px] text-slate-300">NAV {money(khazanahNav(g))}</span>}>
       <table className="w-full text-[12px]" data-testid="khazanah-table">

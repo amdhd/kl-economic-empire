@@ -26,7 +26,7 @@ export const WINDOW_GROUPS: { title: string; items: WindowDef[] }[] = [
   ] },
   { title: 'Trade & resources', items: [
     win('ministry', 'Trade', '#7cc4f2', [['ministry', 'Trade ministry'], ['partners', 'Trading partners'], ['trade', 'Tariffs & FX']]),
-    win('commodities', 'Resources', '#e8a86a', [['commodities', 'Commodities'], ['oil', 'Oil & PETRONAS']]),
+    win('commodities', 'Resources', '#e8a86a', [['commodities', 'Commodities']]),
     win('deals', 'Deals & investment', '#b6a2ee', [['deals', 'Deal Room'], ['fdi', 'Investment & FDI']]),
   ] },
   { title: 'Markets & analysis', items: [

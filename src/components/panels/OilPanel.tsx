@@ -10,23 +10,9 @@ import { bnTick, money, pct } from '../../utils/format';
 import { TimeChart } from '../charts/TimeChart';
 import { Section, Stat } from '../ui';
 import { ConfirmDialog } from './ConfirmDialog';
-import { PanelShell } from './PanelShell';
 
 const bn = (v: number) => `${v < 0 ? '−' : ''}RM${Math.abs(v / 1e9).toFixed(1)}bn`;
 const signed = (v: number) => `${v >= 0 ? '+' : '−'}RM${Math.abs(v / 1e9).toFixed(1)}bn`;
-
-export function OilPanel() {
-  const g = useGameState();
-  if (!g.world.enabled || !g.soe.petronas.enabled) {
-    return <PanelShell title="Oil" subtitle="PETRONAS and the fuel subsidy">
-      <p className="text-[12px] text-amber-200">Oil, PETRONAS and fuel subsidies are modelled in new Malaysia campaigns. This save keeps its original calibration.</p>
-    </PanelShell>;
-  }
-  return <PanelShell title="Oil" subtitle="PETRONAS and the petrol subsidy · fictional simulation" width={640}>
-    <p className="text-[12.5px] text-slate-300">The PETRONAS dividend and capex and the petrol subsidy (pump ceiling and who gets it) are set in Money & debt, Fiscal control, beside the budget they pay for.</p>
-    <button className="btn btn-primary" data-testid="oil-go-fiscal" onClick={() => useGame.getState().setPanel('reforms')}>Open Fiscal control</button>
-  </PanelShell>;
-}
 
 /** PETRONAS dividend and capex, with the 12-month outlook. Shown in the Fiscal control tab (D-115). */
 export function Petronas() {

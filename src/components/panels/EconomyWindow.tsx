@@ -272,7 +272,7 @@ function SubsidyDetail({ g, paid, label }: { g: GameState; paid: number; label: 
         <Line label="Opening petrol bill (Budget 2027 basis)" value={money(FUEL_SUBSIDY0)} />
       </div>
       <div className="econ-links">
-        <button className="btn" onClick={go('oil')}>Petrol ceiling & eligibility</button>
+        <button className="btn" onClick={go('reforms')}>Petrol ceiling & eligibility</button>
         <button className="btn" onClick={go('commodities')}>Food subsidy</button>
       </div>
     </Detail>
