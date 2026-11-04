@@ -9,6 +9,7 @@ import type { Deal } from '../types/deals';
 import { initialDeals, addDeal, dealCommand, offerDeal } from './deals';
 import { exportOffers } from './export-contracts';
 import { initialHousing } from './housing';
+import { initialReactions } from './reactions';
 import { cancelInfra, initialInfra, orderInfra } from './infrastructure';
 import type { NetworkId } from '../data/infrastructure';
 import { initialTradeBook, setProgramme, tradeDealCommand, type TradeDealAction } from './trade-book';
@@ -52,7 +53,7 @@ import { seedRng } from './rng';
 import { klDay, klParts, klToEpochMin, monthKey } from './time';
 import { clamp, news, pushBounded, toMinor } from './util';
 
-export const SCHEMA_VERSION = 20;
+export const SCHEMA_VERSION = 21;
 export const START = { year: 2027, month: 1, day: 1, hour: 8 };
 export const CAMPAIGN_MONTHS = 24;
 
@@ -188,6 +189,8 @@ function createWithProfile(seed: number, scenario: ScenarioId, profile: 'malaysi
   s.baseline.publicNetWorth = publicNetWorth(s);
   s.indicators.publicNetWorth = s.baseline.publicNetWorth;
   s.indicators.score = computeScore(s);
+
+  s.reactions = initialReactions(s);
 
   if (s.deals.enabled) addDeal(s, 'advisory', 'diligence', 'Independent investment due diligence', 'treasury', 250_000);
   if (scenario === 'recession') {

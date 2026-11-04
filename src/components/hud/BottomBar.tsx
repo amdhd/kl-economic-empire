@@ -27,7 +27,7 @@ export function BottomBar() {
           {[...text, ...text].map((n, i) => (
             <span key={`${n.id}-${i}`}>
               <span className="num mr-2 text-slate-500">{n.when.date.slice(0, 6)} {n.when.time}</span>
-              <span className={n.tone === 'good' ? 'text-emerald-300' : n.tone === 'bad' ? 'text-rose-300' : 'text-slate-200'}>{n.title}</span>
+              <span className={n.tone === 'good' ? 'text-emerald-300' : n.tone === 'bad' ? 'text-rose-300' : 'text-slate-200'}>{n.voice && <span aria-label="public reaction">💬 </span>}{n.title}</span>
             </span>
           ))}
         </div>

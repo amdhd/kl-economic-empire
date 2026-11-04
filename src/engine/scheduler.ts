@@ -40,6 +40,7 @@ import { surchargeEquivalent } from './income-tax';
 import { BOOM, boomOn } from '../data/boom';
 import { monthCloseTradeBook, prepareTradeDay, recordTradeDay } from './trade-book';
 import { clamp, news, pushBounded } from './util';
+import { monthCloseReactions, weeklyReactions } from './reactions';
 
 export function runHourTick(s: GameState): void {
   if (s.scheduler.campaignEnded) return;
@@ -57,6 +58,7 @@ export function runHourTick(s: GameState): void {
       weeklyEvents(s, today);
       weeklyWorld(s, today);
       weeklyFdi(s, today);
+      weeklyReactions(s, today);
       s.scheduler.lastWeekDay = today;
     }
     const mk = monthKey(p.year, p.month);
@@ -262,6 +264,7 @@ function closeMonth(s: GameState, key: number, mods: AggregatedMods): void {
     title: `${label} report: GDP ${(ind.realGrowthYoY * 100).toFixed(1)}% real, CPI ${(ind.inflationYoY * 100).toFixed(1)}%, jobless ${(u * 100).toFixed(1)}%`,
     body: report.notes.slice(0, 3).join(' '),
   });
+  monthCloseReactions(s, key);
 
   s.trade.history.push({ monthKey: key, exports: s.trade.mtdExports, imports: s.trade.mtdImports, tariff: g.importTariff, support: g.exportSupport });
   monthClosePolicy(s, operatingStock(s, 'datacentre'));

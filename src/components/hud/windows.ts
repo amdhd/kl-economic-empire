@@ -15,7 +15,7 @@ export const WINDOW_GROUPS: { title: string; items: WindowDef[] }[] = [
   { title: 'Presidency', items: [
     win('overview', 'Briefing', '#76d7ef'),
     win('finance', 'Finances', '#8fe3a0'),
-    win('population', 'Population', '#78c9ec'),
+    win('population', 'Population', '#78c9ec', [['population', 'Population'], ['people', 'Public mood']]),
     win('objectives', 'Objectives', '#edce79'),
     win('standing', 'Global standing', '#f5d98b'),
   ] },

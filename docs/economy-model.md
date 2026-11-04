@@ -1118,3 +1118,32 @@ The opening references (OPR, unemployment, utilisation, housing load ÷ capacity
 **Saves:** schema 18. Migration 17 → 18 gives older saves an index of 100 with today's OPR, unemployment, utilisation and housing load as references; older reports have no `housingIndex` and the chart starts from the upgrade.
 
 All values are fictional game-balance numbers, not real market data.
+
+## Reactive news and group polls (D-146)
+
+**Display only.** Nothing in this section changes output, prices, approval, the score or the rng sequence.
+
+**Reactions.** Each Monday the engine compares a snapshot (taxes in force, announced levers, OPR, total operating budget, MYR/USD, CPI inflation, unemployment, approval, house price index, MY index, the credit rating in whole notches and congested Boom networks) with the previous Monday's. Each change crossing its threshold, and each condition below, is a story quoting fictional public figures:
+
+| Story | Trigger | Cooldown |
+|---|---|---|
+| Policy reaction | tax rate ±0.5 pt (income tax ±0.05×), minimum wage or worker levy ±RM50, cash aid +RM0.5bn, subsidy targeting +10 pts, top-earner/wealth taxes changed, carbon tax +RM5/t, a hub regime switched on, productivity programme +10 pts, OPR ±25bp, operating budget ±3% | none (the snapshot moves on) |
+| Sector overheating | worst sector with utilisation > 115% (construction: "Contractors fully booked"); the story gives the unserved share 1 − 1/utilisation and the sector price change | 42 days per sector |
+| House prices | index moved ≥ 6% over the last 13 Mondays | 60 days |
+| Network congestion (Boom) | a network newly over capacity | none |
+| Credit rating | whole notch changed | 90 days |
+| Month close | inflation > 4% or < −0.5%; unemployment +0.3 pt or < 2.5%; MYR/USD ±3%; MY index ±8%; approval −4 pts; approval < 40 | 90 days per topic |
+
+At most three stories are published per weekly or monthly pass. Quote variants are chosen by a deterministic hash of day, topic and voice.
+
+**Group polls** (0–100, clamped). Base = weighted satisfaction components; then policy points against the opening settings:
+
+| Group | Component weights | Policy points (ASSUMPTION) |
+|---|---|---|
+| B40 | jobs 0.30, income 0.25, housing 0.25, services 0.20 | −250 × Δconsumption levy; +8 × Δcash aid ÷ RM10bn; +4 × Δsubsidy targeting; +10 × Δminimum wage ÷ RM1,300 |
+| M40 | income 0.30, housing 0.30, jobs 0.20, trust 0.10, stability 0.10 | −30 × Δincome-tax multiple; −150 × Δconsumption levy; −4 × Δsubsidy targeting; +6 × Δtax-free allowance ÷ RM17,000 |
+| T20 | income 0.30, stability 0.30, trust 0.25, services 0.15 | −150 × Δtop-band surcharge; −1,000 × Δwealth tax; −40 × ΔCGT; −20 × Δincome-tax multiple; +20 × ln(MY index ÷ opening), ±15 |
+| Business | stability 0.40, trust 0.30, jobs 0.30 | −150 × Δcorporate tax; −12 × Δminimum wage ÷ RM1,300; −8 × Δworker levy ÷ RM2,150; −8 if intake frozen; −8 × Δcarbon tax ÷ RM150; −400 × ΔOPR; demand 20 × (min(avg utilisation, 1) − 0.85) − 30 × max(0, avg utilisation − 1.1); +3 × productivity programme |
+| Foreign investors | trust 0.40, stability 0.60 | +3 per rating notch; ringgit 30 × ln(opening ÷ MYR/USD), ±10; +3 per HQ/financial-hub/golden-visa regime, +6 × free zones; −8 hot-money controls, −10 × export conversion ÷ 75%; −2,000 × transaction tax − 20 × CGT; +15 × ln(MY index ÷ opening), ±10 |
+
+The UI lists each group's largest drivers, with components shown as points against a neutral 60. Polls are recorded at each month close (last 36 kept). All people, organisations and quotes are fictional.
