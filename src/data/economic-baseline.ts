@@ -189,6 +189,8 @@ export interface DemandParams {
   laborForcePull: number; // monthly pull of the workforce toward labour demand (migrant workers, participation)
   oprGapWeight: number; // OPR rule response to the modelled output gap
   oprDemandWeight: number; // OPR rule response to the external Malaysian-demand index (D-141)
+  savingsDrawdown: number; // share a year of savings above (below) the opening savings-to-income ratio spent (rebuilt) (D-144)
+  liquidSavingShare: number; // share of new household saving kept as liquid savings; the rest goes to EPF and other illiquid assets (D-144)
   visitorLevyElasticity: number; // tourism demand response per point of consumption levy above its opening rate
   upstreamOilElasticity: number; // PETRONAS capex response to the lagged (~6-month) oil/gas price index
   fundFxPressure: number; // FX pressure (log) per US$1bn the sovereign fund converts out of ringgit (Task 3, D-058)
@@ -198,10 +200,10 @@ export interface DemandParams {
   taxFreePriceAnchor: boolean;
 }
 export const LEGACY_DEMAND: DemandParams = {
-  currentIncomeWeight: 0.5, permanentSpeed: 0.012, permanentDrift: 0, importedConsumption: 0, hiringSpeed: 0.12, investmentRate: 0.6, creditRate: 8, laborForcePull: 0.06, oprGapWeight: 0.2, oprDemandWeight: 0.5, visitorLevyElasticity: 1.5, upstreamOilElasticity: 0, fundFxPressure: 0, fundImpactPersistence: 0, tobinQ: 0, taxFreePriceAnchor: false,
+  currentIncomeWeight: 0.5, permanentSpeed: 0.012, permanentDrift: 0, importedConsumption: 0, hiringSpeed: 0.12, investmentRate: 0.6, creditRate: 8, laborForcePull: 0.06, oprGapWeight: 0.2, oprDemandWeight: 0.5, savingsDrawdown: 0, liquidSavingShare: 1, visitorLevyElasticity: 1.5, upstreamOilElasticity: 0, fundFxPressure: 0, fundImpactPersistence: 0, tobinQ: 0, taxFreePriceAnchor: false,
 };
 export const NATIONAL_DEMAND: DemandParams = {
-  currentIncomeWeight: 0.2, permanentSpeed: 0.002, permanentDrift: 0.059, importedConsumption: 0.12, hiringSpeed: 0.02, investmentRate: 0.2, creditRate: 4, laborForcePull: 0.15, oprGapWeight: 0.75, oprDemandWeight: 0.1, visitorLevyElasticity: 0.75, upstreamOilElasticity: 0.5, fundFxPressure: 0.003, fundImpactPersistence: 0.5, tobinQ: 0.008, taxFreePriceAnchor: true,
+  currentIncomeWeight: 0.2, permanentSpeed: 0.002, permanentDrift: 0.059, importedConsumption: 0.12, hiringSpeed: 0.02, investmentRate: 0.2, creditRate: 4, laborForcePull: 0.15, oprGapWeight: 0.75, oprDemandWeight: 0.1, savingsDrawdown: 0.05, liquidSavingShare: 0.35, visitorLevyElasticity: 0.75, upstreamOilElasticity: 0.5, fundFxPressure: 0.003, fundImpactPersistence: 0.5, tobinQ: 0.008, taxFreePriceAnchor: true,
 };
 export const demandFor = (s: { baseline: { profile: 'malaysia' | 'legacy-kl'; model?: 1 | 2 | 3 } }): DemandParams =>
   s.baseline.profile === 'malaysia' && s.baseline.model === 3 ? NATIONAL_DEMAND : LEGACY_DEMAND;

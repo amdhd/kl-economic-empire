@@ -18,6 +18,9 @@ CPI: 100 = start. FX: MYR per USD.
 1. **Households:** wages `Σ L_j·w0_j·W`; disposable `YD = wages + transfers + distributed profits − surcharge − interest − amortisation`.
    Permanent income `P += 0.012(YD − P)`; desired spending `C* = MPC·(0.5·YD + 0.5·P) + equityWealthSpend`.
    Funded spending `C = min(max(0, C*), max(0, YD + savings))`; fuel costs reallocate this envelope (see D-051 below).
+   Model 3 (D-144): `C*` adds `5%/yr × (savings − s0 × P × 365)`, where `s0` is the opening savings-to-income ratio (0.87), and
+   only 35% of positive saving `YD − C` stays in liquid `savings` (the rest goes to EPF and other illiquid assets, not modelled);
+   a drawdown comes fully out of `savings`. The ratio then stays near 0.85 over ten years (it rose to 1.48 before).
    New household credit is spent 35 % on property, 65 % on consumer goods.
 2. **Demand:** consumption by basket share; consumer-sector spending net of the consumption levy; government
    purchases by budget line; investment by `INVESTMENT_GOODS`; exports `X0_j × index_j`, where the index mixes
