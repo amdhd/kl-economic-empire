@@ -58,6 +58,9 @@ export const CAMPAIGN_MONTHS = 24;
 
 export interface GameOptions { months?: CampaignMonths; boom?: boolean }
 
+/** Opening scenario shocks (D-141): a global slowdown at twice the usual depth for nine months; an oil spike 1.5× for five. */
+export const SCENARIO_SHOCK = { exportSlump: { days: 270, magnitude: 2 }, energyShock: { days: 150, magnitude: 1.5 } };
+
 export function createGame(seed = 20270101, scenario: ScenarioId = 'balanced', profile: 'malaysia' | 'legacy-kl' = 'malaysia', options: GameOptions = {}): GameState {
   const base = profile === 'legacy-kl' ? LEGACY_BASELINE : BASELINE;
   const cal = profile === 'legacy-kl' ? LEGACY_CAL : CAL;
@@ -206,8 +209,9 @@ function createWithProfile(seed: number, scenario: ScenarioId, profile: 'malaysi
   rescueOffers(s);
   takeoverOffers(s);
   exportOffers(s);
-  if (scenario === 'export-slump') startEvent(s, 'global_slowdown', startDay, 180, 1);
-  if (scenario === 'energy-shock') startEvent(s, 'oil_spike', startDay, 90, 1);
+  // Opening shocks are deeper and longer than a typical random episode (D-141), so a scenario is a real handicap.
+  if (scenario === 'export-slump') startEvent(s, 'global_slowdown', startDay, SCENARIO_SHOCK.exportSlump.days, SCENARIO_SHOCK.exportSlump.magnitude);
+  if (scenario === 'energy-shock') startEvent(s, 'oil_spike', startDay, SCENARIO_SHOCK.energyShock.days, SCENARIO_SHOCK.energyShock.magnitude);
   if (s.controls.plans.length) news(s, { kind: 'policy', tone: 'neutral', title: 'Inherited budget path', body: `Operating appropriations are indexed at ${(trend.budgetEscalation * 100).toFixed(0)}% a year, in monthly steps, roughly in line with trend nominal GDP. Development spending stays at its 2027 level. Review or cancel each ministry plan under Economic controls.` });
   news(s, { kind: 'system', tone: 'neutral', title: 'Welcome, President', body: 'A fictional Malaysian presidency governs the national economy from the KL map. New campaigns use dated official starting figures; subsequent outcomes are simulations. All companies’ prices and financials are fictional simulations. Press Space to start the clock.' });
   return s;

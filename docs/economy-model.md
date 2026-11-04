@@ -717,8 +717,8 @@ base cost. Completed/cancelled projects are excluded. Default warning thresholds
 points respectively for the other rules. A 10% release margin avoids boundary chatter. Alerts do not post money,
 change RNG or alter economic decisions; optional pause only controls the existing clock.
 
-New export-slump and energy-shock scenarios use existing slowdown/oil event templates, at normal magnitude for
-180/90 days. Their future hazards equal the balanced scenario. Existing recession hazards remain unchanged and are
+New export-slump and energy-shock scenarios use existing slowdown/oil event templates, at magnitude 2 for 270 days and
+1.5 for 150 days (`SCENARIO_SHOCK`, D-141; normal magnitude for 180/90 days before). Their future hazards equal the balanced scenario. Existing recession hazards remain unchanged and are
 now explicitly shown before campaign creation. Tests cover explanation reconciliation, read-only behaviour, alert
 entry/escalation/recovery, disabled rules, invalid preferences, project estimates and scenario save/resume. Browser
 coverage verifies metric clicks, critical versus warning pause, deduplication and persisted preferences.
@@ -953,6 +953,14 @@ the panel, mild trust cost). `nonTaxRevenue = RM25.89bn/12 × nominalGDP/opening
 shrinks by the same opening amount. Debt-history chart data is display-only (`OFFICIAL_FEDERAL_DEBT`).
 
 ## Central-bank policy (D-075)
+Rule target (each MPC meeting): `OPR0 + 1.3·(π − 2%) + w_d·ln(myDemand ÷ trend) + w_g·outputGap`, with `w_d` = 0.5 in legacy
+campaigns and 0.1 in national (model 3) campaigns, where the modelled economy is Malaysia itself so the external demand index
+would count a slump twice (D-141; `w_g` = 0.2 / 0.75).
+**Scenario fairness (D-141).** `weeklyEvents` draws each template's random number before checking whether that episode is
+already running, so an opening shock no longer shifts every later random draw. The score's allowance for external shocks
+fades with `exp(−days since the episode ended ÷ 180)`. In model 3 the growth score's `realGrowth` is the mean of endpoint
+growth (last 3 months) and term growth (average output over the term, annualised to the term midpoint), so a slump that
+recovers still costs score; steady growth scores the same on both. `tests/scenario-shocks.test.ts`.
 `applyMpcDecision` at each MPC meeting: auto: `opr += sign(rule - opr) × 25bp` when the gap exceeds 12.5bp; manual: move towards `targetOpr` by
 `min(50bp, round(gap/25bp) × 25bp)`; `credibility += 2` if `|opr - rule| <= 50bp` else `-600 × (|opr - rule| - 0.005)`.
 `monetaryEffects`: `pen = max(0, 80 - credibility)`, `q = qeHoldings / nominalGDP`; inflation `+0.00025·pen + 0.1q`, yield `+0.0001·pen - 0.06q`,

@@ -33,8 +33,10 @@ export function scenarioHazardMultiplier(s: GameState, templateId: string): numb
 
 export function weeklyEvents(s: GameState, today: number): void {
   for (const t of EVENTS) {
-    if (!t.company && s.events.active.some((e) => e.templateId === t.id && eventIsActive(e, today))) continue;
+    // Draw before the active check (D-141): skipping the draw for a running episode shifted every later random number,
+    // so a scenario's opening shock also reshuffled the cycles and events that followed.
     const r = rand(s.rng);
+    if (!t.company && s.events.active.some((e) => e.templateId === t.id && eventIsActive(e, today))) continue;
     if (r >= t.weeklyHazard * scenarioHazardMultiplier(s, t.id)) continue;
     if (BOOM.upsideEventsOnly && boomOn(s) && !t.company && t.tone !== 'good' && !BOOM.upsideEvents.includes(t.id)) continue; // D-094: Boom mode only starts upside macro events
     const days = randInt(s.rng, t.minDays, t.maxDays);
