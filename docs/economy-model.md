@@ -962,7 +962,7 @@ fades with `exp(−days since the episode ended ÷ 180)`. In model 3 the growth 
 growth (last 3 months) and term growth (average output over the term, annualised to the term midpoint), so a slump that
 recovers still costs score; steady growth scores the same on both. `tests/scenario-shocks.test.ts`.
 `applyMpcDecision` at each MPC meeting: auto: `opr += sign(rule - opr) × 25bp` when the gap exceeds 12.5bp; manual: move towards `targetOpr` by
-`min(50bp, round(gap/25bp) × 25bp)`; `credibility += 2` if `|opr - rule| <= 50bp` else `-600 × (|opr - rule| - 0.005)`.
+`min(50bp, round(gap/25bp) × 25bp)` (a manual target outside 1.25–6% is clamped to those limits, D-142); `credibility += 2` if `|opr - rule| <= 50bp` else `-600 × (|opr - rule| - 0.005)`.
 `monetaryEffects`: `pen = max(0, 80 - credibility)`, `q = qeHoldings / nominalGDP`; inflation `+0.00025·pen + 0.1q`, yield `+0.0001·pen - 0.06q`,
 FX log `+0.0003·pen + 0.35q`. Banks: lending rate `+3(srr - 2%) + 2·bills/loans`. Bank identity: `reserves + bills + loans = deposits + capital`.
 Month close: `income = usd × 0.5 × UST10 / 12 × fx + bonds × debtRate / 12`; `net = income - bills × OPR / 12`; `remit = remitShare × max(0, net)`.

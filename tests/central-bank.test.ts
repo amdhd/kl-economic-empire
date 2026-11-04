@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { bankIdentityGap } from '../src/engine/banks';
-import { monetaryEffects, monthCloseCentralBank } from '../src/engine/central-bank';
+import { monetaryEffects, monthCloseCentralBank, OPR_MAX, OPR_MIN } from '../src/engine/central-bank';
 import { applyCommand, createGame } from '../src/engine/game';
 import { reserveEquityChange } from '../src/engine/indicators';
 import { clone, runUntil, withoutEvents } from './helpers';
@@ -32,9 +32,17 @@ describe('central bank powers (D-075)', () => {
 
   it('rejects out-of-range settings atomically', () => {
     const s = createGame(83), before = clone(s);
-    for (const cmd of [{ targetOpr: 0.2 }, { srr: 0.5 }, { remitShare: 2 }, { targetOpr: NaN }] as const)
+    for (const cmd of [{ srr: 0.5 }, { remitShare: 2 }, { targetOpr: NaN }] as const)
       expect(act(s, { type: 'cbPolicy', ...cmd }).ok).toBe(false);
     expect(s).toEqual(before);
+  });
+
+  it('clamps an out-of-range OPR target to BNM limits, as tax rates are clamped (D-142)', () => {
+    const s = createGame(83);
+    expect(act(s, { type: 'cbPolicy', mode: 'manual', targetOpr: 0.2 }).ok).toBe(true);
+    expect(s.centralBank.targetOpr).toBeCloseTo(OPR_MAX, 9);
+    expect(act(s, { type: 'cbPolicy', targetOpr: 0 }).ok).toBe(true);
+    expect(s.centralBank.targetOpr).toBeCloseTo(OPR_MIN, 9);
   });
 
   it('bills drain bank liquidity into the BNM float without changing reserve equity or breaking the bank identity', () => {

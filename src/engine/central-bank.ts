@@ -34,13 +34,14 @@ export function monetaryEffects(s: GameState) {
 export function setMonetaryPolicy(s: GameState, cmd: { mode?: 'auto' | 'manual'; targetOpr?: number; srr?: number; remitShare?: number }, atMin: number): string | null {
   const cb = s.centralBank;
   if (cmd.mode !== undefined && cmd.mode !== 'auto' && cmd.mode !== 'manual') return 'Unknown policy mode.';
-  if (cmd.targetOpr !== undefined && !(cmd.targetOpr >= OPR_MIN && cmd.targetOpr <= OPR_MAX)) return `Target OPR must be ${OPR_MIN * 100}%–${OPR_MAX * 100}%.`;
+  if (cmd.targetOpr !== undefined && !Number.isFinite(cmd.targetOpr)) return 'Enter a target OPR.';
   if (cmd.srr !== undefined && !(cmd.srr >= SRR_MIN && cmd.srr <= SRR_MAX)) return `Reserve requirement must be ${SRR_MIN * 100}%–${SRR_MAX * 100}%.`;
   if (cmd.remitShare !== undefined && !(cmd.remitShare >= 0 && cmd.remitShare <= 1)) return 'Remittance share must be 0–100%.';
   const parts: string[] = [];
   if (cmd.mode !== undefined && cmd.mode !== cb.mode) { cb.mode = cmd.mode; parts.push(cmd.mode === 'manual' ? 'BNM now follows the president’s rate target at MPC meetings' : 'BNM returns to its automatic rule'); }
   if (cmd.targetOpr !== undefined) {
-    const t = Math.round(cmd.targetOpr / OPR_MPC_STEP) * OPR_MPC_STEP;
+    // Out-of-range targets are clamped to BNM's limits, as tax rates are (D-142).
+    const t = clamp(Math.round(cmd.targetOpr / OPR_MPC_STEP) * OPR_MPC_STEP, OPR_MIN, OPR_MAX);
     if (Math.abs(t - cb.targetOpr) > 1e-9) { cb.targetOpr = t; parts.push(`target OPR ${(t * 100).toFixed(2)}%`); }
   }
   if (cmd.srr !== undefined && Math.abs(cmd.srr - cb.srr) > 1e-9) { cb.srr = Math.round(cmd.srr * 1000) / 1000; parts.push(`reserve requirement ${(cb.srr * 100).toFixed(1)}%`); }
