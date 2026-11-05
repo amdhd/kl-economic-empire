@@ -26,6 +26,8 @@ export const GROWTH_TARGET = 0.035;
 /** Growth benchmark before external adjustment: potential growth, so an economy merely on trend scores 50. */
 export const growthTarget = (s: GameState): number => trendFor(s).potentialGrowth;
 export const MAX_EXTERNAL_ADJUSTMENT = 0.01;
+/** Days over which the score's allowance for a finished shock fades by a factor of e (D-141). */
+export const EXTERNAL_ADJUSTMENT_FADE_DAYS = 180;
 
 /** A duration-weighted run rate, so February and a 31-day month measure the same steady output. */
 export function annualRealOutput(reports: MonthlyReport[]): number {
@@ -50,7 +52,8 @@ export function externalGrowthAdjustment(s: GameState): number {
       + 0.1 * Math.log(m.creditWillingness ?? 1) - 0.1 * Math.log(m.oil ?? 1);
     let strengthDays = Math.max(0, hi - Math.max(lo, event.startDay + 7));
     for (let day = lo; day < Math.min(hi, event.startDay + 7); day++) strengthDays += (day - event.startDay + 1) / 7;
-    exposure += pressure * strengthDays * event.magnitude;
+    // A shock the economy has had time to recover from no longer lowers the bar (D-141): its credit fades after it ends.
+    exposure += pressure * strengthDays * event.magnitude * Math.exp(-(end - hi) / EXTERNAL_ADJUSTMENT_FADE_DAYS);
   }
   return clamp(0.25 * exposure / days, -MAX_EXTERNAL_ADJUSTMENT, MAX_EXTERNAL_ADJUSTMENT);
 }
@@ -61,7 +64,12 @@ export function scoreDrivers(s: GameState) {
   const reports = s.reports;
   const realOutput = reports.length ? annualRealOutput(reports.slice(-3)) : s.baseline.realGdpAnnual;
   const years = Math.max(reports.length / 12, 0.25);
-  const realGrowth = Math.pow(realOutput / s.baseline.realGdpAnnual, 1 / years) - 1;
+  const endpointGrowth = Math.pow(realOutput / s.baseline.realGdpAnnual, 1 / years) - 1;
+  // Model 3 (D-141): half the growth credit comes from average output over the whole term, annualised to its midpoint,
+  // so a slump that later recovers still costs score. Steady growth scores the same on both measures.
+  const termGrowth = reports.length >= 6 && trendFor(s).trendWealthCredit
+    ? Math.pow(annualRealOutput(reports) / s.baseline.realGdpAnnual, 1 / (years / 2)) - 1 : endpointGrowth;
+  const realGrowth = (endpointGrowth + termGrowth) / 2;
   const externalAdjustment = externalGrowthAdjustment(s);
   const liabilities = debtMYR(s.government) + s.government.unpaidObligations + ((s.deals?.items??[]).reduce((a,d)=>a+d.arrearsMinor,0)+guaranteeReserve(s))/100;
   // A negative opening net worth must not earn score merely by inflating nominal liabilities.
@@ -79,7 +87,7 @@ export function scoreDrivers(s: GameState) {
     realOutput / (s.baseline.realGdpAnnual * outputPath), s.government.serviceQuality / BASELINE.serviceQuality);
   const wealthCreditFactor = clamp(TREND.trendWealthCredit ? 1 - 4 * (1 - sustained) : sustained, 0, 1);
   const rawWealthScore = clamp(50 + TREND.wealthSlope * realWealthChange / s.baseline.nominalGdpAnnual, 0, 100);
-  return { realGrowth, growthTarget: growthTarget(s) + externalAdjustment, externalAdjustment, realWealthChange,
+  return { realGrowth, endpointGrowth, termGrowth, growthTarget: growthTarget(s) + externalAdjustment, externalAdjustment, realWealthChange,
     wealthCreditFactor, rawWealthScore };
 }
 

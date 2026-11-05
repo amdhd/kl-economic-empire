@@ -108,13 +108,19 @@ export function repayDebt(s: GameState, amountMYR: number): number {
 
 /** Cash above TREASURY_LIMIT_MYR (D-101) buys back debt first, then goes to the sovereign fund, so the sen ledger never
  * overflows. Only reachable late in a long Boom campaign. Returns the MYR moved. */
-export function sweepExcessCash(s: GameState): number {
-  const excess = treasuryMYR(s.government) - TREASURY_LIMIT_MYR;
+/** Months of outlays the treasury keeps as cash before a surplus is swept to debt and the fund (D-145). */
+export const SURPLUS_CASH_MONTHS = 12;
+
+/** Cash above the ceiling (D-101), or above `SURPLUS_CASH_MONTHS` of this month's outlays when `outlays` is given (D-145), buys
+ * back debt first, then moves to the sovereign fund: idle cash earns nothing while the bonds it could retire cost interest. */
+export function sweepExcessCash(s: GameState, outlays?: number): number {
+  const limit = outlays !== undefined && outlays > 0 ? Math.min(TREASURY_LIMIT_MYR, SURPLUS_CASH_MONTHS * outlays) : TREASURY_LIMIT_MYR;
+  const excess = treasuryMYR(s.government) - limit;
   if (!(excess > 0)) return 0;
   const repaid = repayDebt(s, excess);
   const rest = excess - repaid;
   const toFund = rest >= 1 && !injectFund(s, rest) ? rest : 0;
-  news(s, { kind: 'policy', tone: 'neutral', title: 'Surplus cash put to work', body: `Treasury cash above RM${(TREASURY_LIMIT_MYR / 1e12).toFixed(0)}tn${repaid > 0 ? `: RM${(repaid / 1e9).toFixed(0)}bn of bonds bought back` : ''}${toFund > 0 ? `${repaid > 0 ? ',' : ':'} RM${(toFund / 1e9).toFixed(0)}bn moved to the sovereign fund` : ''}.` });
+  news(s, { kind: 'policy', tone: 'neutral', title: 'Surplus cash put to work', body: `Treasury cash above ${limit < TREASURY_LIMIT_MYR ? `${SURPLUS_CASH_MONTHS} months of spending (${money(limit)})` : `RM${(TREASURY_LIMIT_MYR / 1e12).toFixed(0)}tn`}${repaid > 0 ? `: RM${(repaid / 1e9).toFixed(0)}bn of bonds bought back` : ''}${toFund > 0 ? `${repaid > 0 ? ',' : ':'} RM${(toFund / 1e9).toFixed(0)}bn moved to the sovereign fund` : ''}.` });
   return repaid + toFund;
 }
 
@@ -356,7 +362,7 @@ export function monthCloseGovernment(s: GameState, otherCorporateTax = 0): GovMo
   const outlays = outlaysOf(gov.mtd);
   const target = Math.max(0,pol.borrowing.cashBufferMonths * outlays - repaid * (1-s.controls.debt.refinance));
   if (treasuryMYR(gov) < target) issueDebt(s, target - treasuryMYR(gov), repaid > 0 ? 'Refinancing maturing bonds and rebuilding the cash buffer' : 'Rebuilding the cash buffer');
-  sweepExcessCash(s);
+  sweepExcessCash(s, outlays);
 
   // Fiscal risk premium and rating
   const gdp = gdpForRatios(s);
