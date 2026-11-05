@@ -2,6 +2,7 @@ import { Clock, SpeedControls } from './TopBar';
 import { TreasuryChip } from './TreasuryChip';
 import { useMemo } from 'react';
 import { daysInMonth, formatKL, klParts } from '../../engine/time';
+import { campaignMonths } from '../../data/boom';
 import { useGame, useGameState } from '../../store/game-store';
 
 /** City-builder style bottom toolbar: time, news, approval and one money readout that opens the Economy window. */
@@ -14,12 +15,13 @@ export function BottomBar() {
   const daysLeft = daysInMonth(p.year, p.month) - p.day + 1;
   const text = items.map((n) => ({ ...n, when: formatKL(n.atMin) }));
   const approval = g.indicators.approval;
+  const months = campaignMonths(g);
   const mood = approval >= 70 ? '😄' : approval >= 60 ? '🙂' : approval >= 45 ? '😐' : '☹️';
   return (
     <footer className="cs-bar pointer-events-auto" data-testid="stats">
       <div className="cs-time"><SpeedControls /><Clock /></div>
       <div className="cs-month" title="Monthly accounts close automatically at midnight on the 1st">
-        <span>Month <b className="num">{Math.min(24, g.reports.length + 1)}</b>/24</span>
+        <span>Month <b className="num">{Math.min(months, g.reports.length + 1)}</b>/{months}</span>
         <span>closes in <b className="num">{daysLeft}</b>d</span>
       </div>
       <button className="cs-ticker" onClick={() => setPanel('reports')} title="Open reports & event log">
