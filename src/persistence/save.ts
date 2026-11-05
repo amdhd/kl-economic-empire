@@ -16,6 +16,7 @@ import { initialPolicy, validatePolicy } from '../engine/policy';
 import { initialFdi, validateFdi } from '../engine/fdi';
 import { initialTradeBook, validateTradeBook } from '../engine/trade-book';
 import { initialHousing, validateHousing } from '../engine/housing';
+import { initialReactions, validateReactions } from '../engine/reactions';
 import { validateInfra } from '../engine/infrastructure';
 import { addMissingListings } from '../engine/stock-market';
 import { CAMPAIGN_LENGTHS } from '../data/boom';
@@ -87,6 +88,13 @@ const MIGRATIONS: Record<number, Migration> = {
   17: state => {
     const s = state as unknown as GameState;
     s.housing ??= initialHousing(s);
+    return state;
+  },
+  // v20 → v21: reactive news, public figures and group polls (D-146). Display only; the snapshot starts from today's
+  // settings, so the first Monday after loading reports nothing already decided and the polls measure policy from here.
+  20: state => {
+    const s = state as unknown as GameState;
+    s.reactions ??= initialReactions(s);
     return state;
   },
   // v19 → v20: the reserve-accumulation programme and gold (D-132). It opens off with no gold, so nothing in an existing campaign changes.
@@ -296,6 +304,7 @@ export function deserialize(json: string): GameState {
   validateTradeBook(s.tradeBook);
   validateInfra(s.infra);
   validateHousing(s.housing);
+  validateReactions(s.reactions);
   if (!s.mode || typeof s.mode.boom !== 'boolean' || !CAMPAIGN_LENGTHS.includes(s.mode.months)) throw new Error('Corrupt save: campaign mode');
   if (s.policy.enabled !== s.fdi.enabled || (s.policy.enabled && s.baseline.model !== 3)) throw new Error('Corrupt save: inconsistent policy generation');
   if (![1, 2, 3].includes(s.baseline.model) || !(s.households.equityIndex > 0)

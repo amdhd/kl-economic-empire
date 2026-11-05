@@ -438,6 +438,46 @@ export interface NewsItem {
   tone: 'good' | 'bad' | 'neutral';
   title: string;
   body?: string;
+  /** Reactive news (D-146): the fictional public figure quoted, if any. */
+  voice?: VoiceId;
+}
+
+/** Fictional public figures who react to policy and conditions (D-146). */
+export type VoiceId = 'union' | 'opposition' | 'business' | 'developers' | 'economist' | 'consumers' | 'investors';
+/** Population groups polled each month (D-146). Display only: approval still comes from the satisfaction formula. */
+export type PollGroup = 'b40' | 'm40' | 't20' | 'business' | 'investors';
+
+/** What the reaction engine compares against, taken each Monday (D-146). */
+export interface ReactionSnapshot {
+  day: number;
+  tax: TaxPolicy;
+  /** Announced lever settings (`leverTarget`), so a decision is reacted to when it is made. */
+  levers: Partial<Record<LeverId, number>>;
+  budgetTotal: number;
+  opr: number;
+  fx: number;
+  inflation: number;
+  unemployment: number;
+  approval: number;
+  housing: number;
+  indexMY: number;
+  creditRating: number;
+  congested: string[];
+}
+
+export interface VoiceQuote { day: number; voice: VoiceId; topic: string; stance: 'for' | 'against' | 'warn'; text: string }
+
+export interface ReactionsState {
+  /** Opening snapshot: the polls measure policy against it. */
+  opening: ReactionSnapshot;
+  last: ReactionSnapshot;
+  /** Topic → first KL day it may be reported again. */
+  cooldown: Record<string, number>;
+  /** Weekly house-price index, last 13 Mondays, for the three-month change. */
+  housingWeeks: number[];
+  quotes: VoiceQuote[];
+  /** Month-end polls, newest last (bounded). */
+  polls: { monthKey: number; values: Record<PollGroup, number> }[];
 }
 
 export interface Indicators {
@@ -570,6 +610,8 @@ export interface GameState {
   infra?: InfraState;
   /** House price index readout (D-118). */
   housing: HousingState;
+  /** Reactive news, public figures and group polls (D-146). Display only; no economic effect. */
+  reactions: ReactionsState;
   events: { active: ActiveEvent[]; nextId: number; log: ActiveEvent[] };
   indicators: Indicators;
   baseline: BaselineSnapshot;

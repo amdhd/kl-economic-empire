@@ -19,6 +19,7 @@ export function ExplanationPanel() {
     {metric === 'gdp' && <Section title="Monthly GDP in US dollars" right={<button className="btn" onClick={() => useGame.getState().setPanel('gdphistory')} data-testid="open-gdp-history">Why each month moved</button>}>
       <TimeChart data={gdpHistory(s).map((m) => ({ t: m.label, gdp: m.usd }))} xKey="t" series={[{ key: 'gdp', name: 'GDP (US$)', color: '#60a5fa' }]} yFormat={(v) => bnTick(v, 'US$')} unit="US$ per year, at each month's ringgit rate" height={130} area />
     </Section>}
+    {metric === 'approval' && <div><button className="btn" onClick={() => useGame.getState().setPanel('people')} data-testid="open-public-mood">Polls by group & what people are saying</button></div>}
     <Section title="Measured contributions">
       <p className="mb-2 text-[12px] text-cyan-200">{view.period}</p>
       <dl className="metric-rows" data-testid="explanation-contributions">{view.parts.map(p => <div key={p.label}><dt>{p.label}</dt><dd className="num">{p.value >= 0 ? '+' : '−'}{p.unit.startsWith('MYR') || p.unit.startsWith('USD') ? `${money(Math.abs(p.value), p.unit.startsWith('USD') ? 'USD' : 'MYR')}${p.unit.endsWith('/year') ? '/yr' : ''}` : `${Math.abs(p.value).toFixed(3)} ${p.unit}`}</dd></div>)}</dl>

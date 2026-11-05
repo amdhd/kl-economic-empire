@@ -1,5 +1,6 @@
 import { DealsPanel } from '../components/panels/DealsPanel';
 import { PopulationPanel } from '../components/panels/PopulationPanel';
+import { PeoplePanel } from '../components/panels/PeoplePanel';
 import { ExplanationPanel } from '../components/panels/ExplanationPanel';
 import { DecisionsPanel, FiscalReformsPanel } from '../components/panels/DecisionsPanel';
 import { FdiPanel } from '../components/panels/FdiPanel';
@@ -51,6 +52,7 @@ const PANELS: Record<PanelId, () => ReactNode> = {
   standing: () => <StandingPanel />,
   settings: () => <SettingsPanel />,
   population: () => <PopulationPanel />,
+  people: () => <PeoplePanel />,
   // Rendered as a centred window rather than in the inspector slot.
   finance: () => null,
   controls: () => <ControlsPanel />,
