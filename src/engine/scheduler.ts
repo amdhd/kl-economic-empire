@@ -287,17 +287,21 @@ function explainMonth(s: GameState, r: MonthlyReport, prev: MonthlyReport | unde
   const notes: string[] = [];
   const e = s.external;
   if (prev) {
-    const dGdp = r.realGdp / prev.realGdp - 1;
+    // Compare per day (D-143), so a 28-day February is not reported as a fall in output.
+    const days = (m: MonthlyReport) => daysInMonth(Math.floor(m.monthKey / 12), (m.monthKey % 12) + 1);
+    const dr = days(r), dp = days(prev);
+    const dGdp = (r.realGdp / dr) / (prev.realGdp / dp) - 1;
     let best: SectorId = 'fin';
     let bestD = 0;
     for (const j of SECTOR_IDS) {
-      const d = r.gdpBySector[j] - prev.gdpBySector[j];
+      // Value-added change at this month's length: the 30-day equivalent of the per-day move.
+      const d = (r.gdpBySector[j] / dr - prev.gdpBySector[j] / dp) * 30;
       if (Math.abs(d) > Math.abs(bestD)) {
         bestD = d;
         best = j;
       }
     }
-    notes.push(`Real output ${dGdp >= 0 ? 'rose' : 'fell'} ${(Math.abs(dGdp) * 100).toFixed(1)}% on the month (partly calendar length); the biggest mover was ${best} (${bestD >= 0 ? '+' : '−'}${money(Math.abs(bestD))} value added).`);
+    notes.push(`Real output per day ${dGdp >= 0 ? 'rose' : 'fell'} ${(Math.abs(dGdp) * 100).toFixed(1)}% on the month (adjusted for month length); the biggest mover was ${best} (${bestD >= 0 ? '+' : '−'}${money(Math.abs(bestD))} value added per 30 days).`);
     if (Math.abs(r.gov.taxCorporate - prev.gov.taxCorporate) > 0.08 * prev.gov.taxCorporate) notes.push(`Corporate tax receipts ${r.gov.taxCorporate > prev.gov.taxCorporate ? 'rose' : 'fell'} to ${money(corporateTax)} at a ${(s.government.policies.tax.corporate * 100).toFixed(0)}% rate.`);
     if (r.investment < prev.investment * 0.97) notes.push(`Private investment plans were cut ${(100 - (r.investment / prev.investment) * 100).toFixed(1)}% — after-tax returns, credit (${(s.bank.firmCreditRatio * 100).toFixed(0)}% of demand met) or lending rates (${(s.bank.lendingRate * 100).toFixed(2)}%) weighed.`);
     if (r.investment > prev.investment * 1.03) notes.push(`Private investment plans rose ${((r.investment / prev.investment - 1) * 100).toFixed(1)}% on stronger returns and capacity pressure.`);

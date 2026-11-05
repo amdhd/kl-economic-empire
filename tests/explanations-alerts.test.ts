@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_ALERTS, alertTransitions, economicAlerts, treasuryRunway, validAlertPreferences } from '../src/engine/alerts';
 import { computeCpi } from '../src/engine/economy';
 import { explainEconomy, type ExplainMetric } from '../src/engine/economic-explanations';
-import { applyCommand, createGame, runHeadless } from '../src/engine/game';
+import { applyCommand, createGame, runHeadless, SCENARIO_SHOCK } from '../src/engine/game';
 import { daysInMonth } from '../src/engine/time';
 import { deserialize, serialize } from '../src/persistence/save';
 import { clone, withoutEvents } from './helpers';
@@ -123,7 +123,8 @@ describe('transparent campaign starts', () => {
     expect(s.events.active).toHaveLength(1);
     const event = s.events.active[0];
     expect(event.templateId).toBe(scenario === 'export-slump' ? 'global_slowdown' : 'oil_spike');
-    expect(event.endDay - event.startDay).toBe(scenario === 'export-slump' ? 180 : 90);
+    expect(event.endDay - event.startDay).toBe(scenario === 'export-slump' ? SCENARIO_SHOCK.exportSlump.days : SCENARIO_SHOCK.energyShock.days);
+    expect(event.magnitude).toBe(scenario === 'export-slump' ? SCENARIO_SHOCK.exportSlump.magnitude : SCENARIO_SHOCK.energyShock.magnitude);
     runHeadless(s, 24 * 35);
     const t = deserialize(serialize(s));
     runHeadless(s, 24 * 10); runHeadless(t, 24 * 10);

@@ -118,7 +118,7 @@ export function updateExternal(s: GameState, mods: AggregatedMods, klInflation: 
     // inflation is up to its 2% target, and the target stays inside BNM's rate limits.
     const boom = boomOn(s);
     const gap = boom ? clamp(klOutputGap, -0.05, 0.05) * clamp(e.myInflation / 0.02, 0, 1) : klOutputGap;
-    const raw = BASELINE.opr + 1.3 * (e.myInflation - 0.02) + 0.5 * Math.log(e.myDemand / Math.exp(TREND.my * t)) + demandFor(s).oprGapWeight * gap;
+    const raw = BASELINE.opr + 1.3 * (e.myInflation - 0.02) + demandFor(s).oprDemandWeight * Math.log(e.myDemand / Math.exp(TREND.my * t)) + demandFor(s).oprGapWeight * gap;
     const oprTarget = boom ? clamp(raw, OPR_MIN, OPR_MAX) : raw;
     applyMpcDecision(s, oprTarget);
     const fedTarget = 0.0375 + mods.usRate + 1.2 * (Math.log(e.usDemand / Math.exp(TREND.us * t))) + 0.4 * (e.oil - 1) * 0.03;

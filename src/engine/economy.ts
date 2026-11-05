@@ -159,7 +159,11 @@ export function householdDemand(s: GameState, transfersPaid: number) {
   const D = demandFor(s);
   const permanentIncome = hh.permanentIncome * (1 + D.permanentDrift / 365) + D.permanentSpeed * (disposable - hh.permanentIncome);
   // Wealth effect: households spend a small share of listed-equity gains and losses (model 2).
-  const wealthSpend = nationalV2(s) ? (WEALTH_MPC / 365) * HOUSEHOLD_EQUITY0 * (hh.equityIndex - 1) : 0;
+  const equitySpend = nationalV2(s) ? (WEALTH_MPC / 365) * HOUSEHOLD_EQUITY0 * (hh.equityIndex - 1) : 0;
+  // Liquid savings (D-144): households spend down savings above their opening savings-to-income ratio and rebuild them below it,
+  // so the stock tracks income instead of piling up without limit.
+  const savingsTarget = (baselineFor(s).householdSavings / (s.baseline.realDisposablePerCapita * baselineFor(s).population)) * permanentIncome * 365;
+  const wealthSpend = equitySpend + (D.savingsDrawdown / 365) * (hh.savings - savingsTarget);
   // Pump prices: extra fuel spending comes out of the household budget for other goods (model 2).
   const { consumption: basket, spending, fuelAdjustment } = householdSpending(disposable, permanentIncome, hh.savings, hh.mpc, wealthSpend, householdFuelBillDelta(s), D.currentIncomeWeight);
   // A share of the non-fuel basket buys finished imports directly; it leaves the domestic sectors (model 3).
@@ -183,7 +187,9 @@ export function daily(s: GameState, mods: AggregatedMods, gov: GovDay): DayEcono
   bank.mtdInterestH += interestH;
   bank.mtdAmortH += amortH;
   hh.permanentIncome = permanentIncome;
-  hh.savings = (hh.savings + disposable) - spending;
+  // Only part of new saving stays liquid (D-144): the rest goes to EPF and other illiquid assets, outside the spending buffer.
+  const saved = disposable - spending;
+  hh.savings += saved > 0 ? demandFor(s).liquidSavingShare * saved : saved;
 
   // Discretionary export services are paid only from available treasury cash.
   const support = post(s.government, 'exportSupport', s.trade.policy.exportBudgetMonthly * PER_DAY);

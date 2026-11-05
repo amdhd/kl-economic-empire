@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applyCommand, createGame, runHeadless, type Command } from '../src/engine/game';
-import { debtMYR, issueDebt, sweepExcessCash, treasuryMYR } from '../src/engine/government';
+import { debtMYR, issueDebt, SURPLUS_CASH_MONTHS, sweepExcessCash, treasuryMYR } from '../src/engine/government';
 import { reconcileMonth } from '../src/engine/reconciliation';
 import { sectorTax } from '../src/engine/policy-controls';
 import { visaRentPressure, zoneFeeDaily, zoneTaxRelief } from '../src/engine/policy';
@@ -30,6 +30,18 @@ describe('treasury cash ceiling (D-101)', () => {
     expect((s.fund.myrCash - fund0) / 100).toBeCloseTo(3e12, -2);
     expect(treasuryMYR(s.government)).toBeCloseTo(TREASURY_LIMIT_MYR, -2);
     expect(sweepExcessCash(s)).toBe(0);
+  });
+
+  it('at month close, cash above a year of outlays retires debt, then builds the fund (D-145)', () => {
+    const s = createGame(1, 'balanced', 'malaysia', { months: 24 });
+    const outlays = 40e9;
+    s.government.treasury = Math.round((SURPLUS_CASH_MONTHS * outlays + 300e9) * 100);
+    s.government.debt = Math.round(100e9 * 100);
+    const fund0 = s.fund.myrCash;
+    expect(sweepExcessCash(s, outlays)).toBeCloseTo(300e9, -2);
+    expect(debtMYR(s.government)).toBe(0);
+    expect((s.fund.myrCash - fund0) / 100).toBeCloseTo(200e9, -2);
+    expect(treasuryMYR(s.government)).toBeCloseTo(SURPLUS_CASH_MONTHS * outlays, -2);
   });
 });
 
