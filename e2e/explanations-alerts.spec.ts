@@ -56,7 +56,7 @@ test('warnings do not pause and the energy scenario explains its opening shock',
   await page.addInitScript(() => sessionStorage.setItem('klDevNoSave', '1'));
   await page.goto('/');
   await page.getByTestId('scenario-energy-shock').click();
-  await expect(page.getByTestId('scenario-energy-shock')).toContainText('90-day oil supply shock');
+  await expect(page.getByTestId('scenario-energy-shock')).toContainText('150-day oil supply shock');
   await page.getByTestId('start-campaign').click();
   expect(await page.evaluate(() => (window as unknown as Dev).__klDev.state().events.active[0].templateId)).toBe('oil_spike');
   await page.getByTestId('btn-settings').click();
