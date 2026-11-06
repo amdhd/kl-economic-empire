@@ -13,6 +13,7 @@ export function SaveMenu() {
 
   useEffect(() => {
     if (!open) return;
+    let live = true;
     (async () => {
       const m: Record<string, string> = {};
       for (const s of SLOTS) {
@@ -28,12 +29,13 @@ export function SaveMenu() {
           }
         }
       }
-      setMeta(m);
+      if (live) setMeta(m);
     })();
     const close = (e: MouseEvent) => !ref.current?.contains(e.target as Node) && setOpen(false);
     window.addEventListener('mousedown', close);
-    return () => window.removeEventListener('mousedown', close);
-  }, [open]);
+    return () => { live = false; window.removeEventListener('mousedown', close); };
+    // Re-read after every save as well as on opening, so a slot saved while the menu was open shows at once.
+  }, [open, lastSaved]);
 
   return (
     <div className="relative" ref={ref}>

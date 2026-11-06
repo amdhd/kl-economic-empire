@@ -5,13 +5,25 @@ const STORE = 'saves';
 export type SlotId = 'recovery' | 'autosave' | 'slot1' | 'slot2' | 'slot3';
 export const SLOTS: SlotId[] = ['autosave', 'slot1', 'slot2', 'slot3'];
 
+// One shared connection: opening a new one per call leaked a connection on every save and read.
+let dbPromise: Promise<IDBDatabase> | null = null;
+
 function openDb(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
+  if (dbPromise) return dbPromise;
+  dbPromise = new Promise<IDBDatabase>((resolve, reject) => {
     const req = indexedDB.open(DB, 1);
     req.onupgradeneeded = () => req.result.createObjectStore(STORE);
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      const db = req.result;
+      // Another tab upgrading the database, or the browser closing it, drops this connection; reopen next time.
+      db.onversionchange = () => { db.close(); dbPromise = null; };
+      db.onclose = () => { dbPromise = null; };
+      resolve(db);
+    };
+    req.onerror = () => { dbPromise = null; reject(req.error); };
+    req.onblocked = () => { dbPromise = null; reject(new Error('IndexedDB open blocked')); };
   });
+  return dbPromise;
 }
 
 async function idb<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRequest): Promise<T> {
@@ -21,6 +33,8 @@ async function idb<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRe
     const req = fn(tx.objectStore(STORE));
     tx.oncomplete = () => resolve(req.result as T);
     tx.onerror = () => reject(tx.error);
+    // An aborted transaction fires neither complete nor (always) error; without this the promise never settled.
+    tx.onabort = () => reject(tx.error ?? new Error('IndexedDB transaction aborted'));
   });
 }
 
